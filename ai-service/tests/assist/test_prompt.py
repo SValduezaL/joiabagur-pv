@@ -8,17 +8,24 @@ from __future__ import annotations
 
 import pytest
 
-from jbg_ai.assist.constants import PROMPT_VERSION
+from jbg_ai.assist.constants import (
+    AGENT_PITCH_PROMPT_VERSION,
+    PRICE_PLACEHOLDER,
+    PROMPT_VERSION,
+    STOCK_PLACEHOLDER,
+)
 from jbg_ai.assist.modes import AssistMode
 from jbg_ai.assist.prompt import (
     NUMERAL,
     QUERY_CLOSE,
     QUERY_OPEN,
     TASK_SECTIONS,
+    AgentPitchTask,
     PitchCitation,
     PitchTask,
     build_messages,
     load_prompt,
+    load_prompt_file,
     normalise_numeral,
     payload_from,
     prompt_sections,
@@ -114,12 +121,20 @@ def test_every_assist_prompt_version_is_preserved_with_its_measurement() -> None
     loaded by that route only: `POST /v1/assist/sale` still runs v3, which is exactly what
     keeps the 120 generations of C30b and the 89 of C31 interpretable. Adding a version rather
     than editing a file is the rule, applied a third time.
+
+    **Six since C42, and the sixth did not move `PROMPT_VERSION` either.** `assist/v6` carries
+    the agent's task alone, and `v4` stays on disk because the 204 requests of C32b were measured
+    against it. What v6 changes is that the agent's task now states the free-query placeholder
+    rule explicitly: the *Sistema* of v4 orders placeholders without condition, the agent's
+    payload is correctly unanchored, and since C40 that combination withholds the whole argument.
+    Fourth application of the same rule.
     """
     directory = AI_SERVICE_ROOT / "prompts" / "assist"
     versions = sorted(path.name for path in directory.glob("*.md"))
 
-    assert versions == ["v1.md", "v2.md", "v3.md", "v4.md", "v5.md"]
+    assert versions == ["v1.md", "v2.md", "v3.md", "v4.md", "v5.md", "v6.md"]
     assert PROMPT_VERSION == "assist/v5", "the version the DETERMINISTIC route actually runs"
+    assert AGENT_PITCH_PROMPT_VERSION == "assist/v6", "the version the AGENT route runs"
     for name in versions:
         text = (directory / name).read_text(encoding="utf-8")
         assert text.splitlines()[0].strip() == f"# assist/{name[:-3]}"
@@ -333,3 +348,55 @@ def test_numerals_normalise_the_same_way_on_both_sides_of_the_membership_test(
     raw: str, expected: str
 ) -> None:
     assert normalise_numeral(raw) == expected
+
+
+# --- C42 · the agent's own version, and the drift it could hide ------------------------------
+
+
+def test_v6_system_section_matches_v5() -> None:
+    """**The guard that makes «one version per route» affordable.** D2, as a test and not a review.
+
+    Duplicating the *Sistema* block is the cost of not editing `assist/v5`, whose figures another
+    change is about to measure. The risk of that choice is exactly one thing — the two blocks
+    drifting apart, silently, the first time somebody edits a rule in one of them — and this
+    converts it into a suite failure. Character for character, because a rule that differs in a
+    word is a different rule and a diff nobody runs is not a guard.
+
+    Editing either file alone fails here. The procedure is: edit `v5`, copy into `v6`.
+    """
+    five = load_prompt_file("assist/v5")
+    six = load_prompt_file(AGENT_PITCH_PROMPT_VERSION)
+
+    assert prompt_sections(six)["Sistema"] == prompt_sections(five)["Sistema"]
+
+    # And v6 carries the agent's task and **only** it: merging the two version constants is the
+    # alternative D2 rejected, and a v6 that also held the six deterministic tasks would be it.
+    assert set(prompt_sections(six)) == {"Sistema", "Tarea · evidencia del agente"}
+    for heading in TASK_SECTIONS.values():
+        assert heading not in prompt_sections(six), heading
+
+
+def test_agent_pitch_carries_no_placeholder() -> None:
+    """The defect C42 closes, read where it is closed: **the task text over an unanchored payload.**
+
+    Three links, each correct alone. `v4`'s *Sistema* orders price and availability written as
+    placeholders **without condition**; the agent's payload is a free-query one with
+    `is_anchored = False`, correctly, because its argument speaks of several pieces; and since C40
+    a placeholder over an unanchored payload is a **hard** violation that withholds the argument in
+    full. So the agent's task has to say the rule itself, and the *Sistema* cannot say it for it —
+    the *Sistema* names «las tareas de consulta libre» and this task is not called one.
+    """
+    task = task_message(AgentPitchTask.AGENT_EVIDENCE, load_prompt_file(AGENT_PITCH_PROMPT_VERSION))
+
+    assert "NO hay pieza anclada" in task
+    assert "no escribas marcadores" in task
+    assert PRICE_PLACEHOLDER in task and STOCK_PLACEHOLDER in task, (
+        "the markers are named so the instruction is unambiguous about what is forbidden"
+    )
+    # The half that must survive: a comparison naming no figure is still allowed, and a version
+    # that forbade it would cost the task the only way it has to compare several pieces.
+    assert "lenguaje comparativo sí cabe" in task
+
+    # And the version it derives from did NOT carry the rule, which is what made this necessary.
+    previous = task_message(AgentPitchTask.AGENT_EVIDENCE, load_prompt_file("assist/v4"))
+    assert "no escribas marcadores" not in previous

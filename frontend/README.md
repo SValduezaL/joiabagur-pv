@@ -39,9 +39,9 @@ The app will be available at [http://localhost:3000](http://localhost:3000)
 npm run build
 ```
 
-## Venta asistida y ficha de venta
+## Venta asistida, ficha de venta y agente
 
-Dos pantallas consumen la capa de IA, y las dos siguen la misma regla: **no se enseña nada que el
+Tres pantallas consumen la capa de IA, y las tres siguen la misma regla: **no se enseña nada que el
 sistema no haya afirmado**. El frontend no reordena resultados, no recalcula precio ni existencias, no
 añade avisos y no traduce un código que no conoce inventándose una etiqueta.
 
@@ -49,6 +49,7 @@ añade avisos y no traduce un código que no conoce inventándose una etiqueta.
 |---|---|---|
 | `/sales/new/assisted` | Panel de búsqueda asistida (C16), con **dos rutas** desde C40 | `POST /api/ai/search` · `POST /api/ai/search/assisted` · `GET /api/ai/search/availability` |
 | `/sales/new/assist/:productId` | **Ficha de venta** (C36) | `POST /api/ai/products/{id}/sales-assist` y `GET /api/ai/products/{id}/substitutes` |
+| `/sales/new/agent` | **Panel del agente de venta** (C42) | `POST /api/ai/search/agent` · `GET /api/ai/search/availability` |
 
 ### Las dos rutas del panel (C40)
 
@@ -157,6 +158,47 @@ Tres cosas que parecen erratas y no lo son:
 - **`ai_unavailable` y `not_generated` no comparten mensaje**, aunque suenen parecido: en el primero la
   familia y los materiales vienen del catálogo transaccional y no hay citas; en el segundo vienen del
   índice. Fundirlos haría que la pantalla mintiera sobre la procedencia de lo que enseña.
+
+### El panel del agente (C42)
+
+El agente estaba entregado y medido desde C32b y **nadie lo llamaba**. Ahora tiene ruta propia, cuarta
+tarjeta en el hub de venta y un hilo de conversación. Cinco decisiones que no se deducen del código de
+un vistazo:
+
+- **Cada turno es dueño de su bloque de respuesta**, y es la decisión alrededor de la que está
+  construido el panel. Un área de resultados única refrescada por turno deja al operario leyendo el
+  argumentario de un turno sobre las filas del siguiente — y cuando el bucle pivota a sustitutos, la
+  pieza que estaba mirando desaparece sin ninguna explicación. El pivote es justo lo que el agente
+  existe para demostrar: `buscar_sustitutos` se invocó **125 veces** en la pasada medida.
+- **El orden de lo que hay dentro del bloque sale de frecuencias medidas, no de un mockup.** Una
+  respuesta de cada cinco no trae ninguna pieza (19,6 %, idéntico en los dos arms) y de esas **catorce
+  de veinte son repregunta o rechazo**, así que sólo el 5,9 % de las peticiones es «busqué y no
+  encontré nada» — por eso el caso sin filas va primero y **nunca** se redacta como «sin resultados».
+  Las citas están vacías en el 92,2 % y los avisos en el 96,1 %, así que los dos **no pintan nada**
+  cuando vienen vacíos. La cinta de respuesta incompleta sirve al 2,0 % y va la última, **sin color de
+  alarma**: lo reunido antes del corte sigue sirviendo para vender.
+- **La tira de estado dice una de dos cosas, y depende de si el servicio contestó.** Lo encontró la
+  comprobación manual y ningún test: cuando la pasarela degrada, la respuesta no trae motivo de parada
+  ni contadores, y afirmar uno decía «el agente terminó por un motivo que esta pantalla no reconoce»
+  junto a «0 vueltas · 0 consultas» de un bucle que nunca corrió. Va condicionada a `aiAvailable`, y
+  por el mismo motivo el bloque de argumentario **no se pinta** en ese caso: su copia de
+  `ai_unavailable` dice «Lo que ves viene del catálogo», que es cierto en la ficha para la que se
+  escribió y falso aquí, donde no hay nada que ver.
+- **Los tres topes del transcript se cuentan antes de enviar, y suman los turnos del asistente.** El
+  tope total del contrato suma **todos** los turnos, así que con el argumentario reenviado el tope de
+  12 turnos muerde a los 6 intercambios; un contador que contara sólo lo que el operario teclea
+  llegaría a la mitad de su cuenta con el 422 ya disparado, que es justo lo que existe para evitar. El
+  turno es **indivisible** y los caracteres no lo son, de ahí que el contador distinga si hay
+  borrador: `countTranscript(turns, hasDraft)`.
+- **La tarjeta del hub nace con tres estados, no dos.** Encendida enlaza; apagada se pinta en gris con
+  su motivo y **sin enlace en absoluto**, no con un botón deshabilitado que igualmente navega; y
+  cuando la sonda no ha resuelto o no trae el campo dice «no se pudo confirmar», que **no es lo mismo
+  que apagado** — un despliegue anterior que omita el campo no puede leerse como una tienda que lo
+  apagó. `agentGateState` decide y el componente dice.
+
+Reutiliza `PitchBlock` (C36) y `AssistedSearchResultRow` (C40) **sin modificarlos**. El bloque de
+sustitutos de C36 **no es reutilizable y no se intenta**: se alimenta de señales de similitud que
+llegan por otro endpoint y que el miembro del agente no lleva.
 
 ## Testing
 

@@ -46,4 +46,17 @@ public static class AiScopeSwitchExtensions
     /// <param name="pointOfSaleId">The shop, or <see langword="null"/> for every one of them.</param>
     public static bool IsEnabledForScope(this AiSalesAssistOptions options, Guid? pointOfSaleId) =>
         pointOfSaleId is { } named ? options.IsEnabledFor(named) : options.EnabledByDefault;
+
+    /// <summary>Whether the sale agent is on for a scope: one point of sale, or every one.</summary>
+    /// <param name="options">The sale agent settings.</param>
+    /// <param name="pointOfSaleId">The shop, or <see langword="null"/> for every one of them.</param>
+    /// <remarks>
+    /// The fourth switch, added by C42, and read by the agent's route and by the availability probe
+    /// through this one method for the reason the other three are: two readers of the same switch
+    /// that compute it separately are two readers that will disagree. What the probe must
+    /// <strong>not</strong> do is derive this verdict from the assisted answer's — the agent has a
+    /// credential chain of its own, so the two can be off independently.
+    /// </remarks>
+    public static bool IsEnabledForScope(this AiAgentAssistOptions options, Guid? pointOfSaleId) =>
+        pointOfSaleId is { } named ? options.IsEnabledFor(named) : options.EnabledByDefault;
 }

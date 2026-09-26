@@ -26,6 +26,8 @@ from jbg_ai.assist.constants import (
     AGENT_STOP_REASONS,
     ASSIST_INTENTS,
     ASSIST_WARNING_CODES,
+    GROUP_ORIGIN_CATALOGUE,
+    GROUP_ORIGIN_SUBSTITUTES,
     MAX_TRANSCRIPT_CHARS,
     MAX_TRANSCRIPT_TURNS,
     MAX_TURN_CHARS,
@@ -334,6 +336,36 @@ class AgentUsage(Usage):
     )
 
 
+class AgentAssistGroup(AssistGroup):
+    """One group of the agent's answer, carrying **where it came from**. C42.
+
+    **A subclass and deliberately not a field on `AssistGroup`**, by the precedent `AgentUsage`
+    sets one class up: the shared model is what `POST /v1/assist/sale` publishes, and widening it
+    would move that route's schema — which this change promises not to do. Adding it here is an
+    addition to this route alone, so a consumer that ignores it receives exactly the response it
+    received before.
+
+    **Why it has to reach the consumer at all.** The distinction existed only in the payload the
+    model reads, so the argument said «y como alternativa…» because the prompt told it to, while
+    the screen had no way to label the rows — which is precisely what the marker exists to
+    prevent. Offering a second best as though it were what was asked for is what a customer
+    notices, and the loop asked for substitutes 125 times in the measured pass: routine, not an
+    edge case.
+    """
+
+    origin: Literal[GROUP_ORIGIN_CATALOGUE, GROUP_ORIGIN_SUBSTITUTES] = Field(
+        ...,
+        description=(
+            "Where this group came from, from a closed vocabulary of two: "
+            f"`{GROUP_ORIGIN_CATALOGUE}` for a catalogue match — which a roster member also is, "
+            "since nothing about it says the shop cannot sell what was asked for — and "
+            f"`{GROUP_ORIGIN_SUBSTITUTES}` for an alternative to a piece that did not serve. "
+            "**Never to be inferred from position or ordering**: the payload keeps the order the "
+            "evidence arrived in, so position says nothing about provenance"
+        ),
+    )
+
+
 class AgentTraceTool(BaseModel):
     """One tool call of one iteration, as the wire reports it: **what, and how it went.**
 
@@ -376,6 +408,14 @@ class AgentAssistResponse(AssistResponse):
     are additions.
     """
 
+    groups: list[AgentAssistGroup] = Field(
+        ...,
+        description=(
+            "The deterministic route's groups, each carrying **the provenance of its evidence**. "
+            "Narrowed here rather than widened there, which is what keeps the contract move an "
+            "addition to this route alone"
+        ),
+    )
     partial: bool = Field(
         ...,
         description=(

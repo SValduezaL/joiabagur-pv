@@ -444,6 +444,30 @@ Sobre los dos primeros conviene una precisión que ahorra tests engañosos. Al p
 >
 > El detalle está en el `qa.md` del change archivado, §1 y §11.9.
 
+> **Actualización del 2026-09-26, sobre `c42-add-frontend-agent-panel` (C42).** La suite tiene ahora
+> **1.401 tests**: C42 añade **54** —16 de la pasarela, 21 del servicio de aplicación, 13 de endpoint y
+> 4 de arranque—, los 54 en verde. La línea base dio **53 fallos de 1.347**; al cierre, **46 de 1.401**:
+> el rojo **baja siete** mientras la suite crece 54.
+>
+> **La rotación, otra vez confinada.** Cuatro nombres entran y once salen; los cuatro que entran son
+> tres de `InventoryIntegrationTests` y uno de `ReturnsControllerTests`, y los once que salen son todos
+> de `InventoryIntegrationTests`. **Cero fallos en el área del change** —`Agent*`, `AiGateway*`,
+> `AiSearch*`, `AssistedSearch*`, `FreeQuery*`, `AiScope*`— en las dos pasadas.
+>
+> **Y una tercera vía al mismo desenlace de «sale 0 sin medir nada», que esta entrada añade: medir en
+> paralelo.** La primera pasada de C42 lanzó las tres suites del repositorio a la vez y **el backend
+> dio 490 fallos de 1.347**. No era regresión ni orden: `vitest` con 14 *workers* satura la máquina y
+> **testcontainers deja de alcanzar el demonio de Docker por su tubería con nombre**, así que todos los
+> `IntegrationTests` mueren al arrancar con
+> `System.TimeoutException at System.IO.Pipes.NamedPipeClientStream.ConnectInternal` bajo
+> `Docker.DotNet.DockerClient`. El mismo commit, en serie, da 53.
+>
+> Es peor que las otras dos vías porque **sí ejecuta tests y sí imprime una línea de resumen**: la
+> línea dice 490 y es verdad, sólo que no mide el código. La regla que lo cubre no es la del código de
+> salida sino una nueva: **una pasada de las tres suites es serial**, y cuesta unos 20 minutos.
+>
+> El detalle está en `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` §1.
+
 ### `coverlet` no mide `JoiabagurPV.Application`, y no avisa
 
 **Cualquier cifra de cobertura tomada en este repositorio con el comando por defecto excluye la capa

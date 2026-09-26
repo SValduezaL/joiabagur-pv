@@ -63,5 +63,35 @@ public enum SearchOrigin
     /// populations are selected by whoever chose. This measures an ablation; it is not a
     /// randomised comparison and must not be reported as one.
     /// </remarks>
-    AssistedGenerative = 4
+    AssistedGenerative = 4,
+
+    /// <summary>
+    /// Results produced by the sale agent: a conversation over several turns in which a loop chose
+    /// which of six tools to use, gathered evidence and had an argument written over it.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not folded into <see cref="AssistedGenerative"/>, and the reason is the one
+    /// that kept the fourth value out of the first. The generative route is one query producing
+    /// one set of results: one classification, one retrieval, one generation. This one is a
+    /// conversation, and it costs several times as much — up to five turns of a model choosing
+    /// tools, each turn paying for the accumulated transcript, before the same generation runs.
+    /// Measured over 204 requests against the real provider, its median latency is of the order of
+    /// the total the generative route declares as its ceiling.
+    ///
+    /// Sharing a value would make the comparison this column exists for unanswerable, and that
+    /// comparison is the whole reason the agent gets a panel of its own rather than a flag on the
+    /// panel beside it: the same question asked in both, and what the operator got for the extra
+    /// cost read off the table rather than demonstrated on screen.
+    ///
+    /// No migration. The column persists this enum by conversion to an integer, so a new member is
+    /// a new admissible value and not a schema change — which is what the fourth value already
+    /// established.
+    ///
+    /// The same caution applies twice over: the operator chooses the panel, so this is an ablation
+    /// and not a randomised comparison. And the gap the fourth value declared is still here — a
+    /// query scoped to every point of sale is not recorded at all, because the event requires a
+    /// point of sale. An inherited limitation, declared rather than closed, since closing it does
+    /// open a migration.
+    /// </remarks>
+    AssistedAgent = 5
 }

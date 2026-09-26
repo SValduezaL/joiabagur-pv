@@ -245,12 +245,40 @@ def test_retrieval_accepts_a_token_without_pos_claim(
 def test_sale_assistance_accepts_a_token_without_pos_claim(
     client: TestClient, issue_token: Callable[..., str]
 ) -> None:
-    """The second of exactly two routes that admit it. The list is closed on purpose."""
+    """The second of exactly three routes that admit it. The list is closed on purpose."""
     token = issue_token(pos_id=None)
 
     response = client.post(
         "/v1/assist/sale",
         json={"query": "un anillo de plata"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code != 401, response.text
+
+
+def test_agent_route_accepts_a_token_without_pos_claim(
+    client: TestClient, issue_token: Callable[..., str]
+) -> None:
+    """C42 adds the third, and the test it replaces was right while the route had no consumer.
+
+    The agent route used to refuse the omission, and the reasoning below it read «the agent acts
+    on the shop's behalf, so it has nothing to answer without one». That was never quite the
+    claim: the agent's loop answers perfectly well without a shop — it just cannot pivot to
+    substitutes, because with no scope the availability tool reports that no scope applies rather
+    than that the shop is out of stock. What made the refusal harmless was that **nothing called
+    the route**. C42 gives it a panel, and that panel offers the every-shop scope under the same
+    rule its sibling applies — so leaving this route stricter than the route beside it would
+    break the pair with no test failing anywhere.
+
+    What the omission buys here is what it buys on the other two: the availability prefilter does
+    not apply. Never a wildcard, which remains impossible.
+    """
+    token = issue_token(pos_id=None)
+
+    response = client.post(
+        "/v1/assist/agent",
+        json={"turns": [{"role": "operario", "text": "busco un anillo de plata"}]},
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -270,11 +298,6 @@ def test_sale_assistance_accepts_a_token_without_pos_claim(
             {"top_k": 1},
             id="inventory",
         ),
-        pytest.param(
-            "/v1/assist/agent",
-            {"turns": [{"role": "user", "content": "hola"}]},
-            id="agent",
-        ),
     ],
 )
 def test_pos_scoped_route_still_rejects_it(
@@ -285,9 +308,11 @@ def test_pos_scoped_route_still_rejects_it(
 ) -> None:
     """The omission fails closed everywhere it matters, which is what makes it safe.
 
-    These three work inside one shop: substitutes rank by what that shop can hand over,
-    inventory proposes for that shop's stock, and the agent acts on its behalf. None of them
-    has anything to answer without one.
+    **These two work inside one shop, and the agent no longer belongs here.** Substitutes rank by
+    what that shop can hand over and inventory proposes for that shop's stock: neither has
+    anything to answer without one. The agent's case is different in kind — it can answer, it
+    just cannot pivot — and it moved to the test above when C42 gave it a consumer. Widening it
+    did not widen these: the list is closed and this is what keeps it closed.
     """
     token = issue_token(pos_id=None)
 

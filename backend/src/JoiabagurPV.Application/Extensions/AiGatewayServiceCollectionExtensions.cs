@@ -53,7 +53,7 @@ public static class AiGatewayServiceCollectionExtensions
                 $"{AiGatewayOptions.SectionName}:JwtSecret is too short for HS256; at least {AiGatewayOptions.MinimumSecretLength} characters are required.")
             .Validate(
                 o => o.TokenTtlSeconds > 0 && o.RetrievalTimeoutMs > 0 && o.AssistTimeoutMs > 0
-                     && o.EnrichTimeoutMs > 0 && o.HealthTimeoutMs > 0,
+                     && o.EnrichTimeoutMs > 0 && o.HealthTimeoutMs > 0 && o.AgentTimeoutMs > 0,
                 $"{AiGatewayOptions.SectionName} time-to-live and time budgets must be positive.")
             // The outer budget must cover the worst case the AI service declares inside. Checked
             // here so that relation is something start-up verifies instead of something somebody
@@ -64,6 +64,18 @@ public static class AiGatewayServiceCollectionExtensions
                 + "the worst case jbg-ai declares for the provider calls of one sale assistance is "
                 + "MAX_PITCH_PROVIDER_CALLS × PITCH_TIMEOUT_SECONDS = 2 × 4 s (ai-service/src/jbg_ai/assist/constants.py). "
                 + "A shorter budget discards answers the service was still entitled to deliver.")
+            // Same relation, one route along, and here the argument is sharper: exceeding the
+            // service's deadline is a DEGRADATION there — the evidence gathered is served and the
+            // answer says the clock stopped it — so a budget under the ceiling replaces a partial
+            // answer the service already paid for with nothing at all.
+            .Validate(
+                o => o.AgentTimeoutMs >= AiGatewayOptions.MinimumAgentTimeoutMs,
+                $"{AiGatewayOptions.SectionName}:AgentTimeoutMs must be at least {AiGatewayOptions.MinimumAgentTimeoutMs} ms: "
+                + "that is the wall-clock ceiling jbg-ai gives one agent request, "
+                + "AGENT_DEADLINE_SECONDS = 15 s (ai-service/src/jbg_ai/assist/constants.py), and this "
+                + "budget has to cover it plus the network. Fitting it to the maximum latency observed "
+                + "in measurement is the mistake to avoid: it cuts a request Python has already paid "
+                + "for in full.")
             // ValidateOnStart is the whole point. Without it the check is lazy and would surface
             // inside a request instead of at boot, which is the failure mode being removed here.
             .ValidateOnStart();
@@ -199,6 +211,76 @@ public static class AiGatewayServiceCollectionExtensions
                 });
 
                 builder.AddTimeout(TimeSpan.FromMilliseconds(options.AssistTimeoutMs));
+            });
+
+        // The sale agent (C42). Its own client, its own budget and its own breaker state, for the
+        // reason the generative route got its own and one more of its own: the agent's MEDIAN
+        // latency is of the order of the total the generative route declares as its ceiling, so
+        // sharing that client would cut a large share of agent requests, and sharing its breaker
+        // would let a slow conversation open the circuit of a route that is answering correctly.
+        services
+            .AddHttpClient(AiGatewayClient.AgentClientName, client =>
+            {
+                client.BaseAddress = new Uri(options.BaseUrl);
+                client.Timeout = Timeout.InfiniteTimeSpan;
+            })
+            .AddResilienceHandler("ai-agent-pipeline", builder =>
+            {
+                // One retry, and only for a connection that never opened — the assist policy
+                // exactly, and the argument is stronger here. A timeout is NOT retried: the loop
+                // may already have spent up to five turns of provider calls plus the argument, so a
+                // second attempt doubles both the wait at the counter — thirty-six seconds — and the
+                // paid calls. A 5xx is not retried for the same reason. A connection refused is the
+                // one failure where the request is known not to have left, so nothing was spent.
+                builder.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = 1,
+                    Delay = TimeSpan.FromMilliseconds(100),
+                    BackoffType = DelayBackoffType.Constant,
+                    UseJitter = false,
+                    ShouldHandle = args => ValueTask.FromResult(IsConnectionNeverOpened(args.Outcome)),
+                    OnRetry = _ =>
+                    {
+                        AiGatewayAttemptTracker.RecordRetry();
+                        return default;
+                    }
+                });
+
+                // Counts conditions of TRANSPORT only, and the omission is the decision rather than
+                // a limitation of where this code sits.
+                //
+                // This route does not answer with a server error when its provider falls: it answers
+                // 200, reporting `stop_reason = fallo_proveedor` in a closed vocabulary. The same is
+                // true of `sin_cliente`, when no agent credential is configured, and of the five
+                // budget reasons. `IsRetryable` receives an `Outcome<HttpResponseMessage>` and does
+                // not read the body, so none of those is visible here — but that is convenient, not
+                // the reason. The reason is that what a breaker protects against is the AI service
+                // not answering. A breaker that counted a degradation the service answered WITH
+                // would open over a route working exactly as designed; one that ignored a transport
+                // failure would lose the only signal that the service is down.
+                //
+                // Two alternatives were considered and rejected. A handler that read the body would
+                // have to buffer the response, parse the JSON twice and couple the transport to the
+                // contract's closed vocabulary. A domain breaker in the application service would be
+                // correct in layering and UNREACHABLE in practice: at ~13 000 tokens per request
+                // against a 25 000 tokens-per-minute quota the system admits about ONE REQUEST PER
+                // MINUTE, so a sampling window of 30 s expires long before MinimumThroughput
+                // accumulates. The deferred entry of C32b asking for this is closed by refutation.
+                //
+                // The degradation is instrumented instead — a metric and a log line, in
+                // `AiGatewayClient` — so its rate stays observable without the breaker acting on it.
+                // What tells a screen the agent is unavailable is the availability probe, which costs
+                // no quota and no provider call.
+                builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+                {
+                    FailureRatio = options.BreakerFailureRatio,
+                    MinimumThroughput = options.BreakerMinimumThroughput,
+                    SamplingDuration = TimeSpan.FromSeconds(options.BreakerSamplingDurationSeconds),
+                    BreakDuration = TimeSpan.FromSeconds(options.BreakerBreakDurationSeconds),
+                    ShouldHandle = args => ValueTask.FromResult(IsRetryable(args.Outcome))
+                });
+
+                builder.AddTimeout(TimeSpan.FromMilliseconds(options.AgentTimeoutMs));
             });
 
         return services;

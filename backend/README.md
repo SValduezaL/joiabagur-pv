@@ -237,6 +237,9 @@ The system has two roles:
 | `POST /api/inventory/adjustment` | ✅ | ❌ |
 | `GET /api/inventory/import-template` | ✅ | ❌ |
 | `POST /api/ai/search` | ✅‡ | ✅* |
+| `POST /api/ai/search/assisted` | ✅¶ | ✅*¶ |
+| `POST /api/ai/search/agent` | ✅¶ | ✅*¶ |
+| `GET /api/ai/search/availability` | ✅¶ | ✅*¶ |
 | `POST /api/ai/search-events/{id}/selection` | ✅** | ✅** |
 | `POST /api/ai/products/{productId}/sales-assist` | ✅‡§ | ✅*§ |
 | `GET /api/ai/products/{productId}/substitutes` | ✅‡§ | ✅*§ |
@@ -267,6 +270,7 @@ The system has two roles:
 † Service API key `X-Index-Feed-Key` only. A user JWT, an `access_token` cookie or a C03 token is **401**.
 ‡ Assisted search requires a concrete point of sale in the body, for every role. Operators are checked against their assignments; administrators hold none, so they may pick any **active** point of sale — an inactive one is **400** for everyone. The request-rate policy is partitioned by user, not by network address.
 § The sale card (C34) follows the same point-of-sale rule, **and** answers **404** for every role when that point of sale has no active inventory record of an active product with that identifier — quantity zero is still served. Both checks run **before** the AI service is called, so a refused request never costs a paid call.
+¶ The three routes of C40 and C42 take the point of sale as **optional**, and its absence is the «every shop» scope — never a wildcard. Operators reach that scope too, since without a `pos_id` claim the retriever's availability prefilter **does not apply** rather than matching everything. A value that is present and unusable — blank, whitespace, an unparseable or truncated GUID — is **400** for every role, because absence is the key being missing from the payload and anything else is a value that has to be usable. A global-scope search is **not recorded**: the telemetry column requires a point of sale, so `searchEventId` comes back null and the funnel declares it.
 **Ownership, not role: only the operator who ran that search may record its selection
 
 ### The sale card (C34)
@@ -297,9 +301,11 @@ requested point of sale.
 - **Logs** — one `stage=sales_assist` line and one `stage=substitutes` line per request, correlated by
   `trace_id`. The argument is **never** logged, resolved or not; the question only at `Debug`.
 - **Rate limits** — `sales-assist` has its own per-user policy (`AiSalesAssistRateLimit`, 10 per
-  minute); `substitutes` calls no model and uses the search policy.
+  minute); `substitutes` calls no model and uses the search policy. The agent route of C42 has a
+  third one, `AiAgentAssistRateLimit`, at **4 per minute** — a turn of the agent resolves several
+  provider calls, so its allowance is derived from the provider's token quota rather than chosen.
 
-> **The three AI features are OFF by default, and not one of the switches appears in any
+> **The four AI features are OFF by default, and not one of the switches appears in any
 > `appsettings`.** This cost a whole session the first time somebody tried the card of C36 on a
 > fresh checkout, so it is written here rather than left to be rediscovered.
 >
@@ -308,8 +314,9 @@ requested point of sale.
 > | `AiSearch:EnabledByDefault` | `false` | The panel falls to the lexical path; the badge reads «Búsqueda por texto» and the result rows carry the degraded origin | **Yes**, since C40 |
 > | `AiSalesAssist:EnabledByDefault` | `false` | The card answers 200 with `aiAvailable: false` and «El asistente no está disponible»; `substitutes` answers `ai_unavailable` | **No** — only by opening a card |
 > | `AiFreeQuerySearch:EnabledByDefault` | `false` | The assisted option of the route toggle is **disabled with its reason beside it** — «La respuesta asistida está desactivada en esta tienda», or the same phrase without the shop when the scope covers every one of them — and `GET /api/ai/search/availability` answers `assistedAnswerAvailable: false`, `switched_off`. **Since C40_FIX it also decides whether the every-shop scope is usable at all**, because that scope is served by the assisted route alone: with this off, an administrator who picks it reaches a scope they cannot search from, and the panel says so rather than leaving both options dead | **Yes**, since C40 |
+> | `AiAgentAssist:EnabledByDefault` | `false` | The fourth card of the sale hub renders **greyed out with its reason on it** — «El agente está desactivado en esta tienda» — while the assisted answer stays enabled beside it, and `GET /api/ai/search/availability` answers `agentAvailable: false`, `switched_off`. The card then carries **no link at all**, rather than a disabled-looking one that still navigates; the **route itself is not guarded**, so reaching `/sales/new/agent` directly shows the panel with the same notice. Verified by the manual check of C42: a **third** state exists and is not the same as off — when the probe has not settled or the field is absent the card stays usable and reads «No se pudo confirmar si el agente está disponible», because an older deployment that omits the field must not be read as a shop that switched it off | **Yes**, since C42 |
 >
-> All three are documented in their own options class — *«Defaults to false, so enabling a shop is
+> All four are documented in their own options class — *«Defaults to false, so enabling a shop is
 > an explicit act»* — and that default is right for production. What was missing is any mention
 > where somebody starting the API would read it.
 >
@@ -710,6 +717,11 @@ OpenAPI documentation is served with Scalar (not Swagger UI) at `/scalar/v1` whe
 | `AiFreeQuerySearch__RateLimitPermitLimit` / `AiFreeQuerySearch__RateLimitWindowSeconds` | Free-query searches one user may issue per window. Its **own** allowance, not the card's: the card is opened once per piece and the panel is used in bursts, so a shared quota would leave whichever one the operator reached second unable to work, with no way to know why. The figure is stated on screen before the operator presses, so it is part of the interface | 10 / 60 |
 | `AiFreeQuerySearch__CandidateWindow` | Families requested from `jbg-ai`, which is the over-retrieval dial. 5 is what the frozen contract caps `top_k` at on the assist route; more is refused by the contract | 5 |
 | `AiFreeQuerySearch__DefaultPageSize` / `AiFreeQuerySearch__MaxPageSize` | Groups shown when none is asked for, and the largest a caller may ask for | 5 / 20 |
+| `AiGateway__AgentTimeoutMs` | Time budget of the `ai-agent` client (`POST /v1/assist/agent`). **Start-up refuses a value below 15000**, which is `jbg-ai`'s own wall-clock deadline for the whole request (`AGENT_DEADLINE_SECONDS`); the budget sits **above** that ceiling plus the network margin on purpose. The worst case measured over 204 requests was 11.917 ms, and tightening the budget down to it has an expensive failure mode: cutting a request Python **already paid for in full**. `AssistTimeoutMs` is untouched — the agent carries its own option. The breaker deliberately does not count an in-band degradation, since Polly sees a transport outcome and not the body | 18000 |
+| `AiAgentAssist__EnabledPointOfSaleIds__0`, `__1`, … | Points of sale where the agent panel calls the AI. Reloaded without a redeploy | Empty |
+| `AiAgentAssist__EnabledByDefault` | Whether points of sale absent from that list may use the agent. **Read from its own option and never derived from the assisted verdict**: they are separate features with separate cost profiles, so deriving one from the other would switch off on screen something nobody switched off | false |
+| `AiAgentAssist__RateLimitPermitLimit` / `AiAgentAssist__RateLimitWindowSeconds` | Agent turns one user may issue per window. **The figure is arithmetic, not taste**: roughly 13.000 tokens a request against the provider's 25.000 TPM is one request a minute, so four per minute is already generous against the quota and nothing is gained by raising it | 4 / 60 |
+| `AiAgentAssist__CandidateWindow` | `top_k` sent on the agent route. 5 is what the frozen contract caps it at on assist routes; more is refused by the contract | 5 |
 
 `AiGateway` is validated at start-up, not on first use: if the base address is missing or is not an absolute http/https URI, or the secret is absent or shorter than 32 characters, **the API does not start** and the error names the offending key. That is deliberate — a mismatched secret makes `jbg-ai` answer 401 without disclosing why, so the fault is caught at boot instead of during a request. Set `AiGateway__Enabled=false` to skip registering the client altogether.
 
@@ -720,6 +732,8 @@ OpenAPI documentation is served with Scalar (not Swagger UI) at `/scalar/v1` whe
 `AiSalesAssist` works the same way, and is a separate switch on purpose: the sale card is its own feature with a generative route and a cost profile search does not have. Switched off, `sales-assist` still answers — with the degraded card read from the catalog — and `substitutes` answers `ai_unavailable`, without calling the AI; the log line says `degraded_reason=switched_off` / `reason=switched_off`, so the switch is never mistaken for an outage.
 
 `AiFreeQuerySearch` is the third, and it is a section of its own for a mechanical reason rather than a tidy one: **a rate limit is an attribute of an endpoint in ASP.NET**, so serving the assisted answer as a mode of `POST /api/ai/search` would force both to share one allowance — 30/min lets an operator burn thirty generations, 10/min strangles the cheap path — and the time budget has the same problem. That is why there are two endpoints rather than one with a `mode` field. Switched off, `POST /api/ai/search/assisted` **costs no call and no quota**: it records `degradedReason = "switched_off"` and the log line `stage=free_query_search … ai_available=False degraded_reason=switched_off` says so. Its start-up validation refuses a `DefaultPageSize` above `MaxPageSize`, and a `CandidateWindow` below `DefaultPageSize` — the window is what the hydrator draws a page from, so a smaller one can never fill it. Both are refused at boot rather than clamped at request time, because a clamp would make the misconfiguration permanent and invisible.
+
+`AiAgentAssist` is the fourth, and it is a section of its own for the same mechanical reason plus one of its own. The mechanical one is unchanged: a rate limit and a time budget are attributes of an endpoint in ASP.NET, and this endpoint's figures are nothing like the others' — **4 requests a minute against 10, and 18 s against 10 s**, because one turn of the agent resolves several provider calls instead of one. The reason of its own is that **its switch must not be derived from the assisted one**: `GET /api/ai/search/availability` reports the agent from `AiAgentAssistOptions` alone, so switching the sale card off does not switch the agent off on screen — which is the defect C40 shipped in the other direction and recorded in `openspec/DEFERRED_TASKS.md`. Switched off, nothing is called and nothing is charged: the fourth card of the sale hub renders greyed out carrying its own reason and **no link at all**, and the log line says `degraded_reason=switched_off`. The route itself is deliberately **not** guarded, so reaching it directly shows the panel with the same notice rather than a 404 that would look like a missing feature. Start-up validates `AgentTimeoutMs` against a floor of 15 s and the error message **names `AGENT_DEADLINE_SECONDS`**, because the number is not a local preference: it is the ceiling the Python side enforces on the whole request, and a shorter outer budget would discard answers the service was entitled to give after paying for them.
 
 `POST /api/sales` and each line of `POST /api/sales/bulk` accept an optional `searchEventId`, which attributes the sale to the assisted search it came from and closes the loop that `POST /api/ai/search` opens. The identifier is only stored once the event is verified to exist **and to belong to the user making the sale** — the same ownership rule the selection endpoint applies, and for the same reason. Anything unusable degrades to no attribution: never a validation error, never a failed sale, and nothing else about the sale changes. The check is explicit rather than delegated to the foreign key, whose declared delete behaviour governs deletion of the event and would, on an insert carrying an unknown identifier, abort the whole transaction instead of degrading.
 

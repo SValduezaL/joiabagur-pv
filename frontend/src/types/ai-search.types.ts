@@ -165,6 +165,25 @@ export interface AiSearchAvailability {
    * knowable without making a call, and this route deliberately makes none.
    */
   assistedAnswerUnavailableReason?: string | null;
+  /**
+   * Whether the sale agent is on. False disables its entry card with its reason. C42.
+   *
+   * **A value of its own, never derived from `assistedAnswerAvailable`.** The agent has a credential
+   * chain of its own on the service side, so a deployment can have the assisted answer configured
+   * and the agent not — and a card that read one for the other would say the agent is available
+   * while every agent request came back degraded.
+   *
+   * Optional, so a response from a backend that predates C42 leaves it undefined rather than false:
+   * absent means «the probe did not say», which the card treats as the third state — open, with a
+   * warning — and not as «switched off».
+   */
+  agentAvailable?: boolean;
+  /**
+   * Why the agent is unavailable, or null when it is. **The agent's own reason and not the assisted
+   * answer's**: the two can be off independently, so showing one on the other's card would explain
+   * the wrong switch.
+   */
+  agentUnavailableReason?: string | null;
 }
 
 /**

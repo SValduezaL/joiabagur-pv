@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,7 @@ from jbg_ai.evals.agent_sweep import (
     legacy_router_usage,
     load_artefact,
     pivot_rates,
+    projection_freshness,
     prompt_digests,
     rescore,
     rescore_path,
@@ -452,3 +454,132 @@ def test_the_embedded_summary_of_the_committed_pass_is_the_one_this_harness_no_l
 
     assert embedded[f"{MINI}::load"]["cost_usd_per_request"] == pytest.approx(0.002301)
     assert rescored[f"{MINI}::load"]["cost_usd_per_request"] > 4 * 0.002301
+
+
+# --- the instruments C42 added, before it took the pass it publishes -----------------------------
+
+
+def test_agent_sweep_counts_placeholders() -> None:
+    """**Counted on the FIRST attempt**, which is what the prompt produced before any repair.
+
+    The rule is `free_query_gate`'s and the reason is the same: counting the served argument
+    would report zero for every placeholder the single repair removed, and so would measure the
+    repair rather than the prompt. Driven through the real loop, so the row is what a pass writes.
+    """
+    principal = ServicePrincipal(
+        user_id="u", role="Operator", trace_id="t", pos_id=TOKEN_POS_ID
+    )
+    registry = build_registry(
+        principal=principal,
+        settings=build_settings(),
+        embed=FakeEmbeddingClient(),
+        search=FakeProductSearch([indexed_row()]),
+        knowledge=InMemoryKnowledgeIndex(chunks=[]),
+    )
+    agent, _ = scripted_agent(wants(("buscar_catalogo", {"consulta": "anillo"})), finishes())
+    router, _ = scripted_router(decision())
+    # The exact defect C42 fixes: the agent's task runs over an UNANCHORED payload, so a
+    # placeholder has nothing to resolve against and since C40 it is a hard violation.
+    argument, _ = scripted_client(
+        pitch("Cuesta {{price}} y su disponibilidad es {{stock}}. Otra cuesta {{price}}.")
+    )
+    item = {"id": "C98", "turns": [{"role": "operario", "text": "busco un anillo"}]}
+
+    run = asyncio.run(
+        run_agent(
+            turns_from([("operario", "busco un anillo")]),
+            principal,
+            registry=registry,
+            agent_client=agent,
+            router_client=router,
+            pitch_client=argument,
+        )
+    )
+    row = _row(item=item, set_id="load", arm="fake/agent-model", run=run, elapsed_ms=1.0)
+
+    assert (row["price_placeholders"], row["stock_placeholders"]) == (2, 1)
+
+    summary = summarise([row])["fake/agent-model::load"]["pitch_placeholders"]
+    assert summary == {
+        "price_total": 2,
+        "stock_total": 1,
+        "generations_with_a_price_placeholder": 1,
+        "generations_with_a_stock_placeholder": 1,
+    }
+
+
+def test_the_placeholder_aggregate_is_absent_and_not_zero_for_rows_that_predate_it() -> None:
+    """Zero would assert that no placeholder was written; the committed pass never counted."""
+    rows = load_artefact(PASS)["rows"]
+    summary = summarise(rows, legacy=legacy_router_usage(rows))
+
+    assert all("price_placeholders" not in row for row in rows)
+    assert summary[f"{GPT4O}::load"]["pitch_placeholders"] is None
+    # Same rule for the freshness audit: the pass that motivated recording it recorded nothing.
+    assert summary[f"{GPT4O}::load"]["projection_freshness"] is None
+
+
+def test_agent_sweep_records_projection_age() -> None:
+    """The age comes from the **checkpoint**, and the verdict flips at the configured ceiling.
+
+    Recorded per row because a pass lasts longer than the ceiling: C32b's took 2 h 44 min
+    against 1 h, and with no recorded age its rows cannot be told from rows that were fresh.
+    """
+    settings = build_settings()
+    ceiling = settings.jpv_pos_projection_max_age_seconds
+    now = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+
+    fresh = FakeProductSearch([indexed_row()], synced_at=now - timedelta(seconds=60))
+    verdict = asyncio.run(projection_freshness(fresh, settings, now=now))
+    assert verdict["stale"] is False
+    assert verdict["age_seconds"] == pytest.approx(60.0)
+    assert verdict["ceiling_seconds"] == ceiling
+    # Read through the port that consults `ai.sync_checkpoint`, never `pos_projection.refreshed_at`.
+    assert fresh.synced_at_calls == 1
+
+    stale = FakeProductSearch(
+        [indexed_row()], synced_at=now - timedelta(seconds=ceiling + 1)
+    )
+    assert asyncio.run(projection_freshness(stale, settings, now=now))["stale"] is True
+
+    # Never drained is stale too: the prefilter does not apply then either.
+    never = FakeProductSearch([indexed_row()], never_synchronised=True)
+    blank = asyncio.run(projection_freshness(never, settings, now=now))
+    assert (blank["age_seconds"], blank["stale"], blank["synced_at"]) == (None, True, None)
+
+
+def test_a_degraded_row_is_identifiable_rather_than_averaged_in() -> None:
+    """The audit a pass longer than the ceiling needs: which rows were served without scope."""
+    rows = [
+        {
+            "arm": "a",
+            "set": "load",
+            "stop_reason": "fin",
+            "partial": False,
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+            "total_tokens": 2,
+            "elapsed_ms": 1.0,
+            "iterations": 1,
+            "provider_calls": 1,
+            "per_iteration": [],
+            "tools_invoked": [],
+            "invented_tools": [],
+            "pitch_initial_violations": [],
+            "pitch_ran": False,
+            "pitch_withheld": False,
+            "stages": {
+                name: {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+                       "calls": 0, "model": None}
+                for name in ("router", "loop", "pitch")
+            },
+            "expectation": None,
+            "projection_age_seconds": age,
+            "projection_stale": stale,
+        }
+        for age, stale in ((10.0, False), (10.0, False), (7200.0, True))
+    ]
+
+    freshness = summarise(rows)["a::load"]["projection_freshness"]
+    assert (freshness["rows_recorded"], freshness["rows_stale"]) == (3, 1)
+    assert freshness["age_seconds"]["max"] == 7200.0

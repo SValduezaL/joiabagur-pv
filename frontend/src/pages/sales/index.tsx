@@ -1,14 +1,48 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ScanLine, PenLine, History, ShoppingCart, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AgentEntryCard } from '@/components/sales/agent/agent-entry-card';
 import { useCart } from '@/providers/cart-provider';
 import { ROUTES } from '@/routing/routes';
+import { aiSearchService } from '@/services/ai-search.service';
+import type { AiSearchAvailability } from '@/types/ai-search.types';
 
 export function SalesPage() {
   const { lineCount } = useCart();
+
+  /**
+   * The agent's gate, read **on mount** rather than on press (C42).
+   *
+   * The probe makes no AI call, consumes no request-rate quota and runs no model — that is its
+   * entire reason for existing — so asking before the operator acts costs nothing, and it is the
+   * only way the card can state that the agent is off *before* somebody presses a button with
+   * nothing behind it.
+   *
+   * **No point of sale is named**, so this reads the default state of the deployment: the landing
+   * page has no shop selector, and the agent's own panel reads the probe again for whichever shop
+   * is chosen there. Inventing a shop here to have something to send would report about a scope
+   * nobody asked about.
+   */
+  const [availability, setAvailability] = useState<AiSearchAvailability | null>(null);
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+
+    aiSearchService.getAvailability().then((outcome) => {
+      if (!current) return;
+      setAvailability(outcome.kind === 'ok' ? outcome.availability : null);
+      setSettled(true);
+    });
+
+    return () => {
+      current = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -127,6 +161,11 @@ export function SalesPage() {
             </CardContent>
           </Link>
         </Card>
+
+        {/* The sale agent. Fourth entry method (C42), and a route of its own rather than a toggle
+            inside the card above: that panel is one query producing one set of results, and this is
+            a conversation. Its gate has three states and the card reads the probe on mount. */}
+        <AgentEntryCard availability={availability} settled={settled} />
       </div>
     </div>
   );

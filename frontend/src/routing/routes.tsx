@@ -38,6 +38,15 @@ export const ROUTES = {
     NEW_IMAGE: '/sales/new/image',
     NEW_ASSISTED: '/sales/new/assisted',
     /**
+     * The sale agent's own route (C42), and not a toggle inside the assisted panel.
+     *
+     * That panel is one query producing one set of results while the agent is a conversation, and
+     * it already carries a toggle with a different meaning -- the degraded path against the
+     * generative one. Two controls of similar name and different meaning on one screen is the
+     * failure the free-query panel was built to remove.
+     */
+    NEW_AGENT: '/sales/new/agent',
+    /**
      * The sale card of one piece (C36). Anchored to a product; the point of sale travels in
      * navigation state, and the card offers a role-resolved selector when it does not.
      */

@@ -57,4 +57,29 @@ public class AiSearchAvailabilityResponse
     /// none.
     /// </summary>
     public string? AssistedAnswerUnavailableReason { get; set; }
+
+    /// <summary>
+    /// Whether the sale agent is switched on. When false the agent's entry card is disabled with its
+    /// reason, rather than failing when pressed. C42.
+    /// </summary>
+    /// <remarks>
+    /// <strong>A value of its own, and never derived from <see cref="AssistedAnswerAvailable"/>.</strong>
+    /// The agent has a credential chain of its own on the service side, so a deployment can have the
+    /// assisted answer configured and the agent not — and a probe that reported one for the other
+    /// would state that the agent is available while every agent request came back degraded. That is
+    /// the shape of failure this route was created to remove, which is why the third path is reported
+    /// rather than inferred.
+    /// </remarks>
+    public bool AgentAvailable { get; set; }
+
+    /// <summary>
+    /// Why the agent is unavailable, or null when it is available.
+    /// </summary>
+    /// <remarks>
+    /// <strong>The agent's own reason and not the assisted answer's</strong>, which the screen needs
+    /// separately: the two can be off independently, and showing the assisted answer's reason on the
+    /// agent's card would explain the wrong switch. As with its sibling, only <c>switched_off</c> can
+    /// be known before a call.
+    /// </remarks>
+    public string? AgentUnavailableReason { get; set; }
 }

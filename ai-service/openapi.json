@@ -1,6 +1,56 @@
 {
   "components": {
     "schemas": {
+      "AgentAssistGroup": {
+        "description": "One group of the agent's answer, carrying **where it came from**. C42.\n\n**A subclass and deliberately not a field on `AssistGroup`**, by the precedent `AgentUsage`\nsets one class up: the shared model is what `POST /v1/assist/sale` publishes, and widening it\nwould move that route's schema — which this change promises not to do. Adding it here is an\naddition to this route alone, so a consumer that ignores it receives exactly the response it\nreceived before.\n\n**Why it has to reach the consumer at all.** The distinction existed only in the payload the\nmodel reads, so the argument said «y como alternativa…» because the prompt told it to, while\nthe screen had no way to label the rows — which is precisely what the marker exists to\nprevent. Offering a second best as though it were what was asked for is what a customer\nnotices, and the loop asked for substitutes 125 times in the measured pass: routine, not an\nedge case.",
+        "properties": {
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the product belongs to no family; such a group holds one member",
+            "title": "Family Id"
+          },
+          "family_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Label"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AssistGroupMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "origin": {
+            "description": "Where this group came from, from a closed vocabulary of two: `catalogo` for a catalogue match — which a roster member also is, since nothing about it says the shop cannot sell what was asked for — and `sustitutos` for an alternative to a piece that did not serve. **Never to be inferred from position or ordering**: the payload keeps the order the evidence arrived in, so position says nothing about provenance",
+            "enum": [
+              "catalogo",
+              "sustitutos"
+            ],
+            "title": "Origin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "members",
+          "origin"
+        ],
+        "title": "AgentAssistGroup",
+        "type": "object"
+      },
       "AgentAssistRequest": {
         "description": "A conversation to answer, and the caps that bound it. C32b.\n\n**The transcript travels in the request because this service stores nothing between\ncalls** — the property the generation and routing capabilities already hold with tests,\nwhich a session store would collide with head-on. The price is that the client now\ncontrols the factor that dominates the cost of a loop, which is why the three caps are\npart of the contract rather than an implementation detail.",
         "properties": {
@@ -101,8 +151,9 @@
             "type": "string"
           },
           "groups": {
+            "description": "The deterministic route's groups, each carrying **the provenance of its evidence**. Narrowed here rather than widened there, which is what keeps the contract move an addition to this route alone",
             "items": {
-              "$ref": "#/components/schemas/AssistGroup"
+              "$ref": "#/components/schemas/AgentAssistGroup"
             },
             "title": "Groups",
             "type": "array"

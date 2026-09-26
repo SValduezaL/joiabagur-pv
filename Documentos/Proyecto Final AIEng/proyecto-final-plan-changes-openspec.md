@@ -14,6 +14,69 @@
 
 Este documento se escribió antes de implementar. Cuando una sesión de diseño de un change concreto altera lo que su ficha decía, el cambio se registra aquí con fecha y motivo, y la ficha afectada se corrige en el sitio.
 
+### 2026-09-26 — Nace C42, C38 se reduce y RAGAS se retira
+
+Una sola sesión, abierta para decidir qué hacer con la cola pendiente —C38 y C39— y **si merecía la
+pena implementar C38 entero**. Sale con dos decisiones que se sostienen la una a la otra, y con un
+hallazgo que ninguna de las dos buscaba. Exploración completa en
+[c42-exploration-decisions.md](informes/c42-exploration-decisions.md).
+
+#### C38 se reduce, y el corte lo tenía pre-escrito
+
+El alcance de C38 eran **cuatro piezas independientes**, y su propia ficha llevaba escrito desde el
+principio el orden en que se parten: *«validador → escenarios de venta → adversarios → RAGAS. **RAGAS
+es lo primero que se cae**»*. Se dispara ese corte, y **por valor marginal y no por plazo**:
+
+| Pieza | Qué había ya | Qué faltaba de verdad |
+|---|---|---|
+| Validador | La puerta numérica **corre en ejecución** desde C30b, con 0 violaciones en 120 generaciones; `evals/free_query_gate.py` mide el modo libre | Consolidarlo y su equivalente .NET. **Poco** |
+| Escenarios de agente | `agent_sweep.py` conduce el bucle real, persiste traza rica y tiene `--rescore` | **Anotación**, no código |
+| Adversarios | Defensas escritas con tests unitarios (delimitadores, `transcript.py`) | Un conjunto con tasa de bloqueo por categoría. Anotación otra vez |
+| **RAGAS** | **Nada** | Dependencia pesada, juez LLM, cableado a LiteLLM, cuota y el MITM de Norton de esta máquina |
+
+**Lo que el §5 de la convocatoria premia —*«evals reales, no sólo pruebas manuales»*— ya está
+demostrado y de sobra**: golden set de 72 consultas con escala de tres grados, *pooling* y dos
+lecturas (C24); ablations v0→v3; matriz de confusión del enrutador sobre 119 casos (C31); barrido del
+agente con p50/p95 y coste por brazo (C32b); 20,9 % / 10,4 % / 42,3 % de revisión humana sobre 204
+perfiles (C28); y las cinco cifras de C40. **RAGAS añadiría una fila más a un informe ya denso.**
+
+Se retira, y **la retirada es en sí misma defendible ante el otro epígrafe del §5** —*«se identifican
+limitaciones actuales y se propone cómo resolverlas»*—: la *alucinación con coartada* pasa a
+limitación declarada con su vía de cierre escrita, coherente con el §11.3, que ya había decidido *«sin
+LLM juez»* para el camino de servicio. **Coste de reescritura, medido:** cero referencias en specs
+vivas; cuatro comentarios de código y una línea de README.
+
+#### Nace C42, y el motivo es que un pilar no se puede enseñar
+
+El PF nombra cinco: CAG, RAG, **agentes**, evaluación y despliegue. El agente está entregado, probado
+y medido con proveedor real desde C32b, y **`IAiGatewayClient` no tiene método para él**: no hay
+pantalla, así que no aparece ni en la URL pública ni en el vídeo. Y el §5 es tajante —*«si el
+evaluador no puede acceder al sistema funcionando, el proyecto no puede evaluarse correctamente»*—.
+
+C42 le da superficie: ruta propia, cuarta tarjeta en el hub y un panel de conversación que **pinta la
+traza del bucle**, que es la única prueba en pantalla de que hay un agente y no un prompt. No se
+sirve por defecto: su única cifra comparativa dice **×3,0** de coste y **13,1 %** de retirada contra
+2,2 %, así que entra como **demostración de ablación** y no como modo del mostrador.
+
+#### Y un hallazgo que ninguna de las dos decisiones buscaba
+
+**C40 dejó una regresión latente en el agente sin tocarlo.** Tres eslabones correctos por separado:
+la tarea del agente vive en **`assist/v4`**, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}`
+**siempre**; su payload es un `FreeQueryPayload` con **`is_anchored = False`**; y C40 metió
+**`placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`**, que dispara exactamente cuando el payload
+no está anclado. Juntos: **el argumentario del agente se retira por construcción**. C40 arregló las
+tareas de consulta libre en `v5` y no tocó ésta, porque el agente no tenía consumidor y nadie iba a
+ver el resultado.
+
+Eso encadena el orden de los tres pendientes: **C42 antes que C38**, porque C42 sube la tarea del
+agente a `assist/v5` y unas cifras de generación tomadas antes describirían un prompt sustituido —la
+misma razón por la que C40 fue antes que C38—.
+
+> **La tasa real no está medida, y se dice.** Esta exploración se hizo **contra el código**, no
+> llamando al proveedor. La cadena es inequívoca; el número no existe todavía, y es la primera cifra
+> que C42 debe publicar. Referencia comparable, de C30b sobre modos anclados con `v3`: `{{price}}` en
+> **147 de 213** y `{{stock}}` en **188 de 213**.
+
 ### 2026-09-21 — C34 explorado: sólo el card, y unos marcadores que no dicen de quién son
 
 **La anotación del 14 de septiembre que daba a C34 la ruta de la consulta libre es falsa en su
@@ -899,10 +962,11 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 | ~~**C35**~~ | ~~`add-inventory-agent-proposals`~~ | Python | C26, C29, C32, C33 | ⛔ | **rev. dec. 6** · **anulado el 31 ago** |
 | **C36** | `add-frontend-assist-card-and-family-disambiguation` | Frontend | C16, C34 | ✅ **archivado 2026-09-24** | — · **hereda de C31 tres filas más en la tabla de copy** —los dos rechazos, que son **dos textos distintos** y no uno, más «el corpus no cubre esta pregunta»— y **una excepción razonada**: `clarification_question` viaja **como prosa ya resuelta** y no como código, porque el contrato la tipa así; el frontend la pinta tal cual. **Pintar el rechazo igual que `abstained` borraría la distinción** que las dos cifras publicadas existen para sostener |
 | ~~**C37**~~ | ~~`add-frontend-inventory-review-and-print`~~ | Frontend | C29, C35 | ⛔ | **rev. dec. 6** · **anulado el 31 ago** |
-| **C38** | `add-generation-and-agent-evals` | Python + .NET | C24, **C30b**, **C32b**, C34 | 🔴 | — · *sin escenarios de inventario* · **la excepción de persistencia del arnés la declara C30b** · **de C31 hereda el conjunto de enrutado ya cableado** (119 casos, seis clases, carga que falla si los recuentos no cuadran) y **una cifra que contradice lo esperado**: la puerta numérica de la consulta libre rechaza **0 por cifras** con una lista blanca de ~13 numerales, así que el riesgo que quedaba abierto ahí **no era el numérico** sino `dangling_citation`. Los casos adversarios y de inyección sistemáticos siguen siendo suyos · **y de C32b hereda cinco cosas escritas**: (1) el **golden set está intacto y comprobado** — dos tests cruzan sus 72 consultas contra los dos conjuntos del agente en las dos direcciones, así que puede arbitrar la ablación sin reservas; (2) `evals/agent/calibration.yaml` está declarado **`calibration-only`** y contra él se iteraron DOS prompts, así que C38 escribe los suyos aparte y comprueba el no solape, que es la razón de que la etiqueta exista; (3) la ablación ya tiene una de sus dos filas medida — **×3,0 el agente contra el pipeline, 0,0274 frente a ~0,0092 USD/petición, cada etapa tarifada con su propio modelo** *(corregido el 21 sep: la primera cifra, ×7,6, tarifaba el clasificador con un coste sin fuente)* — y la fila del brazo barato **descartada por comportamiento y no por precio**; (4) el hallazgo abierto que C38 tiene que medir sobre el golden set: **se retira el 13,1 % de los argumentarios del agente en `gpt-4o` —9,5 puntos por `dangling_citation`— contra el 2,2 % de la ruta determinista**, seis veces más, con `assist/v4` ya mejorado una vez y sin cerrar; y (5) **dos cosas que la verificación independiente le deja por medir**: si el argumento menciona disponibilidad —nada lo impide, y el arnés ya lo cuenta por fila (`pitch_availability_terms`)— y la calidad del argumento tras un pivote, cuyo *payload* cambió (la pieza abandonada ya no llega como coincidencia) sin que la pasada lo midiera; `agent_sweep --rescore` recalcula cualquier artefacto sin proveedor. Y un aviso operativo: la cuota de **tokens por minuto de la organización** fija el reloj de cualquier pasada — 204 peticiones costaron 3,4 h a 25.000 TPM |
+| **C38** | `add-generation-and-agent-evals` | Python + .NET | C24, **C30b**, **C32b**, C34, **C42** | 🔴 | **Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero** (§0 · *C38 se reduce y RAGAS se retira*). Lo que queda: **validador determinista consolidado + su equivalente .NET, escenarios de venta puntuados y casos adversarios**. Se dispara el corte que el propio change llevaba **pre-escrito** —*«orden obligatorio si hay que partirlo: validador → escenarios de venta → adversarios → RAGAS; RAGAS es lo primero que se cae»*—, y se dispara por valor marginal y no por plazo: *«evals reales»* ya está demostrado por C24, C25, C28, C30b, C31, C32b y C40, mientras que RAGAS arrastra dependencia pesada, juez LLM, cuota y el MITM de esta máquina. La *alucinación con coartada* **pasa a limitación declarada con su vía de cierre**, que es lo que el §16 premia · **gana a C42 de prerrequisito**: sube la tarea del agente a `assist/v5`, así que unas cifras de generación del agente tomadas antes describirían un prompt sustituido · *sin escenarios de inventario* · **la excepción de persistencia del arnés la declara C30b** · **de C31 hereda el conjunto de enrutado ya cableado** (119 casos, seis clases, carga que falla si los recuentos no cuadran) y **una cifra que contradice lo esperado**: la puerta numérica de la consulta libre rechaza **0 por cifras** con una lista blanca de ~13 numerales, así que el riesgo que quedaba abierto ahí **no era el numérico** sino `dangling_citation`. Los casos adversarios y de inyección sistemáticos siguen siendo suyos · **y de C32b hereda cinco cosas escritas**: (1) el **golden set está intacto y comprobado** — dos tests cruzan sus 72 consultas contra los dos conjuntos del agente en las dos direcciones, así que puede arbitrar la ablación sin reservas; (2) `evals/agent/calibration.yaml` está declarado **`calibration-only`** y contra él se iteraron DOS prompts, así que C38 escribe los suyos aparte y comprueba el no solape, que es la razón de que la etiqueta exista; (3) la ablación ya tiene una de sus dos filas medida — **×3,0 el agente contra el pipeline, 0,0274 frente a ~0,0092 USD/petición, cada etapa tarifada con su propio modelo** *(corregido el 21 sep: la primera cifra, ×7,6, tarifaba el clasificador con un coste sin fuente)* — y la fila del brazo barato **descartada por comportamiento y no por precio**; (4) el hallazgo abierto que C38 tiene que medir sobre el golden set: **se retira el 13,1 % de los argumentarios del agente en `gpt-4o` —9,5 puntos por `dangling_citation`— contra el 2,2 % de la ruta determinista**, seis veces más, con `assist/v4` ya mejorado una vez y sin cerrar; y (5) **dos cosas que la verificación independiente le deja por medir**: si el argumento menciona disponibilidad —nada lo impide, y el arnés ya lo cuenta por fila (`pitch_availability_terms`)— y la calidad del argumento tras un pivote, cuyo *payload* cambió (la pieza abandonada ya no llega como coincidencia) sin que la pasada lo midiera; `agent_sweep --rescore` recalcula cualquier artefacto sin proveedor. Y un aviso operativo: la cuota de **tokens por minuto de la organización** fija el reloj de cualquier pasada — 204 peticiones costaron 3,4 h a 25.000 TPM |
 | **C39** | `finalize-pf-readme-and-evidence` | Docs | todos los vivos | 🔴 | — |
 | **C40** | `add-frontend-free-query-panel` | Python + .NET + Frontend | C16, C31, C34, **C36** | 🔴 | **nace el 24 sep**, durante la comprobación en demo de C36 (tarea 8.5) y **no estaba en el plan**: la sesión destapó que el panel de búsqueda asistida llevaba todo el proyecto sirviendo por su ruta degradada, con los filtros **descartándose en silencio**. Explorado en dos pasadas ([informe](informes/c40-exploration-decisions.md) · [tabla de estados](informes/c40-m1-panel-states.md)): **once hallazgos, diecisiete decisiones y una regla transversal de completitud**. Saca a pantalla **M1**, la pregunta libre sin pieza, convirtiendo el panel de C16 en su superficie, y **cierra tres limitaciones del §15** —la 12, la 13 y la 3 de C34—. **Mueve `openapi.json`** (`filters` en `AssistRequest`, adición pura) y **toca `retrieval-abstention`, spec viva con tres consumidores**. **Va antes de C38**: sube el prompt a `assist/v5` y mueve la fase de la abstención, así que unas cifras tomadas antes describirían un prompt sustituido. **El hallazgo que gobierna su línea de corte:** `AiGatewayClient` **rechaza M1 hoy por construcción** —`PitchPlaceholderResolver` retira el argumentario siempre que no hay ancla, y `v3` ordena escribir los marcadores de precio y stock también en las tareas de consulta libre, medido en **147 de 213**—, así que sin el tramo 2 completo entregaría **un panel asistido sin prosa** |
 | **C41** | `add-pos-projection-scheduled-drain` | **ai-service** (+ despliegue y un retoque .NET/Frontend) *(corregido el 26 sep: decía «.NET + Frontend»)* | **C22**, **C17** *(corregido el 26 sep: decía C40, y la lectura previa de C40 deja de usarse)* | 🔴 | **nace el 25 sep**, durante las pruebas manuales posteriores al cierre de C40, y **no estaba en el plan**. Al levantar el entorno **ninguna de las once tiendas activas tenía la proyección fresca**: el *checkpoint* de `pos-availability` venía del 5 de septiembre —veinte días contra un umbral de 3 600 s— y hubo que drenarla a mano para que las pruebas midieran el sistema y no su desconfiguración. **Es la tercera vez** *(corregido el 26 sep: esta fila decía «la segunda»)*: el §8 del informe de C40 declara la misma causa con 19,7 días —y su arreglo **se aplicó a la columna equivocada**, ver la ficha—, y antes **C34 encontró la proyección vacía en la demo**, que es otro modo de fallo (`count_scope = 0` → **503 en toda recuperación**) y sigue abierto en `DEFERRED_TASKS.md`. Eso es lo que lo convierte en ficha: **el planificador existe y vive en prosa** —`ai-service/README.md` lleva desde C22 una receta de cron que empieza por `cd /srv/jbg-ai`, una ruta de host, y `jbg-ai` es un contenedor—, así que `sync-pos` es sólo CLI y alguien tiene que acordarse. **No es una fuga** —la frontera es `Carried()` en .NET y ningún operario ve una pieza que su tienda no lleva—: lo que causa es que **la página llegue corta**, que es exactamente la avería que C22 midió (ocho de once tiendas por debajo de una página en seis de cada veinte búsquedas, peor caso **un solo producto**). Núcleo *(reescrito el 26 sep)*: una tarea de `lifespan` en **`jbg-ai`** —no un `BackgroundService` de .NET, que sería **una segunda implementación del protocolo del keyset** sobre la misma fila de checkpoint— que drena **al arrancar y cada 600 s**, con `pg_try_advisory_lock` **dentro del drenaje** para que cubra al CLI, porque `ai.sync_checkpoint` es **una fila por feed** y dos drenajes entrelazados **se saltan filas en silencio**. Tramo aditivo: la **edad en `GET /health`** —no en `GET /api/ai/search/availability`, que tiene un `MUST` de spec viva prohibiéndole llamar a la IA— más el **quinto fallo de `verify.sh`** que caza la proyección vacía. **Cortado en el diseño:** el drenaje manual, **también el del administrador** — el argumento que mata el botón del operario mata el suyo |
+| **C42** | `add-frontend-agent-panel` | Python + .NET + Frontend | C32b, C34, C36, **C40** | ✅ **archivado 2026-09-27** | **Nace el 2026-09-26**, al valorar la cola pendiente del PF, y **no estaba en el plan**. Explorado contra el código en [informe](informes/c42-exploration-decisions.md): **ocho hallazgos y doce decisiones**. Da superficie al **único de los cinco pilares del PF que no la tiene** —CAG, RAG, **agentes**, evaluación, despliegue—: `POST /v1/assist/agent` está entregado y medido desde C32b y **nadie lo llama**, así que no puede aparecer ni en la URL pública ni en el vídeo. **El hallazgo que gobierna su línea de corte es una regresión latente que C40 introdujo sin tocar el agente**: la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`. Los tres eslabones son correctos por separado y juntos **retiran el argumentario del agente por construcción**. Ejecuta además la política de *timeout* y circuito que `DEFERRED_TASKS.md` dejó **diseñada y no hecha** desde C32b, y **el agente no se sirve por defecto**: ruta propia y demostración de ablación, porque su única cifra comparativa hoy dice ×3,0 de coste y 13,1 % de retirada contra 2,2 % · **Archivado el 2026-09-27 con 75/75 tareas y trece refutaciones medidas**, de las que cuatro gobiernan. **El orden de ejecución no fue el del ticket**: el v1 pedía medir antes de la primera tarea y eso **no era ejecutable**, porque el arnés no contaba marcadores ni registraba la antigüedad de la proyección — de ahí un tramo 0 de instrumentos antes de cualquier tarea funcional, que es lo que impide que una pasada más larga que el techo de 3.600 s se lea como fresca, la contaminación que ya estropeó sin arreglo parte de las cifras de recuperación de C32b. **La caída del argumentario retirado del 13,1 % al 1,2 % NO es atribuible a `assist/v6`** y el informe nombra los confundidores: era lo esperado, porque la frase que ordena escribir marcadores es idéntica palabra por palabra en `v3` y `v4` y C40 ya había medido ahí 3 de 90 — el arreglo del prompt es real y **su urgencia era pequeña**, tal como el propio ticket anticipaba. **Las piezas por respuesta siguen saturando en `MAX_AGENT_PIECES`**, así que el tope sigue mordiendo. **La tabla de herramientas del informe de exploración mezcla los dos arms**: 115 de las 125 invocaciones de `buscar_sustitutos` pertenecen al arm descartado, así que la cifra que justificaba rotular la procedencia era correcta en la conclusión y no en la magnitud. Y **nada ejercitaba la ruta del agente sobre HTTP**: el contenedor servía código anterior al change, lo que sólo apareció al montar la comprobación manual. El contrato congelado se movió **por adición pura** (`origin` en subclase, sin ensanchar `AssistGroup`) y el fixture pasó a `openapi-c42-baseline.json`; `SearchOrigin` gana un quinto valor **sin migración**; la entrada de C32b en `DEFERRED_TASKS.md` se cierra **por refutación y no por ejecución**, con la aritmética escrita —~13.000 tokens contra 25.000 TPM es una petición por minuto, así que 204 peticiones cuestan 2 h 44 min—. **La comprobación manual encontró dos cosas que ningún test vio**: la tira de estado afirmaba un motivo de parada cuando la pasarela no había contestado, ya corregido; y **el pivote es inalcanzable si el operario nombra la pieza por su nombre**, porque `buscar_catalogo` no devuelve el nombre del producto — establecido con un experimento HTTP (por SKU pivota, por nombre no), **fuera del alcance de C42** y abierto en `DEFERRED_TASKS.md`. Informe [`c42-implementation-measurements.md`](informes/c42-implementation-measurements.md) y guion de comprobación manual [`c42-manual-check-runbook.md`](informes/c42-manual-check-runbook.md) |
 
 **Origen** indica de dónde sale el change: en **negrita**, los que existen por la revisión del compañero.
 
@@ -910,7 +974,7 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 
 **⛔ Cortado el 2026-09-12 (1):** **C27**, complementarios — el corte nº 1 del §6, disparado **con medición y no por juicio de plazo**. Sus dos señales están vacías (co-ocurrencia: 98,6 % de los pares vistos **una sola vez** y ninguno tres veces, sobre un generador que **diversifica las cestas a propósito**; etiquetas de color/estilo: **1 de 404** productos reales con estilo) y el proyecto nunca le reservó categoría en el golden set. Ficha conservada con el sello y la condición de reactivación; detalle en el §0 y en [`c27-cut-measurements.md`](informes/c27-cut-measurements.md).
 
-**Vivos: 41** (39 numerados más `FIX1` y `C25bis`) *(C32 partido en **C32a** y **C32b** el 2026-09-20, §0; **C40 añadido el 2026-09-24**, nacido durante la comprobación en demo de C36; **C41 añadido el 2026-09-25**, nacido durante las pruebas manuales posteriores al cierre de C40 — ninguno de los dos previsto en ninguna ola)*. Archivados **39** (C01–C18b, C20, C21, C22, C23, C24, C25, `FIX1`, `C25bis`, **C26**, **C28**, **C30a**, **C30b**, **C31**, **C32a**, **C32b**, **C34**, **C36**, **C40** y **C40_FIX**). Pendientes **3**: C38, C39 y **C41**. *(Recuento puesto al día el 2026-09-26, al archivar C40_FIX: entra en las archivadas y **no** en las fichas numeradas, igual que `FIX1` y `C25bis`, porque corrige a C40 en vez de salir de la descomposición original.)* *(Recuento puesto al día el 2026-09-25, al archivar C40: la frase anterior arrastraba «37 · 3 con C40 pendiente» y era de antes de su archivo.)* El orden que ataba C40 antes de C38 **ya está cumplido**: C40 subió el prompt a `assist/v5` y movió la fase de la abstención, así que las cifras de C38 se tomarán sobre el prompt vigente. **C41 no compite con ninguno de los dos**: no toca prompt, ni fase, ni contrato congelado. *(Recuento puesto al día el 2026-09-24, al archivar C36: arrastraba el 35 · 4 desde el archivo de C32b, porque ni C34 ni C36 lo movieron en su momento. Contado contra `openspec/changes/archive/`, que es la única base fiable.)* **C23 se archivó el 2026-09-06** y su corte pre-autorizado —bajar a 15 documentos— se refutó por su propia unidad de medida: el diseño fija el tamaño en fragmentos y quince documentos dan la mitad del mínimo, con lo que la abstención dejaba de poder demostrarse. **C21 se archivó el 2026-09-02**, y con él caen los prerrequisitos de C24 y C30, o sea las dos mitades del proyecto que estaban esperando a la fusión. **C22 y `FIX1` se archivaron el 2026-09-05**, con lo que la ventana que `FIX1` tenía que respetar —entrar antes de que C24 etiquete su línea base— queda cumplida. **C24 se archivó el 2026-09-11 y C25 el 2026-09-12**, con lo que la cadena crítica `C21 → C24 → C25 → C26 → C34 → C36` arranca ahora en **C26**. C25 se archiva habiendo **refutado tres puntos de su propia ficha con mediciones** — la penalización de variante ambigua, la calibración de `1-2` frente a `3+` y la rotación como criterio de orden — y habiendo corregido un defecto que no estaba en su alcance: la fusión de C21 **concatenaba en vez de fusionar**. Deja **tres brechas declaradas y no cerradas** (`Recall@5` 0,758 contra 0,85, abstención 0,150 contra 0,80, y `v3` sin batir a `v2b` por el margen) y **desbloquea C25bis** (`clean-plain-fusion`), que retira el andamio de la fusión plana. **`C25bis` y C26 se archivaron el 2026-09-12**, y con ellos la cadena crítica deja de arrancar en C26 y pasa a arrancar en ~~**C34**~~ → **C30a** *(corregido el 13 sep: C34 lleva C30 de prerrequisito, así que nunca pudo ser el eslabón de arranque; era un error de la frase y no un cambio de plan)*. C26 se archiva habiendo cerrado el **último 501 cerrable** del contrato congelado —`/v1/inventory/propose` sigue en 501, pero por una rama anulada y ya declarada como limitación— y habiendo **refutado tres puntos de su propia ficha con mediciones**: «misma familia primero» estaba invertida, la exclusión por stock no le correspondía y `style_similarity` no tiene dato sobre catálogo real. Deja **dos limitaciones medidas y declaradas**, y anotada en la ficha de C34 la exclusión por stock que sí es suya. **C28 se archivó el 2026-09-13**, entregando las dos cifras del §16 que no existían —**20,9 % ponderado** y **32,1 s de media** sobre 204 perfiles, **204 cronometrados**— y publicándolas partidas, porque los **10,4 %** de los campos sensibles y los **42,3 %** de las etiquetas comerciales no miden lo mismo: aquéllas llegaban vacías y el revisor las rellenó con su criterio. Es el **noveno change consecutivo cuya exploración refuta lo escrito antes**, y el primero que además se refuta a sí mismo **durante la revisión**: la marca «pendiente de revisión» por campo resultó constante en seis de los siete campos y se retiró enmendando la spec. Confirma media predicción —las retiradas se concentran en el estrato B, 8 de 9— y refuta la otra mitad. **Deja tres cosas declaradas sin medir** (el A/B de teclado, la tesis de ceguera del span y la comparación de versiones de prompt) y **un hallazgo que ninguna consulta podía encontrar**: `vidrio` falta en el vocabulario de `materials` y alcanza 67 productos, el 5,6 % del catálogo.
+**Vivos: 42** (40 numerados más `FIX1` y `C25bis`) *(C32 partido en **C32a** y **C32b** el 2026-09-20, §0; **C40 añadido el 2026-09-24**, nacido durante la comprobación en demo de C36; **C41 añadido el 2026-09-25**, nacido durante las pruebas manuales posteriores al cierre de C40 — **C42 añadido el 2026-09-26**, nacido al valorar la cola pendiente del PF — ninguno de los tres previsto en ninguna ola)*. Archivados **40** (C01–C18b, C20, C21, C22, C23, C24, C25, `FIX1`, `C25bis`, **C26**, **C28**, **C30a**, **C30b**, **C31**, **C32a**, **C32b**, **C34**, **C36**, **C40**, **C40_FIX** y **C41**). Pendientes **3**: **C42**, C38 y C39 — **en ese orden**, y la cadena de prompts es la que lo fija: C40 subió a `assist/v5` y movió la fase de la abstención, **C42 sube la tarea del agente a esa misma versión**, y sólo entonces las cifras de generación de C38 describen el prompt que se sirve. *(Recuento puesto al día el 2026-09-26, al rebasar C42 sobre `ai-eng` tras archivar C41: la frase anterior arrastraba «Pendientes 3: C38, C39 y C41» y era de antes de su archivo — el commit que lo archivó sincronizó las specs y no tocó este recuento, exactamente el mismo desfase que ya se corrigió al archivar C40. Contado contra `openspec/changes/archive/`, que es la única base fiable: **40 fichas del Proyecto Final archivadas** —las 41 posteriores al 2026-08-03 menos `barcode-qr-scanning`, que es del MVP—, más las 3 pendientes, dan las 42 vivas más `C40_FIX`, que está archivado y fuera de la numeración.)* *(Recuento puesto al día el 2026-09-26, al archivar C40_FIX: entra en las archivadas y **no** en las fichas numeradas, igual que `FIX1` y `C25bis`, porque corrige a C40 en vez de salir de la descomposición original.)* *(Recuento puesto al día el 2026-09-25, al archivar C40: la frase anterior arrastraba «37 · 3 con C40 pendiente» y era de antes de su archivo.)* El orden que ataba C40 antes de C38 **ya está cumplido**: C40 subió el prompt a `assist/v5` y movió la fase de la abstención, así que las cifras de C38 se tomarán sobre el prompt vigente. **C41 no compitió con ninguno de los dos** —no tocaba prompt, ni fase, ni contrato congelado— y se archivó el 2026-09-26. *(Recuento puesto al día el 2026-09-24, al archivar C36: arrastraba el 35 · 4 desde el archivo de C32b, porque ni C34 ni C36 lo movieron en su momento. Contado contra `openspec/changes/archive/`, que es la única base fiable.)* **C23 se archivó el 2026-09-06** y su corte pre-autorizado —bajar a 15 documentos— se refutó por su propia unidad de medida: el diseño fija el tamaño en fragmentos y quince documentos dan la mitad del mínimo, con lo que la abstención dejaba de poder demostrarse. **C21 se archivó el 2026-09-02**, y con él caen los prerrequisitos de C24 y C30, o sea las dos mitades del proyecto que estaban esperando a la fusión. **C22 y `FIX1` se archivaron el 2026-09-05**, con lo que la ventana que `FIX1` tenía que respetar —entrar antes de que C24 etiquete su línea base— queda cumplida. **C24 se archivó el 2026-09-11 y C25 el 2026-09-12**, con lo que la cadena crítica `C21 → C24 → C25 → C26 → C34 → C36` arranca ahora en **C26**. C25 se archiva habiendo **refutado tres puntos de su propia ficha con mediciones** — la penalización de variante ambigua, la calibración de `1-2` frente a `3+` y la rotación como criterio de orden — y habiendo corregido un defecto que no estaba en su alcance: la fusión de C21 **concatenaba en vez de fusionar**. Deja **tres brechas declaradas y no cerradas** (`Recall@5` 0,758 contra 0,85, abstención 0,150 contra 0,80, y `v3` sin batir a `v2b` por el margen) y **desbloquea C25bis** (`clean-plain-fusion`), que retira el andamio de la fusión plana. **`C25bis` y C26 se archivaron el 2026-09-12**, y con ellos la cadena crítica deja de arrancar en C26 y pasa a arrancar en ~~**C34**~~ → **C30a** *(corregido el 13 sep: C34 lleva C30 de prerrequisito, así que nunca pudo ser el eslabón de arranque; era un error de la frase y no un cambio de plan)*. C26 se archiva habiendo cerrado el **último 501 cerrable** del contrato congelado —`/v1/inventory/propose` sigue en 501, pero por una rama anulada y ya declarada como limitación— y habiendo **refutado tres puntos de su propia ficha con mediciones**: «misma familia primero» estaba invertida, la exclusión por stock no le correspondía y `style_similarity` no tiene dato sobre catálogo real. Deja **dos limitaciones medidas y declaradas**, y anotada en la ficha de C34 la exclusión por stock que sí es suya. **C28 se archivó el 2026-09-13**, entregando las dos cifras del §16 que no existían —**20,9 % ponderado** y **32,1 s de media** sobre 204 perfiles, **204 cronometrados**— y publicándolas partidas, porque los **10,4 %** de los campos sensibles y los **42,3 %** de las etiquetas comerciales no miden lo mismo: aquéllas llegaban vacías y el revisor las rellenó con su criterio. Es el **noveno change consecutivo cuya exploración refuta lo escrito antes**, y el primero que además se refuta a sí mismo **durante la revisión**: la marca «pendiente de revisión» por campo resultó constante en seis de los siete campos y se retiró enmendando la spec. Confirma media predicción —las retiradas se concentran en el estrato B, 8 de 9— y refuta la otra mitad. **Deja tres cosas declaradas sin medir** (el A/B de teclado, la tesis de ceguera del span y la comparación de versiones de prompt) y **un hallazgo que ninguna consulta podía encontrar**: `vidrio` falta en el vocabulario de `materials` y alcanza 67 productos, el 5,6 % del catálogo.
 
 ---
 
@@ -1879,11 +1943,32 @@ El envío de `ProductSearchEvent` **ya no consiste en construir el evento**: el 
 
 #### C38 · `add-generation-and-agent-evals` 🔴
 
-**Objetivo.** Cerrar la evaluación: validador anti-alucinación, RAGAS, escenarios del agente de venta y casos adversarios.
-**Prereq.** C24, **C30b**, **C32b**, C34 *(afinado el 13 sep; ~~C35~~, anulado · sufijo puesto el 20 sep al partir C32)* · **Zona.** `ai-service/src/jbg_ai/evals/` + `Application/`
-**Alcance.** (1) **Validador determinista** que extrae toda cifra de precio/stock de la respuesta final y la contrasta con el hidratador, umbral **cero fallos**, más su equivalente en .NET antes de responder; (2) **RAGAS** sobre el subconjunto con citas; (3) **20-25 escenarios de agente de venta**; (4) **20-25 casos adversarios**. Todo integrado en el runner e informe de C24.
-**Recortado el 31 ago** con la rama de C19 (§0): salen los **8-10 escenarios de agente de inventario** —no hay segundo agente— y el **test de fidelidad del perfil por POS**, que evaluaba C33. Sobrevive lo que el PF puntúa: validador, escenarios de venta, adversarios y RAGAS.
-**Tests.** `test_detects_injected_fake_price_in_response`; `test_ignores_numbers_that_are_sizes_or_skus`; `test_scenario_runner_replays_multi_turn_conversation`; `test_injection_cases_all_blocked`; .NET: `Response_WithUnverifiedNumber_IsRejected`.
+> **Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero.** Se dispara el corte que
+> esta misma ficha llevaba **pre-escrito desde el principio** —véase *Orden obligatorio* al final—,
+> y se dispara **por valor marginal, no por plazo**: lo que el §5 de la convocatoria premia es
+> *«evals reales, no sólo pruebas manuales»*, y eso ya lo sostienen el golden set de 72 consultas en
+> dos lecturas con *pooling* (C24), la recalibración de C25, las métricas de revisión humana sobre
+> 204 perfiles (C28), el barrido de generación con 0 violaciones en 120 (C30b), la matriz de
+> confusión de 119 casos (C31), el barrido del agente con p50/p95 y coste por brazo (C32b) y las
+> cinco cifras de C40. **RAGAS añadiría una fila más a un informe ya denso** a cambio de una
+> dependencia pesada, un juez LLM, cuota de proveedor y el MITM de Norton de la máquina de
+> desarrollo. Se retira, y la *alucinación con coartada* **pasa a limitación declarada con su vía de
+> cierre escrita**, que es exactamente lo que el §5 premia en el otro epígrafe —*«se identifican
+> limitaciones actuales y se propone cómo resolverlas»*— y lo que el §11.3 ya venía argumentando al
+> decidir *«sin LLM juez»* para el camino de servicio.
+>
+> **Coste de la retirada, medido y pequeño:** **cero** referencias a C38 en specs vivas, y sólo
+> cuatro comentarios de código (`assist/pitch.py`, `assist/schema.py`, `assist/verification.py`,
+> `evals/assist_sweep.py`) más una línea del README de `ai-service` dicen «se mide con RAGAS en
+> C38». Se reescriben aquí.
+
+**Objetivo.** Cerrar la evaluación con lo que el PF puntúa: validador anti-alucinación, escenarios del agente de venta y casos adversarios.
+**Prereq.** C24, **C30b**, **C32b**, C34, **C42** *(afinado el 13 sep; ~~C35~~, anulado · sufijo puesto el 20 sep al partir C32 · **C42 añadido el 26 sep**)* · **Zona.** `ai-service/src/jbg_ai/evals/` + `Application/`
+**Alcance, reducido** *(26 sep)*. (1) **Validador determinista** que extrae toda cifra de precio/stock de la respuesta final y la contrasta con el hidratador, umbral **cero fallos**, más su equivalente en .NET antes de responder — es la pieza con mejor retorno y **no arranca en cero**, porque C30b ya corre la puerta por lista blanca en ejecución y `evals/free_query_gate.py` ya mide el modo libre; (2) **escenarios de agente de venta puntuados**, con éxito definido, tools invocadas contra esperadas, pasos, coste medio y tasa de escalado — **una decena larga basta para publicar la tabla**, y la muestra sale de `evals/assist/sweep-sample.yaml`, no del golden set, que no ancla ninguna pieza; (3) **casos adversarios** con criterio de bloqueo por categoría, incluido el que C30b nombró: *preguntar por un material describiéndolo sin nombrarlo*. Todo integrado en el runner e informe de C24.
+**~~(4) RAGAS~~** — **retirado el 2026-09-26.** Pasa a limitación declarada del §15 con su vía de cierre: *faithfulness* sobre el subconjunto con citas, que el arnés ya persiste **alineado por afirmación** gracias a los tramos de apoyo que C30b guarda.
+**Por qué gana C42 de prerrequisito** *(26 sep)*. C42 sube la tarea del agente de `assist/v4` a `assist/v5` para que deje de escribir `{{price}}` y `{{stock}}` sobre un payload sin ancla. Unas cifras de generación del agente tomadas antes de ese cambio **describirían un prompt sustituido**, que es la misma razón por la que C40 tuvo que ir antes que este change.
+**Recortado el 31 ago** con la rama de C19 (§0): salen los **8-10 escenarios de agente de inventario** —no hay segundo agente— y el **test de fidelidad del perfil por POS**, que evaluaba C33. Sobrevive lo que el PF puntúa: validador, escenarios de venta, adversarios y ~~RAGAS~~ *(retirado el 26 sep, arriba)*.
+**Tests.** `test_detects_injected_fake_price_in_response`; `test_ignores_numbers_that_are_sizes_or_skus`; `test_scenario_runner_replays_multi_turn_conversation`; `test_injection_cases_all_blocked`; .NET: `Response_WithUnverifiedNumber_IsRejected`. **Los cinco siguen en pie tras la reducción**: ninguno era de RAGAS, que es otra señal de dónde estaba el valor.
 **Tres cosas que C30b le deja resueltas de antemano** *(13 sep)*. **(1) El validador ya no arranca en cero**: la puerta numérica por lista blanca corre **en ejecución** dentro de C30b, así que aquí se evalúa un invariante que el sistema ya sostiene en vez de descubrirlo. **(2) La excepción de persistencia está declarada**: el pitch no se persiste ni se loguea en el camino de servicio, pero **el arnés sí guarda el texto generado** —en `evals/results/` y en `ai.eval_*`, atado a `run_id`, `git_sha` y `prompt_version`—, y eso viene escrito en la spec de C30b. Sin esa cláusula, la primera sesión de aquí rompe el invariante sin darse cuenta o se queda bloqueada por él. **(3) Un caso adversario nuevo, nombrado**: *preguntar por un material describiéndolo sin nombrarlo*. Es el hueco de **M1**, el único modo donde no hay pieza y por tanto no se puede aplicar el filtro de slug de C30a, sobre nueve fichas que C23 describe como *«structurally identical»*.
 
 > **Lo que C30b le deja hecho y lo que le deja pendiente, al implementarse** *(14 sep)*. **(1) La
@@ -1902,11 +1987,11 @@ El envío de `ProductSearchEvent` **ya no consiste en construir el evento**: el 
 > publica **tasa de rechazo clasificada por causa** y coste, y **no** publica *faithfulness* — la
 > alucinación con coartada sobrevive a las tres comprobaciones deterministas y está **declarada como
 > limitación en la capability**, con estas palabras, para que se mida aquí y no se dé por cerrada.
-**Orden obligatorio si hay que partirlo:** validador → escenarios de venta → adversarios → RAGAS. **RAGAS es lo primero que se cae.**
+**Orden obligatorio si hay que partirlo:** validador → escenarios de venta → adversarios → ~~RAGAS~~. **RAGAS es lo primero que se cae** — *y se cayó, el 2026-09-26. El orden sigue vigente para los tres que quedan.*
 
 ---
 
-#### C40 · `add-frontend-free-query-panel` 🔴
+#### C40 · `add-frontend-free-query-panel` ✅
 
 > **Nace el 2026-09-24**, durante la comprobación en demo de C36 (tarea 8.5). No estaba en el plan:
 > la sesión iba a verificar la ficha de venta y destapó que **el panel de búsqueda asistida llevaba
@@ -2058,6 +2143,82 @@ que leerlo de las filas *«reportaría meses de rancidez sobre una proyección s
 segundos»*. La sesión que abrió esta ficha cometió ese error y acertó **por casualidad**, porque el
 checkpoint venía del mismo drenaje. **Cualquier verificación de este change lee el checkpoint.**
 
+#### C42 · `add-frontend-agent-panel` 🔴
+
+> **Nace el 2026-09-26**, al valorar la cola pendiente del Proyecto Final. **No estaba en el plan.**
+> La sesión se abrió para decidir entre implementar C38 completo o dar superficie al agente, y la
+> comparación de valor contra esfuerzo salió a favor del segundo por un motivo que el §5 de la
+> convocatoria escribe: *«el sistema debe poder probarse»*. Explorado **contra el código y no contra
+> el servicio** en [c42-exploration-decisions.md](informes/c42-exploration-decisions.md): **ocho
+> hallazgos, doce decisiones** y **tres cosas que hay que medir o comprobar antes de escribir la
+> primera tarea**, nombradas en su §11.
+
+**Objetivo.** Que el **agente de venta llegue al operario**. `POST /v1/assist/agent` está entregado, probado y medido con proveedor real desde C32b, y **no lo llama nadie**: `IAiGatewayClient` tiene siete métodos y ninguno es el suyo. De los cinco pilares que el PF nombra —CAG, RAG, **agentes**, evaluación y despliegue— es **el único sin superficie**, y por tanto el único que no puede aparecer ni en la URL pública ni en el vídeo de 2-3 minutos.
+**Prereq.** C32b, C34, C36, **C40** · **Zona.** `ai-service/src/jbg_ai/`, `backend/src/`, `frontend/src/` — **tres capas, y el contrato se mueve**, igual que C40.
+**Va antes de C38**, por la misma cadena de prompts que puso a C40 antes que a C38: aquí la tarea del agente sube a `assist/v5`, así que unas cifras de generación del agente tomadas antes describirían un prompt sustituido.
+
+**El agente no tiene M1, M2 ni M3, y conviene decirlo porque no es lo que se espera.** `AgentAssistRequest` **no lleva `product_id`, ni `query`, ni `filters`**: lleva `turns`. Los tres modos son una propiedad de `/v1/assist/sale`, leída estructuralmente de qué anclas trae la petición. El agente **no los necesita porque los descubre**: recibe una conversación de hasta 12 turnos y decide él, vuelta a vuelta, cuál de las seis tools congeladas usa. Lo que **no** cambia es que el bucle **no escribe la respuesta** —sólo reúne evidencia—, y por eso `AgentAssistResponse` es subclase de `AssistResponse`: los mismos campos con el mismo significado, más `partial`, `stop_reason`, `iterations`, `tool_calls_used` y `trace`.
+
+**Alcance, en cuatro tramos con línea de corte fijada de antemano.** El criterio es el de C40: **primero lo que impide que la pantalla diga la verdad**.
+
+1. **`ai-service`, y sin esto no hay pantalla que valga** — la tarea del agente **sube a `assist/v5`** con la prohibición de marcadores (D2); **`AgentAssistGroup(AssistGroup)` gana `origin`** (D3, subclase por el precedente de `AgentUsage`, adición pura); y la ruta **acepta token con y sin punto de venta** (D4).
+2. **`backend`, el consumidor que no existe** — método en `IAiGatewayClient`; **cliente con nombre propio** de 15 s más margen, sin reintento; **circuito que cuenta `stop_reason=fallo_proveedor` y no cuenta `partial`**, porque esta ruta no devuelve 5xx cuando el proveedor cae; DTO = el `FreeQuerySearchResponse` de C40 más los cinco campos del agente; **`agentAvailable` en la sonda** (D8); y **quinto `SearchOrigin`** (D12).
+3. **`frontend`, la pantalla** — ruta `/sales/new/agent` y **cuarta tarjeta** en el hub (D1), con la **puerta cerrada antes de entrar** y sus tres estados (D7); el hilo como eje, **un bloque de respuesta por turno** (D9); la **traza** (D10); y el castellano de los **diez** `stop_reason` (D11). Las filas son `assisted-search-result-row` **sin tocar**; la prosa y las citas, `pitch-block` de C36.
+4. **El contador de coste acumulado** en la barra fija. **Va el último porque es el único que no arregla nada que hoy engañe.**
+
+> **El hallazgo que gobierna la línea de corte, y no es una carencia sino una regresión latente que
+> C40 introdujo sin tocar el agente.** Tres eslabones, cada uno correcto por separado: la tarea del
+> agente vive en **`assist/v4`**, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}`
+> **siempre**; su payload es un `FreeQueryPayload` con **`is_anchored = False`**, que es correcto
+> porque el argumentario habla de varias piezas; y C40 metió **`placeholder_in_free_query` en
+> `HARD_VIOLATION_CAUSES`**, disparando exactamente cuando el payload no está anclado. Juntos:
+> **un argumentario del agente que obedezca a su propio prompt se retira por construcción.** C40
+> arregló las tareas de consulta libre en `v5` y no tocó ésta, porque el agente no tenía consumidor.
+> **La tasa real no está medida y es la primera cifra que C42 debe publicar**; la referencia
+> comparable es la de C30b sobre modos anclados con `v3`: `{{price}}` en 147 de 213 y `{{stock}}` en
+> 188 de 213.
+>
+> ### ⚠ Corregido por la segunda pasada de exploración de C42 · 2026-09-26 · **las dos frases de arriba son falsas**
+>
+> **Uno: este hallazgo NO gobierna la línea de corte.** La frase que ordena escribir marcadores es
+> **idéntica palabra por palabra** en `assist/v3.md:47` y en `assist/v4.md:59`, y la tarea del agente
+> (`v4.md:132-166`) **no menciona precio ni existencias**: hereda esa regla y nada más. Así que C40 ya
+> midió este caso exacto —misma frase, payload sin anclar— sobre 90 consultas libres contra el
+> proveedor real: **3 de 90 generaciones con marcador y 0 retiradas tras la reparación**. El defecto es
+> real y **su urgencia es pequeña**. Lo que de verdad retira el argumentario del agente es
+> `dangling_citation`: **85 incidencias y 72 supervivientes** en la pasada de C32b, con el 92,2 % de
+> las respuestas trayendo cero citas. Y «consume la reparación única» tampoco es lo que hace el
+> código: `assist/pitch.py:24` escribe *«One repair, not one per check»* y `repair_message` recibe la
+> lista entera, así que un marcador **se suma a la lista** y no gasta un turno que otra causa fuera a
+> usar. **Lo que gobierna la línea de corte es el consumidor .NET**: `IAiGatewayClient` tiene siete
+> métodos y ninguno es el del agente, que no es una degradación del 3 % sino el **100 %** del camino.
+>
+> **Dos: la referencia comparable no es la de C30b.** Los 147 de 213 y 188 de 213 son de los **modos
+> anclados**, donde hay UNA pieza y nombrar su precio es natural; en libre hay hasta quince agrupadas
+> y lo que se pide es comparar. La cabecera de `assist/v5.md` **ya había escrito que la proporción no
+> se traslada**, y la medición de C40 lo confirma: `v3` sobre 90 consultas libres escribió `{{price}}`
+> **2 veces** y `{{stock}}` **1**, en 2 de 90 generaciones. La referencia comparable es **ésa**, la del
+> análogo estructural de C40, y así se declara al publicar la cifra: **línea base prestada**.
+
+> **El agente no se sirve por defecto, y eso es criterio y no cautela.** Su única cifra comparativa
+> hoy dice **×3,0 de coste** y **13,1 % de retirada del argumentario** contra el 2,2 % de la ruta
+> determinista. Servir eso por defecto a un joyero sería mala ingeniería; como **ruta propia y
+> demostración de ablación** —la misma pregunta en los dos paneles, legible en diez segundos de
+> vídeo— la misma cifra pasa de penalización a decisión justificada. El ámbito por defecto es **la
+> tienda del operario y no «todas»**, porque sin `pos_id` la etiqueta de disponibilidad es siempre
+> «no consta» y **el pivote a sustitutos no se dispara nunca** — que es el comportamiento que el
+> agente existe para demostrar, medido 3 de 3 en `sin_existencias` con `gpt-4o`.
+
+**Ejecuta un diseño ya escrito, no lo reabre.** La política de *timeout* y de circuito de esta ruta está **identificada, acotada y no hecha** en `openspec/DEFERRED_TASKS.md` desde C32b, con la tabla que explica por qué no puede ser la de `/v1/assist/sale`: p50 **5,3 s**, p95 **9,0 s**, máximo **11,9 s** sobre 102 peticiones, contra los 5 s que el §6.4 declara para la determinista.
+
+**Fuera de alcance, declarado:** el ***streaming*/SSE** del argumentario; **preguntar por el stock de una tienda concreta o de varias** —ninguna tool acepta punto de venta, y habilitarlo exige un modelo de autorización que hoy no existe, no una tool más—; el **desglose de `usage` por etapa**; la **telemetría de la ficha** y el registro de la consulta de ámbito global, que arrastran migración de EF Core; y los **escenarios puntuados del agente**, que son de C38.
+
+**Hereda el fix de C40.** El ámbito «todos los puntos de venta» resultó **inalcanzable desde el frontal para todos los roles**, y su arreglo —la opción en el selector y que la sonda acepte la ausencia de tienda— vive en `c40-fix-all-shops-scope-unreachable`. C42 lo da por hecho; si no hubiera entrado, entra aquí y se declara.
+
+**Cinco cifras que la implementación tiene que publicar:** marcadores en el argumentario del agente antes y después de `v5` —la que decide si el agente tiene prosa—; tasa de retirada por causa, partida entre `dangling_citation` y `placeholder_in_free_query`; reparto de los `stop_reason`; latencia p50/p95 por .NET; y piezas por respuesta con su reparto catálogo/sustitutos contra el tope de 8. **Y el artefacto se persiste** con `run_id`, `git_sha` y `prompt_version`.
+
+**Tests.** `test_agent_pitch_carries_no_placeholder`; `test_agent_route_accepts_a_token_without_pos_claim`; `test_agent_group_declares_its_origin`; .NET: `AgentAssist_WhenProviderFails_DoesNotOpenTheCircuitOnPartial`, `AgentAssist_UsesItsOwnTimeoutAndNotTheAssistOne`; frontend: `should close the agent card when the probe says the agent is off`, `should open the agent card when the probe cannot answer`, `should keep each turn's answer anchored to its own turn`, `should tell a budget-cut answer from a complete one`, `should label a substitutes group as alternatives`, `should render an answer with prose and no pieces`, `should show the transcript caps before the request is refused`.
+
 ---
 
 ### Ola 5 — Entrega
@@ -2109,19 +2270,20 @@ flowchart LR
     C30b --> C31 & C38
     C31 --> C32a
     C32a --> C32b
-    C32b --> C38
-    C34 --> C36 & C38
-    C36 --> C40
+    C32b --> C38 & C42
+    C34 --> C36 & C38 & C42
+    C36 --> C40 & C42
     C31 --> C40
-    C40 --> C38
+    C40 --> C42
+    C42 --> C38
 
     C27["C27 · complementarios<br/>CORTADO 12 sep"]
 
     classDef hecho fill:#d9ead3,stroke:#38761d,color:#274e13
     classDef ahora fill:#fce5cd,stroke:#b45f06,color:#7f3f00,stroke-width:3px
     classDef corte fill:#f4cccc,stroke:#a61c00,color:#660000,stroke-dasharray:4 3
-    class C01,C02,C03,C05,C06a,C06b,C07,C08,C09,C10,C11,C12,C13,C14,C15,C16,C17,C18a,C18b,C20,C21,FIX1,C22,C23,C24,C25,C26,C28,C30a,C30b,C31,C32a,C32b,C34,C36 hecho
-    class C40 ahora
+    class C01,C02,C03,C05,C06a,C06b,C07,C08,C09,C10,C11,C12,C13,C14,C15,C16,C17,C18a,C18b,C20,C21,FIX1,C22,C23,C24,C25,C26,C28,C30a,C30b,C31,C32a,C32b,C34,C36,C40 hecho
+    class C42 ahora
     class C27 corte
 ```
 

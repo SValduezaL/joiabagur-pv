@@ -1017,9 +1017,55 @@ When implementing deferred tasks:
 
 ## C32b · La política de *timeout* y de circuito de `POST /v1/assist/agent` en la capa .NET
 
-**Estado:** identificada, acotada y **no hecha**. Aplazada **con motivo**: hoy la ruta no tiene
-ningún consumidor. *(Sigue abierta tras C34, que dejó fuera la ruta del agente por decisión cerrada
-—sus marcadores hablan de varias piezas—.)*
+**Estado: CERRADA POR C42 el 2026-09-26 — el *timeout* hecho, el circuito CERRADO POR REFUTACIÓN.**
+La mitad del *timeout* se cumple como pedía; la del circuito **no se ejecuta, porque medir la ruta
+demostró que lo que esta entrada pide no es alcanzable**. El motivo, entero, abajo.
+
+> ### Lo que C42 hace, y lo que refuta *(2026-09-26)*
+>
+> **El *timeout* propio por ruta: hecho.** `AiGatewayOptions.AgentTimeoutMs = 18_000` sobre el cliente
+> con nombre `ai-agent`, con `HttpClient.Timeout` infinito y el presupuesto en el *pipeline*, suelo de
+> **15 s validado al arranque** —el `AGENT_DEADLINE_SECONDS` del servicio— y sin reintento en *timeout*
+> ni en 5xx. Deliberadamente **no ajustado al máximo observado** de 11.917 ms: apretarlo corta una
+> petición que Python **ya pagó entera**.
+>
+> **El circuito que cuenta `stop_reason=fallo_proveedor`: NO SE HACE, y es una refutación y no una
+> omisión.** Esta entrada pedía contarlo; el *pipeline* de la ruta hermana ya declaraba lo contrario
+> —*«a 200 the service degraded internally … is not a failure: Python degraded, and the breaker
+> protects from Python not answering»*—, y los dos documentos se contradecían. La contradicción se
+> resuelve del lado de `ai-assist`, por **tres** razones y no por una:
+>
+> 1. **Lo que un cortafuegos protege es que el servicio no conteste.** Estas respuestas son
+>    contestaciones. Uno que las contara se abriría sobre una ruta que **funciona como está diseñada**,
+>    y la consecuencia sería peor que el problema: negaría el servicio a un mostrador cuyo proveedor
+>    ya volvió.
+> 2. **La aritmética lo hace inalcanzable.** Con ~13.000 tokens por petición contra un techo de 25.000
+>    TPM —la misma cifra que esta entrada ya publicaba como restricción operativa— el sistema admite
+>    **una petición por minuto**. El cortafuegos de este proyecto abre por **proporción de fallos sobre
+>    un mínimo de muestras en una ventana**: con `BreakerSamplingDurationSeconds` en decenas de
+>    segundos y `MinimumThroughput` en unidades, **la ventana expira antes de acumular la primera
+>    muestra**. Un circuito que no puede abrirse no es una protección, es código que nadie ejecuta.
+> 3. **Y hay un obstáculo mecánico encima.** El predicado del cortafuegos recibe un
+>    `Outcome<HttpResponseMessage>` y **no ve el cuerpo**. Leerlo exigiría bufferizar la respuesta,
+>    parsear el JSON dos veces y acoplar el transporte al vocabulario cerrado del contrato. Un circuito
+>    de dominio en el servicio de aplicación sería correcto en capas y choca con el punto 2 igual.
+>
+> **Qué se hace en su lugar, porque la señal no se pierde.** La degradación se instrumenta: un
+> `LogWarning` con plantilla `ai_gateway_agent_degraded` que nombra el motivo de parada, la latencia,
+> las vueltas y las llamadas, emitido para `fallo_proveedor` y para `sin_cliente`. Así su tasa queda
+> observable sin que el circuito actúe sobre ella —que era el único coste real de la decisión—. Y
+> **quien avisa a la pantalla es la sonda**, `GET /api/ai/search/availability`, que gana
+> `agentAvailable` como valor propio: no gasta cupo, no llama al proveedor y se lee antes de entrar.
+>
+> **La tercera viñeta de *Qué hace falta*, la de `partial: true`, también está hecha**: el bloque de
+> respuesta lo dice sin alarma y nombrando el presupuesto agotado, y va el último porque sirve al
+> **2,0 %** de las peticiones del brazo servido.
+>
+> **Y la restricción operativa se hereda tal cual.** Una petición por minuto basta para un mostrador y
+> un evaluador, y **no** para dos mostradores simultáneos. Por eso el agente lleva su propia política
+> de cupo —`AiAgentAssist:RateLimitPermitLimit`, cuatro por minuto— en vez de compartir la de la
+> consulta libre: un puñado de conversaciones agotaría lo que la ruta barata necesita. Dimensionar la
+> cuota sigue siendo parte de poner esto en producción.
 
 > **Lo que C34 cambia en esta entrada** *(2026-09-21)*. La ruta determinista ya no declara 5 s: C34
 > registró el cliente `ai-assist` para `/v1/assist/sale` con **10 s y un suelo de 8 s validado al
@@ -1075,6 +1121,70 @@ Dimensionar la cuota es parte de poner esta ruta en producción, no un detalle d
 > menos la reserva del argumentario y la vuelta en curso se corta; el límite es **15 s más, como
 > mucho, las herramientas de esa vuelta**, que no se cancelan a medias. Es el número que un
 > *timeout* .NET debe cubrir, con su margen de red.
+
+---
+
+## C42 · El pivote a sustitutos es inalcanzable cuando el operario nombra la pieza por su NOMBRE
+
+**Estado: medido con proveedor real, acotado y fuera del alcance de C42**, que declara no tocar las
+seis herramientas ni añadir una séptima. Encontrado por la **comprobación manual** de C42 y por nada
+más — las tres suites estaban verdes.
+
+> **El pivote a sustitutos es lo que el panel del agente existe para demostrar**, y está medido **3 de
+> 3** en `sin_existencias` con `gpt-4o`. Esta entrada dice que esa medición se tomó en **una situación
+> que no existe en la pantalla**.
+
+### El experimento que lo establece
+
+Una pieza agotada de verdad —`SKU759`, *Anillo Luna Creciente S*, `qty_bucket = '0'` en
+`ai.pos_projection` para `CIU-CENTRE`, comprobado— preguntada de las dos maneras contra el proveedor
+real por HTTP:
+
+| Cómo la nombra el operario | Herramientas que el bucle eligió | ¿Pivota? |
+|---|---|---|
+| **Por su referencia**, `SKU759` | `consultar_disponibilidad` → **`buscar_sustitutos`** | ✅ **Sí.** 6 grupos, **todos `sustitutos`** |
+| **Por su nombre**, «Anillo Luna Creciente S» | `consultar_disponibilidad`❗`referencia_desconocida` → `buscar_catalogo` → `consultar_disponibilidad` | ❌ **No.** 8 grupos, todos `catalogo` |
+
+### Y el mecanismo, que es estructural y no una torpeza del modelo
+
+**`buscar_catalogo` no devuelve el nombre de la pieza.** Su observación lleva
+`posicion`, `sku`, `materiales`, `variante` y `motivos` (`assist/tools.py`, `buscar_catalogo`). De modo
+que la cadena es:
+
+1. El modelo pasa el **nombre** a `consultar_disponibilidad`, que quiere un SKU → `referencia_desconocida`.
+2. Se recupera con `buscar_catalogo`, que devuelve ocho candidatos **identificados sólo por SKU,
+   material y variante**.
+3. **No tiene con qué saber cuál de los ocho es la pieza que el cliente nombró**, así que consulta la
+   disponibilidad de otra — que sí tiene stock — y, correctamente, no pivota.
+
+**El bucle hace lo correcto en cada paso.** Lo que falta es el puente del nombre al SKU, y las seis
+herramientas no lo tienen: la búsqueda semántica devuelve **vecinos**, no la pieza exacta.
+
+**Por qué el arnés no lo vio**, que es el mismo patrón que esta implementación ya encontró dos veces
+más: `scenario_turns` resuelve el marcador `{pieza}` a un **SKU** y lo escribe en el turno, así que en
+las 204 peticiones de C32b y en las 102 de C42 **el modelo siempre recibió la referencia servida**. Un
+operario teclea un nombre.
+
+### Qué haría falta cuando se haga, y la decisión que arrastra
+
+- **Lo más estrecho: que la observación de `buscar_catalogo` lleve el nombre del producto.** Un campo,
+  en la observación que ve el modelo y no en el payload de generación.
+- **Y el argumento de C30b contra ensanchar el payload no se le aplica tal cual**, que es lo que hace
+  esta opción defendible: aquella regla es sobre **numerales** —*«every field handed over widens the
+  whitelist the numeric gate admits»*— y un nombre no lleva cifras. Pero sigue siendo **una de las seis
+  herramientas congeladas**, así que lo decide quien las posea, no un change de frontal.
+- **Alternativa sin tocar las herramientas:** que la pantalla ofrezca la referencia. El panel del
+  agente ya enseña el SKU en cada fila, así que un operario que ve la pieza en un turno anterior puede
+  nombrarla por referencia en el siguiente. **Es un paliativo y no el arreglo**, porque el caso que
+  falla es justo el primer turno, cuando el cliente nombra algo que el operario aún no tiene en
+  pantalla.
+- **Y lo que NO hay que hacer:** colapsar `referencia_desconocida` con una búsqueda por nombre dentro de
+  `consultar_disponibilidad`. Esa herramienta responde sobre **una** pieza identificada; hacerla adivinar
+  cuál convertiría una respuesta sobre existencias en una búsqueda, que es precisamente la confusión que
+  el vocabulario cerrado de causas existe para evitar.
+
+**Mientras no se haga, el pivote se demuestra nombrando la referencia**, que es realista en un
+mostrador —la pieza lleva su etiqueta delante— y es lo que el *runbook* de la comprobación manual dice.
 
 ---
 

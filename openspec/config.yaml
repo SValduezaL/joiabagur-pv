@@ -31,7 +31,14 @@ context: |
   product; an unresolved placeholder withholds the argument, never the response
   (pitchStatus has six values, substitutes an outcome of four). The gateway's generative
   client `ai-assist` has a 10 s budget, an 8 s floor validated at start-up, its own
-  circuit and no retry on timeout. Free query and agent routes have no .NET consumer.
+  circuit and no retry on timeout. Both of the other assist routes got their .NET consumer
+  later: the free query in C40 (POST /api/ai/search/assisted) and the agent in C42
+  (POST /api/ai/search/agent). The agent's gateway client is `ai-agent`, a fourth route
+  family with a circuit of its own, an 18 s budget and a 15 s floor validated at start-up
+  because 15 s is the service's own wall-clock deadline (AGENT_DEADLINE_SECONDS); AssistTimeoutMs
+  is untouched. That breaker deliberately does NOT count an in-band degradation: Polly sees a
+  transport outcome and not the body, so a 200 carrying stop_reason=fallo_proveedor or sin_cliente
+  is a success at that layer and is instrumented as a metric instead.
 
   C17 enriched GET /health without moving the frozen contract: it also reports database
   reachability, indexed document count, whether the embedding provider credential is
