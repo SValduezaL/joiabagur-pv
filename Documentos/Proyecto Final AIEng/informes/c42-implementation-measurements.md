@@ -1,4 +1,4 @@
-# C42 — informe de implementación: el agente llega al operario, y las siete cosas que se refutaron por el camino
+# C42 — informe de implementación: el agente llega al operario, y las diez cosas que se refutaron por el camino
 
 **Change:** `add-frontend-agent-panel` · **Rama:** `c42-add-frontend-agent-panel` sobre `ai-eng`
 **Artefactos de partida:** `946eb42` (specs y tareas) · **Implementación:** 2026-09-26
@@ -71,9 +71,202 @@ reloj del agente, y **solos pasan**: 49 de 49.
 
 ---
 
-## 2 · Las siete cifras de la pasada
+## 2 · Las siete cifras de la pasada, y la que las hace auditables
 
-> *(Sección pendiente de la pasada, en curso al escribir esto. Se rellena con el artefacto.)*
+**Artefacto:** `ai-service/evals/results/c32b-agent-sweep-17fbdd15a18c.json`
+**Procedencia completa:** `run_id 17fbdd15a18c` · `git_sha f1a2a4a…+dirty` (declarado: el árbol llevaba
+los cambios de documentación sin commitear) · `pitch_prompt_version assist/v6` ·
+`agent_prompt_version agent/v1` · `router_prompt_version router/v3` ·
+`deterministic_route_prompt_version assist/v5` · `arms ['openai/gpt-4o']` · surtido 416 ·
+`paced_seconds 4.853,3` · **102 peticiones** · coste **2,78 USD**.
+
+**Reducción declarada:** un solo brazo, el que se sirve. Motivo en el §5.7.
+
+### 2.0 · La frescura: la cifra que hace auditable todo lo demás
+
+| | C32b (2026-09-21) | **C42 (2026-09-26)** |
+|---|---|---|
+| Duración de la pasada | 9.870,8 s = **2 h 44 min** | 4.853,3 s = **1 h 21 min** |
+| Techo de rancidez | 3.600 s | 3.600 s |
+| Drenaje automático | **no existía** | **encendido**, cada 600 s |
+| Antigüedad registrada | **ninguna** | procedencia **y las 102 filas** |
+| **Filas rancias** | *imposible saberlo* | **0 de 102** |
+| Rango de antigüedad | — | **2 s a 1.193 s** |
+
+**La pasada volvió a durar más que el techo —1 h 21 min contra 1 h— y ninguna fila salió rancia.** Eso
+no es suerte: el drenaje de C41 refresca cada 600 s, y el máximo observado de 1.193 s son dos
+intervalos. **Es la prueba de que la precondición funciona**, y es exactamente la condición que C32b no
+pudo cumplir porque el drenaje es cinco días posterior a su pasada.
+
+Con esto, y sólo con esto, las cifras de recuperación de abajo describen el sistema y no su
+desconfiguración.
+
+### 2.1 · Marcadores con `v6` (tarea 10.4)
+
+| | `{{price}}` | `{{stock}}` |
+|---|---|---|
+| Total | **0** | **0** |
+| Generaciones con al menos uno | **0 de 102 · 0,0 %** | **0 de 102 · 0,0 %** |
+
+**Línea base prestada de C40 y declarada como prestada**, que es lo que el §5.1 corrige del plan: `v3`
+sobre 90 consultas libres con payload sin anclar escribió `{{price}}` 2 veces y `{{stock}}` 1, en
+**3 de 90 generaciones**, y la reparación las arregló todas.
+
+> **La cifra sale ~0 y eso era lo esperado, no un fallo del instrumento.** Comprobado con un caso
+> sintético antes de concluirlo: `test_agent_sweep_counts_placeholders` guía un argumentario con dos
+> `{{price}}` y un `{{stock}}` por el bucle real y el contador devuelve `(2, 1)`. El contador cuenta.
+
+**El defecto queda cerrado por construcción**, y su magnitud confirmada como pequeña: era real y ya
+costaba casi nada.
+
+### 2.2 · `dangling_citation` sobre el agente con `v6` (tarea 10.3)
+
+Comparado **brazo contra brazo, 102 filas contra 102**, que es la única comparación limpia:
+
+| | C32b `v4` | **C42 `v6`** |
+|---|---|---|
+| Generaciones que corrieron | 84 | 83 |
+| **Generaciones con cita colgante, primer intento** | **8 · 9,5 %** | **1 · 1,2 %** |
+| **Sobreviven a la reparación** | **8 · 9,5 %** | **1 · 1,2 %** |
+| Incidencias | 40 | 8 |
+| Incidencias por generación afectada | 5,0 | **8,0** |
+| Citas que el modelo declaró | 14 | 14 |
+| Respuestas con cero citas | 93 de 102 · 91,2 % | 93 de 102 · **91,2 %** |
+
+**La unidad comparable es la generación y no la incidencia**, y eso lo descubre esta pasada: las ocho
+incidencias de C42 están **todas en una sola generación**. Contar incidencias diría «8 contra 40» y
+sugeriría una mejora de cinco veces; contar generaciones dice «1 contra 8», que es la cifra con la que
+se retira o no un argumentario.
+
+**La reparación no arregla ninguna**, en las dos pasadas: 8 → 8 y 1 → 1. Es la causa dura que de verdad
+retira el argumentario, y la reparación única no la toca.
+
+### 2.3 · La retirada, partida por causa (tarea 10.5)
+
+| Causa | C32b `v4` · 1er / sobrevive | **C42 `v6`** · 1er / sobrevive |
+|---|---|---|
+| `dangling_citation` | 40 / 34 | **8 / 8** |
+| `claim_not_in_pitch` *(no dura, por decisión declarada)* | 3 / 1 | 2 / 1 |
+| `figure_not_in_context` | 3 / 1 | **2 / 0** |
+| `placeholder_in_free_query` | *(no existía como causa dura para esta tarea)* | **0 / 0** |
+| **Retirada del argumentario** | **11 de 84 · 13,1 %** | **1 de 83 · 1,2 %** |
+
+La descomposición que el informe de C32b publicó queda **confirmada**: de su 13,1 %, **9,5 puntos** son
+`dangling_citation` —8 de 84 generaciones, exactamente— y el resto otras causas. En C42 el 1,2 % es
+**íntegramente** `dangling_citation`: una generación, y ninguna otra causa retira nada.
+
+### 2.4 · ⚠ La caída de la retirada es real y **`v6` no la explica**
+
+**Diez veces menos retirada —13,1 % a 1,2 %— y no puedo atribuirla a este change.** Hay que decirlo
+así, porque la tentación de cobrarse la mejora es exactamente el error que este repositorio corrige
+cada vez.
+
+`v6` hace **una** cosa: llevar la prohibición de marcadores a la tarea del agente. Su efecto medido es
+el del §2.1 —0 marcadores— y ya era ~0 antes. **La caída está enteramente en `dangling_citation`**, una
+causa que `v6` no menciona: de 8 generaciones afectadas a 1.
+
+**Los confusores, nombrados:**
+
+1. **El modelo del argumentario no se puede verificar idéntico.** El artefacto de C32b trae
+   `stage_models: None` — **predata ese registro**, que es la misma razón por la que existe
+   `legacy_router_usage`. El de C42 declara `pitch: openai/gpt-4o-mini`. No hay forma de saber desde
+   los artefactos si corrieron el mismo modelo de argumentario.
+2. **C40 y C41 entraron entre las dos pasadas.** C40 tocó `verification.py` y la fase de la abstención.
+3. **Los números son pequeños.** 8 de 84 contra 1 de 83: sugestivo, no establecido, sobre **una** pasada.
+4. **Y el modelo no es determinista.**
+
+**Qué queda dicho, entonces:** el defecto que `v6` cierra está cerrado y su coste era pequeño; la
+retirada del agente hoy es del **1,2 %** contra el **2,2 %** de la ruta determinista que C32b publicó,
+o sea que **la brecha de seis veces que C32b encontró ya no se observa**. Por qué, **esta pasada no lo
+dice**, y es de C38 medirlo sobre el conjunto etiquetado.
+
+### 2.5 · Piezas por respuesta y reparto de procedencia (tarea 10.6)
+
+| | C32b `v4` | **C42 `v6`** |
+|---|---|---|
+| Grupos por respuesta | p50 8 · p95 8 · **máx 8** | p50 8 · p95 8 · **máx 8** |
+| Respuestas sin ninguna pieza | 20 · 19,6 % | **21 · 20,6 %** |
+| `buscar_sustitutos` invocada | 10 | **11** |
+
+**La tarea pedía esta cifra «esta vez con ámbito aplicado y auditable», y el ámbito lo está —0 filas
+rancias— pero la cifra sigue sin medir lo que se quería.** Los grupos **saturan al tope** en las dos
+pasadas: p50 = p95 = máximo = 8, que es `MAX_AGENT_PIECES`. Lo que se está midiendo es **la constante**,
+no el catálogo ni el surtido.
+
+> **Es una refutación de la premisa de la tarea.** El informe de C32b marcó esta cifra como «tratar
+> como NO medida» y atribuyó la duda al ámbito; con el ámbito arreglado y auditable, **sigue sin
+> medirse**, porque la restricción que muerde es el tope de piezas y no el surtido. Arreglar la
+> frescura era necesario y no suficiente. Quien quiera esta cifra tiene que mover `MAX_AGENT_PIECES` —
+> que es justo lo que el design declara fuera de alcance, porque de esa constante depende un
+> invariante que la suite afirma.
+
+Lo que sí queda medido y auditable: **la tasa de respuestas sin ninguna pieza, 20,6 %**, que reproduce
+el 19,6 % de C32b y confirma la cifra que gobierna el orden del frontal.
+
+### 2.6 · Latencia (tarea 10.7)
+
+| | C32b `v4` | **C42 `v6`** |
+|---|---|---|
+| p50 | 5.311 ms | **4.707 ms** |
+| p95 | 9.021 ms | **7.060 ms** |
+| Máximo | 11.918 ms | **8.719 ms** |
+
+**Medida en proceso por el arnés, y NO extremo a extremo por .NET, que es lo que la tarea pedía.** El
+motivo está en el §5.8: medirla por .NET exige una segunda pasada de ~102 peticiones contra el
+proveedor a través de la API, y la decisión Q-10 del ticket es **una pasada**. Lo que .NET añade sobre
+esta cifra es el salto de red más la hidratación, y queda **instrumentado en cada petición** —`ai_ms` y
+`total_ms` en el registro de embudo `stage=agent_assist`—, de modo que la cifra es recolectable en
+explotación sin gastar una pasada.
+
+**Y confirma el presupuesto de 18 s con margen amplio**: el máximo observado baja de 11.918 a 8.719 ms
+contra un techo de servicio de 15 s. El presupuesto sigue **deliberadamente sin apretarse**.
+
+### 2.7 · Reparto de los motivos de parada (tarea 10.8)
+
+| Motivo | C32b `v4` | **C42 `v6`** |
+|---|---|---|
+| `sin_mas_herramientas` | 86 | **88** |
+| `aclaracion` | 10 | **10** |
+| `rechazado` | 4 | **4** |
+| `presupuesto_tools` | 2 | **0** |
+| **`partial`** | **2 · 2,0 %** | **0 · 0,0 %** |
+
+**Cero respuestas incompletas en 102 peticiones**, contra las 2 de C32b. Contrasta con el informe de
+exploración v2, que publicaba el 2,0 % del brazo servido y lo usaba para poner la cinta de respuesta
+incompleta **la última** del frontal: la decisión era correcta y **la cifra ha bajado aún más**. La
+cinta sirve a menos del 1 % en la configuración que se sirve, y sigue construida contra escenario y no
+contra observación.
+
+### 2.8 · ⚠ Y una refutación del informe de exploración: **la tabla de herramientas está agrupada por los dos brazos y la domina el barato**
+
+El informe v2 —y con él el orden del tramo de frontend— justificaba poner `origin` primero con esto:
+*«`buscar_sustitutos` se invocó **125 veces** en la pasada medida: rotular la procedencia es lo que más
+veces impide que la pantalla mienta»*. Partido por brazo desde el mismo artefacto:
+
+| Herramienta | `gpt-4o` · **el que se sirve** | `gpt-4o-mini` · descartado | Total publicado |
+|---|---|---|---|
+| `consultar_disponibilidad` | 103 | 273 | 376 |
+| `buscar_catalogo` | 79 | 87 | 166 |
+| **`buscar_sustitutos`** | **10** | **115** | **125** |
+| `consultar_conocimiento` | 31 | 82 | 113 |
+| `listar_familia` | 8 | 86 | 94 |
+| `pedir_aclaracion` | 10 | 14 | 24 |
+| **Total** | **241** | **657** | **898** |
+
+**De las 125 invocaciones de `buscar_sustitutos`, 115 son del brazo barato y 10 del que se sirve.** El
+brazo descartado hace **2,7 veces** más llamadas a herramienta que el servido, así que domina cada fila
+de esa tabla.
+
+> **Es el mismo error que la verificación independiente de C32b ya corrigió una vez, una tabla más
+> allá.** Aquella agrupaba los dos brazos en la tasa de pivote, llamaba «6 escenarios» a 3 × 2 brazos y
+> publicaba un 83 % cuyo único fallo era del brazo descartado. La tabla de herramientas del informe de
+> exploración repite la composición.
+>
+> **Y no cambia la decisión, que también hay que decirlo.** `origin` tenía que llegar al consumidor
+> igual: la pantalla no tenía **nada** con que rotular las filas, y eso es una cuestión de corrección y
+> no de frecuencia. Lo que cambia es la **magnitud** con que se justificó el orden: el pivote ocurre
+> **una vez cada diez peticiones** en la configuración que se sirve —10 en C32b y **11** en C42, así que
+> la tasa no se movió con `v6`—, no «125 veces, rutina».
 
 ---
 
@@ -263,7 +456,22 @@ ni un error, ni un recuento—. Sin filtro salen veinte `MSBUILD warning MSB3026
 decir — es que no se compiló. Y la coincidencia de tener la API levantada para la 12.1 **mientras** se
 corren tests es exactamente la situación en la que pasa.
 
-### 5.7 · El brazo barato no se mide, y es una reducción declarada
+### 5.7 · La latencia extremo a extremo por .NET **no se mide**, y el motivo es la decisión de una sola pasada
+
+La tarea 10.7 pedía *«la latencia p50/p95 extremo a extremo medida por .NET»*. Lo publicado en el §2.6
+es **la del arnés, en proceso**, y la diferencia se declara en vez de disimularse.
+
+Medirla por .NET exige llevar ~102 peticiones **a través de la API**, o sea **una segunda pasada contra
+el proveedor**: otros 1 h 21 min y otros 2,78 USD, para una cifra que es la del §2.6 más el salto de red
+y la hidratación. La decisión Q-10 del ticket es explícita —**una pasada, después del cambio**— y ésta
+es la clase de gasto que esa decisión existe para evitar.
+
+**Y la cifra no se pierde, se recoge donde de verdad importa:** el registro de embudo
+`stage=agent_assist` publica `ai_ms` y `total_ms` en **cada** petición, así que la latencia extremo a
+extremo es una consulta a los logs en explotación, con tráfico real en vez de con un conjunto
+sintético. Es una cifra mejor que la que una segunda pasada habría dado.
+
+### 5.8 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
 barato ya está **descartado por comportamiento y no por precio** —58,8 % de respuestas incompletas
@@ -340,7 +548,7 @@ argumentario.
 | 4 · Tramo 2 · `backend` | ✅ 13/13 |
 | 5-8 · Tramo 3 · `frontend` | ✅ 25/25 |
 | 9 · Tramo 4 · el coste | ✅ 1/1 |
-| 10 · Medición | *(en curso — §2)* |
+| 10 · Medición | ✅ 8/8 — 10.7 publicada como la del arnés y no como la de .NET, con su razón en el §5.7 |
 | 11 · Specs y anotaciones | ✅ 5/5 |
 | 12 · Cierre | *(12.1 en manos del operario, con su guion en `c42-manual-check-runbook.md`)* |
 

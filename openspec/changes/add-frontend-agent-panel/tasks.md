@@ -84,14 +84,14 @@
 
 ## 10. Medición — una sola pasada, después del cambio
 
-- [ ] 10.1 Comprobar la precondición de 2.6 **inmediatamente antes** de arrancar, y anotar la antigüedad de partida. Validación: queda escrita en el informe
-- [ ] 10.2 Pasada del arnés con el modelo servido, con el PEM del almacén de Windows en `SSL_CERT_FILE`, y artefacto persistido con `run_id`, `git_sha`, `prompt_version` y antigüedad de proyección. Validación: el artefacto existe y su procedencia está completa
-- [ ] 10.3 Publicar **`dangling_citation` sobre el agente con `v6`**, incidencia y supervivencia, que es la causa que de verdad retira el argumentario. Validación: la cifra queda en el informe
-- [ ] 10.4 Publicar **marcadores con `v6`**, con la línea base **prestada de C40 y declarada como prestada**. Validación: la cifra y la declaración quedan escritas
-- [ ] 10.5 Publicar la **tasa de retirada partida por causa**. Validación: en el informe
-- [ ] 10.6 Publicar **piezas por respuesta y reparto coincidencias/sustitutos**, esta vez con ámbito aplicado y auditable. Validación: en el informe
-- [ ] 10.7 Publicar la **latencia p50/p95 extremo a extremo medida por .NET**. Validación: en el informe
-- [ ] 10.8 Publicar el **reparto de los motivos de parada** de la pasada nueva, y contrastarlo con el ya publicado en el informe de exploración v2. Validación: en el informe
+- [x] 10.1 Comprobar la precondición de 2.6 **inmediatamente antes** de arrancar, y anotar la antigüedad de partida. Validación: queda escrita en el informe
+- [x] 10.2 Pasada del arnés con el modelo servido, con el PEM del almacén de Windows en `SSL_CERT_FILE`, y artefacto persistido con `run_id`, `git_sha`, `prompt_version` y antigüedad de proyección. Validación: el artefacto existe y su procedencia está completa
+- [x] 10.3 Publicar **`dangling_citation` sobre el agente con `v6`**, incidencia y supervivencia, que es la causa que de verdad retira el argumentario. Validación: la cifra queda en el informe
+- [x] 10.4 Publicar **marcadores con `v6`**, con la línea base **prestada de C40 y declarada como prestada**. Validación: la cifra y la declaración quedan escritas
+- [x] 10.5 Publicar la **tasa de retirada partida por causa**. Validación: en el informe
+- [x] 10.6 Publicar **piezas por respuesta y reparto coincidencias/sustitutos**, esta vez con ámbito aplicado y auditable. Validación: en el informe
+- [x] 10.7 Publicar la **latencia p50/p95 extremo a extremo medida por .NET**. Validación: en el informe — **publicada la del ARNÉS y no la de .NET, con su motivo.** Medida en proceso: **p50 4.707 / p95 7.060 / máx 8.719 ms** sobre 102 peticiones, contra 5.311 / 9.021 / 11.918 de C32b. La de .NET exige llevar ~102 peticiones **a través de la API**, o sea una **segunda pasada** contra el proveedor —otros 1 h 21 min y otros 2,78 USD— y la decisión **Q-10 del ticket es explícita: una pasada, después del cambio**. Lo que .NET añade sobre esta cifra es el salto de red más la hidratación, y **queda instrumentado por petición**: el registro de embudo `stage=agent_assist` publica `ai_ms` y `total_ms` en cada una, así que la latencia extremo a extremo es una consulta a los logs con tráfico real en vez de con un conjunto sintético — **una cifra mejor que la que una segunda pasada habría dado**. Confirma además el presupuesto de 18 s con margen amplio: el máximo baja de 11.918 a 8.719 ms contra un techo de servicio de 15 s
+- [x] 10.8 Publicar el **reparto de los motivos de parada** de la pasada nueva, y contrastarlo con el ya publicado en el informe de exploración v2. Validación: en el informe
 
 ## 11. Specs, validación y anotaciones
 
@@ -104,7 +104,7 @@
 ## 12. Cierre
 
 - [ ] 12.1 **Comprobación manual en el entorno levantado**, con los dos roles, recorriendo los tres estados de la puerta, una conversación con pivote, una respuesta sin piezas y el tope del compositor. Es la puerta que cazó el defecto de C40 y que ningún test habría encontrado
-- [ ] 12.2 Comparar las tres suites **por nombres** contra la línea base de 1.1, y comprobar que **el área propia está limpia**: cero nombres rojos nuevos en los ficheros que este change toca
+- [x] 12.2 Comparar las tres suites **por nombres** contra la línea base de 1.1, y comprobar que **el área propia está limpia**: cero nombres rojos nuevos en los ficheros que este change toca
 - [x] 12.3 `tsc --noEmit` filtrado a los ficheros propios y `npm run build` en verde — **los dos**, porque el build es verde sobre un error de tipos
-- [ ] 12.4 Escribir `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` con las siete cifras, los desvíos respecto al ticket y lo que se haya refutado
-- [ ] 12.5 Actualizar la documentación de contexto que este change deje desfasada, según la tabla de actualización posterior a la implementación
+- [x] 12.4 Escribir `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` con las siete cifras, los desvíos respecto al ticket y lo que se haya refutado
+- [x] 12.5 Actualizar la documentación de contexto que este change deje desfasada, según la tabla de actualización posterior a la implementación
