@@ -337,7 +337,15 @@ def _resolve_agent_client(request: Request, settings: Settings) -> AgentLlm | No
 async def assist_agent(
     payload: AgentAssistRequest,
     request: Request,
-    principal: ServicePrincipal = Depends(get_service_principal),
+    # **Unscoped since C42, joining the deterministic route that was widened in C40.** This was
+    # the only route of the assistance family left out, because at the time it had no consumer —
+    # and a panel offering the every-shop scope on the agent would otherwise be refused by the
+    # very route its sibling panel is served by. The absence of the claim means «do not apply the
+    # availability prefilter» and never a wildcard: with no shop the availability tool can only
+    # report that no scope applies, so the loop cannot pivot to substitutes. That is a
+    # consequence of the data, not a behaviour anybody simulates. Every other `/v1` route that
+    # operates inside one shop — substitutes and inventory — still requires the claim.
+    principal: ServicePrincipal = Depends(get_unscoped_principal),
     settings: Settings = Depends(get_app_settings),
 ) -> AgentAssistResponse:
     """Run the loop over the transcript; the pitch keeps price and stock as placeholders.

@@ -519,7 +519,16 @@ AGENT_PROMPT_VERSION = "agent/v1"
 #:
 #: `PROMPT_VERSION` above is **unchanged and still what `POST /v1/assist/sale` reports**. The two
 #: travel as separate values on the agent's response.
-AGENT_PITCH_PROMPT_VERSION = "assist/v4"
+#:
+#: **Moved to `assist/v6` by C42, and `assist/v4` stays on disk untouched** — the 204 requests of
+#: C32b were measured against it. Fourth time, same precedent, and this time the reason is a
+#: defect of composition rather than a new payload field: the *Sistema* of `v4` orders price and
+#: availability to be written as placeholders **without condition**, the agent's payload is
+#: correctly unanchored — its argument speaks of several pieces — and C40 made a placeholder over
+#: an unanchored payload a **hard** violation. So an argument obeying its own prompt was withheld
+#: in full. `v6` carries the free-query rule into the agent's task and nothing else; its *Sistema*
+#: is `v5`'s character for character, and a test asserts that identity rather than a reviewer.
+AGENT_PITCH_PROMPT_VERSION = "assist/v6"
 
 #: The model that runs the loop. A **setting with its own variable**, and it never inherits the
 #: argument's nor the classifier's: choosing *which tool* is a harder call than choosing *which
