@@ -27,19 +27,19 @@
 
 ## 4. Tramo 2 · `backend` — el consumidor que no existe
 
-- [ ] 4.1 `SearchOrigin.AssistedAgent = 5` en el dominio, con su comentario de por qué no se pliega en el valor de la ruta generativa. Validación: compila y **no se crea ninguna migración**
-- [ ] 4.2 DTOs del agente en la capa de aplicación: petición con la transcripción, y respuesta = la de consulta libre **más** `Partial`, `StopReason`, `Iterations`, `ToolCallsUsed`, `Trace` y `AgentPromptVersion`, con `Origin` en el grupo. Validación: compila
-- [ ] 4.3 `AgentTimeoutMs` en las opciones de la pasarela, **por encima del techo de reloj del servicio más margen de red** y con su suelo validado al arranque. Validación: un valor por debajo del suelo falla el arranque con mensaje propio
-- [ ] 4.4 Método del agente en `IAiGatewayClient` y su implementación, **sin enviar punto de venta en el cuerpo**. Validación: compila y el test de mapeo cubre los cinco campos nuevos y el `origin`
-- [ ] 4.5 Registro del cliente con nombre `ai-agent`: `HttpClient.Timeout` infinito, presupuesto en el *pipeline*, reintento **sólo** para conexión nunca abierta, y cortafuegos sobre condiciones de transporte. Validación: `AgentAssist_UsesItsOwnTimeoutAndNotTheAssistOne`
-- [ ] 4.6 El cortafuegos **no cuenta** la degradación servida con 200, con el motivo en el comentario y la aritmética de una petición por minuto. Validación: `AgentAssist_WhenProviderFails_DoesNotOpenTheCircuitOnPartial`
-- [ ] 4.7 Métrica y log de `stop_reason=fallo_proveedor`, para que su tasa quede observable sin que el circuito actúe. Validación: el test comprueba que se registra
-- [ ] 4.8 `AgentAssistRequestValidator` con FluentValidation: turnos entre 1 y el tope, longitud por turno, **suma sobre todos los turnos** y al menos un turno del operario. Mensajes en es-ES. Validación: `AgentAssist_WhenTranscriptExceedsItsCaps_IsRefusedBeforeTheCall`, que además comprueba que **no se llamó al servicio**
-- [ ] 4.9 Servicio de aplicación del agente: llama a la pasarela, hidrata **todos los miembros de todos los grupos** con `AssistedSearchResultDto`, y con ámbito global deja cantidad y existencias como desconocidas en vez de cero. Validación: el test de hidratación cubre un grupo de sustitutos
-- [ ] 4.10 Endpoint del agente en la capa de API, autorizado **por la misma regla que la ruta de consulta libre** —los dos roles, ámbito global incluido— y rechazando una tienda no asignada. Validación: los tres tests de autorización, con **cliente fresco de la factoría** para la llamada no autenticada
-- [ ] 4.11 `AgentAvailable` en la respuesta de la sonda y en `GetAvailability`, reutilizando el predicado extraído por el fix de C40 y **la cadena de credencial del agente**, sin derivarlo del interruptor de la asistida. Validación: `AgentAvailability_WithoutPointOfSale_ReportsTheAgentSwitch` y el escenario de asistida encendida con agente apagado
-- [ ] 4.12 Registro del evento de selección con el quinto origen, conservando el hueco declarado de que la consulta de ámbito global no se registra. Validación: el test del origen
-- [ ] 4.13 Comprobar que **no se ha creado ninguna migración** y que `dotnet build` está en 0 errores. Validación: `git status` sobre el árbol de migraciones
+- [x] 4.1 `SearchOrigin.AssistedAgent = 5` en el dominio, con su comentario de por qué no se pliega en el valor de la ruta generativa. Validación: compila y **no se crea ninguna migración**
+- [x] 4.2 DTOs del agente en la capa de aplicación: petición con la transcripción, y respuesta = la de consulta libre **más** `Partial`, `StopReason`, `Iterations`, `ToolCallsUsed`, `Trace` y `AgentPromptVersion`, con `Origin` en el grupo. Validación: compila
+- [x] 4.3 `AgentTimeoutMs` en las opciones de la pasarela, **por encima del techo de reloj del servicio más margen de red** y con su suelo validado al arranque. Validación: un valor por debajo del suelo falla el arranque con mensaje propio
+- [x] 4.4 Método del agente en `IAiGatewayClient` y su implementación, **sin enviar punto de venta en el cuerpo**. Validación: compila y el test de mapeo cubre los cinco campos nuevos y el `origin`
+- [x] 4.5 Registro del cliente con nombre `ai-agent`: `HttpClient.Timeout` infinito, presupuesto en el *pipeline*, reintento **sólo** para conexión nunca abierta, y cortafuegos sobre condiciones de transporte. Validación: `AgentAssist_UsesItsOwnTimeoutAndNotTheAssistOne`
+- [x] 4.6 El cortafuegos **no cuenta** la degradación servida con 200, con el motivo en el comentario y la aritmética de una petición por minuto. Validación: `AgentAssist_WhenProviderFails_DoesNotOpenTheCircuitOnPartial`
+- [x] 4.7 Métrica y log de `stop_reason=fallo_proveedor`, para que su tasa quede observable sin que el circuito actúe. Validación: el test comprueba que se registra
+- [x] 4.8 `AgentAssistRequestValidator` con FluentValidation: turnos entre 1 y el tope, longitud por turno, **suma sobre todos los turnos** y al menos un turno del operario. Mensajes en es-ES. Validación: `AgentAssist_WhenTranscriptExceedsItsCaps_IsRefusedBeforeTheCall`, que además comprueba que **no se llamó al servicio**
+- [x] 4.9 Servicio de aplicación del agente: llama a la pasarela, hidrata **todos los miembros de todos los grupos** con `AssistedSearchResultDto`, y con ámbito global deja cantidad y existencias como desconocidas en vez de cero. Validación: el test de hidratación cubre un grupo de sustitutos
+- [x] 4.10 Endpoint del agente en la capa de API, autorizado **por la misma regla que la ruta de consulta libre** —los dos roles, ámbito global incluido— y rechazando una tienda no asignada. Validación: los tres tests de autorización, con **cliente fresco de la factoría** para la llamada no autenticada
+- [x] 4.11 `AgentAvailable` en la respuesta de la sonda y en `GetAvailability`, reutilizando el predicado extraído por el fix de C40 y **la cadena de credencial del agente**, sin derivarlo del interruptor de la asistida. Validación: `AgentAvailability_WithoutPointOfSale_ReportsTheAgentSwitch` y el escenario de asistida encendida con agente apagado
+- [x] 4.12 Registro del evento de selección con el quinto origen, conservando el hueco declarado de que la consulta de ámbito global no se registra. Validación: el test del origen
+- [x] 4.13 Comprobar que **no se ha creado ninguna migración** y que `dotnet build` está en 0 errores. Validación: `git status` sobre el árbol de migraciones
 
 ## 5. Tramo 3 · `frontend` — tipos y servicio
 

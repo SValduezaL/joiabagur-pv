@@ -58,6 +58,8 @@ public class AiScopePredicateAgreementTests
         MaxPageSize = 20
     };
 
+    private readonly AiAgentAssistOptions _agentOptions = new() { EnabledByDefault = true };
+
     public AiScopePredicateAgreementTests()
     {
         _traceContext.SetupGet(t => t.CurrentTraceId).Returns("trace-agreement");
@@ -213,6 +215,7 @@ public class AiScopePredicateAgreementTests
             Projector(factory),
             Monitor(_assistOptions),
             Monitor(_freeQueryOptions),
+            Monitor(_agentOptions),
             _timeProvider,
             factory.CreateLogger<AssistedSearchService>());
     }

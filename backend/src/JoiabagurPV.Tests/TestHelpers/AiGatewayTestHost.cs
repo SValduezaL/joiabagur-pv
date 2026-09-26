@@ -42,6 +42,8 @@ public static class AiGatewayTestHost
         int healthTimeoutMs = 2000,
         FakeHttpMessageHandler? assistHandler = null,
         int assistTimeoutMs = 10_000,
+        FakeHttpMessageHandler? agentHandler = null,
+        int agentTimeoutMs = 18_000,
         TimeProvider? timeProvider = null)
     {
         var configuration = new ConfigurationBuilder()
@@ -57,7 +59,8 @@ public static class AiGatewayTestHost
                 ["AiGateway:BreakerBreakDurationSeconds"] = breakerBreakDurationSeconds.ToString(),
                 ["AiGateway:EnrichTimeoutMs"] = enrichTimeoutMs.ToString(),
                 ["AiGateway:HealthTimeoutMs"] = healthTimeoutMs.ToString(),
-                ["AiGateway:AssistTimeoutMs"] = assistTimeoutMs.ToString()
+                ["AiGateway:AssistTimeoutMs"] = assistTimeoutMs.ToString(),
+                ["AiGateway:AgentTimeoutMs"] = agentTimeoutMs.ToString()
             })
             .Build();
 
@@ -111,6 +114,14 @@ public static class AiGatewayTestHost
             AiGatewayClient.AssistClientName,
             options => options.HttpMessageHandlerBuilderActions.Add(
                 b => b.PrimaryHandler = assistHandler ?? handler));
+
+        // The agent client (C42). Its own handler for the reason the others have one, and here the
+        // property most worth asserting is the one the whole client exists for: a slow conversation
+        // must not open the GENERATIVE circuit. Sharing a handler would make that unassertable.
+        services.Configure<HttpClientFactoryOptions>(
+            AiGatewayClient.AgentClientName,
+            options => options.HttpMessageHandlerBuilderActions.Add(
+                b => b.PrimaryHandler = agentHandler ?? handler));
 
         return services.BuildServiceProvider();
     }

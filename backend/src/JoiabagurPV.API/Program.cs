@@ -45,6 +45,10 @@ builder.Services.AddAssistedSearch(builder.Configuration);
 builder.Services.AddSalesAssist(builder.Configuration);
 builder.Services.AddFreeQuerySearch(builder.Configuration);
 
+// The sale agent (C42). Its own section, its own switch and its own allowance: the binding
+// constraint is the tokens-per-minute quota, which admits about one request per minute.
+builder.Services.AddAgentAssist(builder.Configuration);
+
 // Add API services
 builder.Services.AddApiServices(builder.Configuration);
 

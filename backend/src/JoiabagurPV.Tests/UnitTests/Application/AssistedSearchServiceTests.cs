@@ -48,6 +48,7 @@ public class AssistedSearchServiceTests
 
     /// <summary>The free-query endpoint's own switch; both must be on for the assisted route.</summary>
     private readonly AiFreeQuerySearchOptions _freeQueryOptions = new() { EnabledByDefault = true };
+    private readonly AiAgentAssistOptions _agentOptions = new() { EnabledByDefault = true };
 
     private readonly List<RecordSearchRequest> _recorded = [];
 
@@ -937,6 +938,7 @@ public class AssistedSearchServiceTests
                 factory.CreateLogger<AssistedSearchResultProjector>()),
             AssistOptionsMonitor(),
             FreeQueryOptionsMonitor(),
+            AgentOptionsMonitor(),
             _timeProvider,
             factory.CreateLogger<AssistedSearchService>());
     }
@@ -945,6 +947,13 @@ public class AssistedSearchServiceTests
     {
         var monitor = new Mock<IOptionsMonitor<AiFreeQuerySearchOptions>>();
         monitor.SetupGet(m => m.CurrentValue).Returns(_freeQueryOptions);
+        return monitor.Object;
+    }
+
+    private IOptionsMonitor<AiAgentAssistOptions> AgentOptionsMonitor()
+    {
+        var monitor = new Mock<IOptionsMonitor<AiAgentAssistOptions>>();
+        monitor.SetupGet(m => m.CurrentValue).Returns(_agentOptions);
         return monitor.Object;
     }
 

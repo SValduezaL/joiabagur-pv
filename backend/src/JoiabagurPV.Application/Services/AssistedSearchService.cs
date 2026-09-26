@@ -28,6 +28,7 @@ public class AssistedSearchService : IAssistedSearchService
     private readonly IAssistedSearchResultProjector _projector;
     private readonly IOptionsMonitor<AiSalesAssistOptions> _assistOptions;
     private readonly IOptionsMonitor<AiFreeQuerySearchOptions> _freeQueryOptions;
+    private readonly IOptionsMonitor<AiAgentAssistOptions> _agentOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<AssistedSearchService> _logger;
 
@@ -43,12 +44,14 @@ public class AssistedSearchService : IAssistedSearchService
         IAssistedSearchResultProjector projector,
         IOptionsMonitor<AiSalesAssistOptions> assistOptions,
         IOptionsMonitor<AiFreeQuerySearchOptions> freeQueryOptions,
+        IOptionsMonitor<AiAgentAssistOptions> agentOptions,
         TimeProvider timeProvider,
         ILogger<AssistedSearchService> logger)
     {
         _projector = projector;
         _assistOptions = assistOptions;
         _freeQueryOptions = freeQueryOptions;
+        _agentOptions = agentOptions;
         _gateway = gateway;
         _repository = repository;
         _cache = cache;
@@ -167,6 +170,14 @@ public class AssistedSearchService : IAssistedSearchService
             _freeQueryOptions.CurrentValue.IsEnabledForScope(pointOfSaleId)
             && _assistOptions.CurrentValue.IsEnabledForScope(pointOfSaleId);
 
+        // **The agent's own switch, read through the same shared predicate and NOT derived from
+        // the verdict above.** The agent has a credential chain of its own on the service side —
+        // agent, then assist, then the shared key — so a deployment can have the assisted answer
+        // configured and the agent not. Reporting one for the other would tell the screen the agent
+        // is available while every agent request came back degraded: exactly the failure this route
+        // was created to remove, and the reason the third path is reported rather than inferred.
+        var agent = _agentOptions.CurrentValue.IsEnabledForScope(pointOfSaleId);
+
         return new AiSearchAvailabilityResponse
         {
             PointOfSaleId = pointOfSaleId,
@@ -181,7 +192,10 @@ public class AssistedSearchService : IAssistedSearchService
 
             // Only the switch can be known without calling. An outage or a rejected credential is
             // discovered by making a call, and making one here would defeat the purpose.
-            AssistedAnswerUnavailableReason = assistedAnswer ? null : "switched_off"
+            AssistedAnswerUnavailableReason = assistedAnswer ? null : "switched_off",
+
+            AgentAvailable = agent,
+            AgentUnavailableReason = agent ? null : "switched_off"
         };
     }
 

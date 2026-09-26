@@ -39,17 +39,23 @@ public class AiSearchController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly IValidator<AssistedSearchRequest> _validator;
     private readonly IFreeQuerySearchService _freeQuerySearchService;
+    private readonly IAgentAssistService _agentAssistService;
+    private readonly IValidator<AgentAssistRequest> _agentValidator;
 
     public AiSearchController(
         IAssistedSearchService searchService,
         ICurrentUserService currentUserService,
         IValidator<AssistedSearchRequest> validator,
-        IFreeQuerySearchService freeQuerySearchService)
+        IFreeQuerySearchService freeQuerySearchService,
+        IAgentAssistService agentAssistService,
+        IValidator<AgentAssistRequest> agentValidator)
     {
         _searchService = searchService;
         _currentUserService = currentUserService;
         _validator = validator;
         _freeQuerySearchService = freeQuerySearchService;
+        _agentAssistService = agentAssistService;
+        _agentValidator = agentValidator;
     }
 
     /// <summary>
@@ -200,6 +206,97 @@ public class AiSearchController : ControllerBase
             FreeQuerySearchOutcome.PointOfSaleForbidden => Forbid(),
 
             FreeQuerySearchOutcome.PointOfSaleUnavailable => BadRequest(new
+            {
+                errors = new[] { "El punto de venta no existe o no está activo." }
+            }),
+
+            _ => Ok(result.Response)
+        };
+    }
+
+    /// <summary>
+    /// Answers the last turn of a sale-agent conversation. C42.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>Authorised by exactly the rule the free-query route uses</strong>, and copied rather
+    /// than tightened: two sibling panels with two different authorisation rules break without any
+    /// test failing. Both roles, the every-shop scope open to both, and the boundary that is actually
+    /// protected is the narrow one — a caller may not name a shop they are not assigned to, and that
+    /// is refused before any call is made.
+    /// </para>
+    /// <para>
+    /// <strong>The three transcript caps are validated here, before the call.</strong> The AI service
+    /// would answer 422, which is correct and useless: the caller would have paid the round trip to
+    /// learn its request was malformed, and on this route that round trip competes for a quota that
+    /// admits about one request per minute. The total in particular sums <em>every</em> turn, the
+    /// assistant's included, and is not implied by the other two.
+    /// </para>
+    /// <para>
+    /// Its own rate-limiting policy, a fourth one, because the binding constraint is the
+    /// tokens-per-minute quota rather than the money. <strong>A 429 is not an outage</strong>: the
+    /// throttle answers 429 while every AI failure answers 200 with a reason, and so does every
+    /// degradation the loop reports inside a successful response.
+    /// </para>
+    /// </remarks>
+    [HttpPost("agent")]
+    [EnableRateLimiting(RateLimitPolicies.AiAgentAssist)]
+    [ProducesResponseType(typeof(AgentAssistResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> Agent(
+        [FromBody] AgentAssistRequest? request,
+        CancellationToken cancellationToken)
+    {
+        if (!_currentUserService.UserId.HasValue)
+        {
+            return Unauthorized(new { message = "User not authenticated." });
+        }
+
+        if (request is null)
+        {
+            return BadRequest(new { errors = new[] { "La conversación es obligatoria." } });
+        }
+
+        // **Absent means every shop; empty is a malformed request.** The same distinction the
+        // free-query route draws, and for the same reason: a caller that meant «all of them» omits
+        // the field, and a caller that sent `Guid.Empty` sent a value identifying no shop.
+        if (request.PointOfSaleId == Guid.Empty)
+        {
+            return BadRequest(new
+            {
+                errors = new[]
+                {
+                    "El punto de venta no es válido. Omítelo para conversar sobre todas las tiendas."
+                }
+            });
+        }
+
+        // The three caps, in Spanish, and **before the service is called at all** — which is what
+        // the test for this asserts: not only the 400, but that no gateway call was made.
+        var validation = await _agentValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(new
+            {
+                errors = validation.Errors.Select(error => error.ErrorMessage).ToArray()
+            });
+        }
+
+        var result = await _agentAssistService.AnswerAsync(
+            request,
+            _currentUserService.UserId.Value,
+            _currentUserService.Role ?? "Operator",
+            _currentUserService.IsAdmin,
+            cancellationToken);
+
+        return result.Outcome switch
+        {
+            AgentAssistOutcome.PointOfSaleForbidden => Forbid(),
+
+            AgentAssistOutcome.PointOfSaleUnavailable => BadRequest(new
             {
                 errors = new[] { "El punto de venta no existe o no está activo." }
             }),
