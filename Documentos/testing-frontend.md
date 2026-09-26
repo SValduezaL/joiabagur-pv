@@ -366,6 +366,36 @@ describe('ProductCard', () => {
 >
 > Detalle en el `qa.md` del change archivado, §1.1 y §11.9.
 
+> **Actualización del 2026-09-26, sobre `c42-add-frontend-agent-panel` (C42).** La suite tiene ahora
+> **953 tests**: C42 añade **99** —6 ficheros nuevos, los 99 en verde—. La línea base dio **113 fallos
+> de 854 en 14 de 57 ficheros**; al cierre, **113 de 953 en 14**, con el conjunto de nombres
+> **idéntico** y el diff vacío. Cuarta observación consecutiva de que el rojo de este árbol no crece
+> con la suite.
+>
+> **Pero la primera comparación de C42 dio 114, y el nombre que sobraba era una regresión de verdad —
+> la primera de esta serie de entradas.** `pages/sales/__tests__/sales-index.test.tsx :: should show
+> "Buscar con Ayuda" tile linking to the assisted search panel`. La causa no estaba en ningún test
+> nuevo: la tarjeta que C42 añade al hub llevaba la viñeta «Más lento y más caro que **buscar con
+> ayuda**», con lo que el **nombre accesible de su propio enlace** pasaba a encajar también con
+> `/Buscar con Ayuda/i`, y la consulta del test —`getByRole('link', { name: … })`— encontraba dos
+> elementos. Reescrita la viñeta, el recuento vuelve a 113.
+>
+> **Y eso es lo que esta entrada aporta al método**, porque va justo contra la costumbre que las
+> anteriores establecieron: aquí el nombre discrepante **no** era ruido de un fichero ya rojo. Cayó en
+> un fichero que el change **tocaba** —`pages/sales/index.tsx`—, que es exactamente el criterio que las
+> entradas de C40 y C40_FIX dejaron escrito: *un nombre nuevo en un fichero que tú tocas es una
+> regresión; uno más en `scan.test.tsx` es martes*. El criterio funcionó a la primera.
+>
+> **La otra lección es sobre el paralelismo, y vale para las tres suites de este repositorio.** La
+> primera medición de C42 lanzó `dotnet test`, `npm run test` y `uv run pytest` **a la vez**, y el
+> backend dio **490 fallos de 1.347** en vez de 53: `vitest` con 14 *workers* satura la máquina y
+> testcontainers deja de alcanzar el demonio de Docker por su tubería con nombre, así que **todos** los
+> tests de integración fallan al arrancar con un `TimeoutException` de `NamedPipeClientStream`. En la
+> misma pasada, `pytest` dio 2 rojos —sus dos tests de reloj del agente— que solos pasan. **Una pasada
+> de las tres suites es serial**, y cuesta unos 20 minutos.
+>
+> Detalle en `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` §1.
+
 > **Re-medido el 2026-09-13, al cerrar C28: 595 tests, 113 fallos, en 14 de 48 ficheros.** La suite
 > ha crecido 113 tests en dos semanas y el rojo **no ha crecido con ella**: cae de 118 a 113 y de 17
 > ficheros a 14. La proporción pasa del 24 % al 19 %. El conjunto de nombres fallidos de C28 fue

@@ -43,6 +43,31 @@ A live spec containing `## ADDED Requirements` is a broken sync, not a style cho
 means delta files were copied verbatim into `openspec/specs/` instead of being merged.
 `--all --strict` catches it via the missing `## Purpose` section.
 
+## Las tres suites no se pueden medir en paralelo, y el fallo no se parece a lo que es
+
+**Medido el 2026-09-26 al abrir C42.** Lanzar `dotnet test`, `npm run test` y `uv run pytest` a la vez
+sobre el mismo commit da **490 rojos de 1.347 en el backend** donde en serie da **53**. No es
+regresión, no es orden, y no lo tapa ninguna de las reglas de abajo:
+
+```text
+System.TimeoutException : The operation has timed out.
+   at System.IO.Pipes.NamedPipeClientStream.ConnectInternal(...)
+   at Docker.DotNet.DockerClient...
+```
+
+`vitest` con 14 *workers* satura la máquina y **testcontainers deja de alcanzar el demonio de Docker
+por su tubería con nombre**, así que **todos** los `IntegrationTests` mueren al arrancar. En la misma
+pasada `pytest` da 2 rojos —sus dos tests de reloj del agente— que **solos pasan**.
+
+**Es peor que el `dotnet test` desde la raíz y que el `.exe` vivo, porque sí ejecuta tests y sí
+imprime una línea de resumen**: la línea dice 490 y es verdad, sólo que no está midiendo tu código.
+Leer el resumen no basta aquí.
+
+| | |
+|---|---|
+| Una pasada de las tres suites | **serial**, ~20 min en total |
+| Si el backend da cientos de rojos en `IntegrationTests` | mira si había algo más corriendo antes de mirar tu diff |
+
 ## Backend test suite: a red count is not a regression signal
 
 `dotnet test` on this repository comes back with **dozens of failures that were already

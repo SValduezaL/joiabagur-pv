@@ -1354,6 +1354,9 @@ ai-service/
                     #   stay on disk because figures were measured against them) and router/v1-v3
                     #   (C31 intent classifier; v3 in force)
                     # + agent/v1 (C32b loop) and assist/v4 (C32b agent evidence; v3 untouched)
+                    # + assist/v5 (C40: the free-query tasks stop writing placeholders) and
+                    #   assist/v6 (C42: the AGENT task inherits that rule; v4 and v5 untouched,
+                    #   and only AGENT_PITCH_PROMPT_VERSION moves: PROMPT_VERSION stays on v5)
   evals/            # the yardstick, versioned: golden/ (queries, judgements, frozen query vectors,
                     # criterion.md, pricing.yaml), configs/ (the five baseline configurations —
                     # globbed by load_all(), so nothing else may live there), assist/ (C30b's
