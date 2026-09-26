@@ -43,44 +43,44 @@
 
 ## 5. Tramo 3 · `frontend` — tipos y servicio
 
-- [ ] 5.1 Tipos TypeScript del agente: la transcripción, la respuesta con sus cinco campos, el grupo con `origin` y la traza por iteración. Validación: `tsc --noEmit` **filtrado a los ficheros propios**, sin errores nuevos
-- [ ] 5.2 `agentAssistService` con el envío de la transcripción y la lectura de la sonda. Validación: test del servicio con `vi.mock`, sin depender de un handler de MSW que no falla si no existe
-- [ ] 5.3 Tabla de copy de los **diez** motivos de parada y de los avisos del agente, con **etiqueta neutra** para un valor no reconocido. Validación: el test que recorre los diez valores y el del valor desconocido
+- [x] 5.1 Tipos TypeScript del agente: la transcripción, la respuesta con sus cinco campos, el grupo con `origin` y la traza por iteración. Validación: `tsc --noEmit` **filtrado a los ficheros propios**, sin errores nuevos
+- [x] 5.2 `agentAssistService` con el envío de la transcripción y la lectura de la sonda. Validación: test del servicio con `vi.mock`, sin depender de un handler de MSW que no falla si no existe
+- [x] 5.3 Tabla de copy de los **diez** motivos de parada y de los avisos del agente, con **etiqueta neutra** para un valor no reconocido. Validación: el test que recorre los diez valores y el del valor desconocido
 
 ## 6. Tramo 3 · `frontend` — la puerta y la ruta
 
-- [ ] 6.1 Ruta `/sales/new/agent` en el enrutado, **cargada de forma diferida** como sus hermanas. Validación: la ruta resuelve y el bundle inicial no crece
-- [ ] 6.2 Cuarta tarjeta en la página de entrada de venta, leyendo la sonda **al montar**. Validación: no se gasta cupo ni llamada al proveedor
-- [ ] 6.3 Los tres estados de la tarjeta. Validación: `should close the agent card when the probe says the agent is off` y `should open the agent card when the probe cannot answer`
-- [ ] 6.4 El motivo mostrado es **el del agente** y no el de la asistida. Validación: el test del escenario asistida-encendida / agente-apagado
-- [ ] 6.5 Enlace al panel determinista desde el panel del agente, para que la misma pregunta se pueda comparar. Validación: a ojo en la pantalla
+- [x] 6.1 Ruta `/sales/new/agent` en el enrutado, **cargada de forma diferida** como sus hermanas. Validación: la ruta resuelve y el bundle inicial no crece
+- [x] 6.2 Cuarta tarjeta en la página de entrada de venta, leyendo la sonda **al montar**. Validación: no se gasta cupo ni llamada al proveedor
+- [x] 6.3 Los tres estados de la tarjeta. Validación: `should close the agent card when the probe says the agent is off` y `should open the agent card when the probe cannot answer`
+- [x] 6.4 El motivo mostrado es **el del agente** y no el de la asistida. Validación: el test del escenario asistida-encendida / agente-apagado
+- [x] 6.5 Enlace al panel determinista desde el panel del agente, para que la misma pregunta se pueda comparar. Validación: a ojo en la pantalla
 
 ## 7. Tramo 3 · `frontend` — el hilo y el compositor
 
-- [ ] 7.1 El hilo como eje: un bloque de respuesta por turno, anclado, **sólo el último abierto**, los anteriores colapsados a una línea con chips y reabribles. Validación: `should keep each turn's answer anchored to its own turn`
-- [ ] 7.2 El turno del asistente que viaja en la petición lleva **el argumentario íntegro**; con argumentario retirado o repregunta, una **línea sintética con los SKU**. Validación: `should send a synthetic assistant turn when the pitch was withheld`
-- [ ] 7.3 Contadores del compositor sobre **la transcripción que se va a enviar**, turnos del asistente incluidos. Validación: `should count the assistant turns towards the transcript caps`
-- [ ] 7.4 El compositor **se cierra con su motivo** al alcanzar cualquiera de los tres topes, sin enviar la petición. Validación: `should stop the composer with a reason when a cap is reached`
-- [ ] 7.5 El ámbito es fijo durante la conversación; cambiarlo **avisa y reinicia el hilo**. Validación: el escenario del reinicio
-- [ ] 7.6 La opción de ámbito global se ofrece **con la misma regla que el panel hermano**, y al seleccionarla una línea dice que **el agente deja de ofrecer alternativas**. Validación: `should warn that the every-shop scope stops the agent offering alternatives`
-- [ ] 7.7 Estado de espera del envío, con el aviso de duración típica. Validación: a ojo, y el test de que el compositor queda deshabilitado mientras la petición está en vuelo
+- [x] 7.1 El hilo como eje: un bloque de respuesta por turno, anclado, **sólo el último abierto**, los anteriores colapsados a una línea con chips y reabribles. Validación: `should keep each turn's answer anchored to its own turn`
+- [x] 7.2 El turno del asistente que viaja en la petición lleva **el argumentario íntegro**; con argumentario retirado o repregunta, una **línea sintética con los SKU**. Validación: `should send a synthetic assistant turn when the pitch was withheld`
+- [x] 7.3 Contadores del compositor sobre **la transcripción que se va a enviar**, turnos del asistente incluidos. Validación: `should count the assistant turns towards the transcript caps`
+- [x] 7.4 El compositor **se cierra con su motivo** al alcanzar cualquiera de los tres topes, sin enviar la petición. Validación: `should stop the composer with a reason when a cap is reached`
+- [x] 7.5 El ámbito es fijo durante la conversación; cambiarlo **avisa y reinicia el hilo**. Validación: el escenario del reinicio
+- [x] 7.6 La opción de ámbito global se ofrece **con la misma regla que el panel hermano**, y al seleccionarla una línea dice que **el agente deja de ofrecer alternativas**. Validación: `should warn that the every-shop scope stops the agent offering alternatives`
+- [x] 7.7 Estado de espera del envío, con el aviso de duración típica. Validación: a ojo, y el test de que el compositor queda deshabilitado mientras la petición está en vuelo
 
 ## 8. Tramo 3 · `frontend` — el bloque de respuesta
 
-- [ ] 8.1 **El bloque sin filas primero**: prosa y citas con cero piezas, sin ninguna de las frases de vacío. Validación: `should render an answer with prose and no pieces`
-- [ ] 8.2 La repregunta pinta sólo la pregunta y **devuelve el foco al compositor**. Validación: el test del foco
-- [ ] 8.3 «Busqué y no encontré nada» se distingue de las dos anteriores. Validación: el test que separa las tres
-- [ ] 8.4 Tira de estado del bloque: motivo de parada traducido, vueltas y herramientas usadas. Validación: el test de los diez motivos a nivel de bloque
-- [ ] 8.5 Prosa y citas con `pitch-block` de C36, **sin modificarlo**. Validación: `git status` sobre ese fichero, sin diff
-- [ ] 8.6 Filas con `assisted-search-result-row` de C40, **sin modificarlo**, bajo los dos rótulos de procedencia y con las coincidencias primero. Validación: `should label a substitutes group as alternatives` y `git status` sin diff sobre la fila
-- [ ] 8.7 Las piezas repetidas entre turnos **no se deduplican**. Validación: el test de la pieza repetida
-- [ ] 8.8 La traza, colapsada, como escalera de pasos, **sin argumentos ni contenido de observaciones**. Validación: el test que comprueba que no aparecen
-- [ ] 8.9 Cinta de respuesta incompleta que **nombra el presupuesto agotado** y no usa color de alarma. Validación: `should tell a budget-cut answer from a complete one`
-- [ ] 8.10 Vender desde el bloque abierto reutiliza el camino de venta existente y registra el quinto origen. Validación: el test de la selección
+- [x] 8.1 **El bloque sin filas primero**: prosa y citas con cero piezas, sin ninguna de las frases de vacío. Validación: `should render an answer with prose and no pieces`
+- [x] 8.2 La repregunta pinta sólo la pregunta y **devuelve el foco al compositor**. Validación: el test del foco
+- [x] 8.3 «Busqué y no encontré nada» se distingue de las dos anteriores. Validación: el test que separa las tres
+- [x] 8.4 Tira de estado del bloque: motivo de parada traducido, vueltas y herramientas usadas. Validación: el test de los diez motivos a nivel de bloque
+- [x] 8.5 Prosa y citas con `pitch-block` de C36, **sin modificarlo**. Validación: `git status` sobre ese fichero, sin diff
+- [x] 8.6 Filas con `assisted-search-result-row` de C40, **sin modificarlo**, bajo los dos rótulos de procedencia y con las coincidencias primero. Validación: `should label a substitutes group as alternatives` y `git status` sin diff sobre la fila — **hecha, y de aquí sale la refutación de un escenario de la delta.** El escenario decía *«the sale is disabled when stock is unknown»* y la fila que esta misma tarea manda reutilizar **no hace eso**: con `hasStock === null` sustituye la línea de existencias por «Selecciona una tienda para ver existencias» y deshabilita **abrir la ficha**, dejando «Seleccionar para venta» activo — y el test propio de C40 lo fija así. Implementarlo como estaba escrito exigía tocar la fila, que está fuera de alcance, y habría dejado a los dos paneles hermanos en desacuerdo. El escenario queda **enmendado en la delta** (no en la spec viva) describiendo lo que la fila hace, con el motivo de por qué además es lo correcto: el ámbito global existe para saber **dónde** está una pieza, y el flujo de venta manual al que entrega exige tienda propia y valida existencias allí
+- [x] 8.7 Las piezas repetidas entre turnos **no se deduplican**. Validación: el test de la pieza repetida
+- [x] 8.8 La traza, colapsada, como escalera de pasos, **sin argumentos ni contenido de observaciones**. Validación: el test que comprueba que no aparecen
+- [x] 8.9 Cinta de respuesta incompleta que **nombra el presupuesto agotado** y no usa color de alarma. Validación: `should tell a budget-cut answer from a complete one`
+- [x] 8.10 Vender desde el bloque abierto reutiliza el camino de venta existente y registra el quinto origen. Validación: el test de la selección
 
 ## 9. Tramo 4 · el coste
 
-- [ ] 9.1 Contador de coste acumulado de la sesión en la barra fija: peticiones, tokens y euros, acumulando el consumo que cada respuesta reporta. Validación: el test de que acumula en vez de sustituir
+- [x] 9.1 Contador de coste acumulado de la sesión en la barra fija: peticiones, tokens y euros, acumulando el consumo que cada respuesta reporta. Validación: el test de que acumula en vez de sustituir
 
 ## 10. Medición — una sola pasada, después del cambio
 

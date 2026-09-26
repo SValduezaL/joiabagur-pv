@@ -135,9 +135,25 @@ Rows MUST be rendered with the existing assisted search result row, which alread
 - **WHEN** a group's provenance says it came from the substitutes tool
 - **THEN** it is labelled as an alternative regardless of its position
 
-#### Scenario: The sale is disabled when stock is unknown
+#### Scenario: An unknown stock says a shop is needed rather than asserting none is left
 - **WHEN** a row carries an unknown stock
-- **THEN** its sale action is disabled
+- **THEN** it states that a shop has to be chosen to see stock
+- **AND** it does not state that the piece has run out
+- **AND** opening the sale card, which reports one shop's stock, is disabled
+
+> **Amended during implementation, and the original scenario was wrong about the component this
+> requirement says to reuse.** It read *«its sale action is disabled»*. The assisted search result row
+> — which this change reuses **unmodified**, and whose own test since C40 pins the behaviour — does
+> not disable selecting for sale on an unknown stock: it replaces the stock line with «Selecciona una
+> tienda para ver existencias» and disables **opening the sale card**. Implementing the scenario as
+> written would have required a diff to that row, which is explicitly out of scope, and the sibling
+> panel has behaved this way since C40, so the two would have disagreed.
+>
+> It is also the correct behaviour, which is why it is not worth the diff: the every-shop scope exists
+> to find out **where** a piece is, and the manual sale flow it hands over to requires a shop of its
+> own and validates stock there — disabling selection would leave the scope unable to lead anywhere.
+> What must not happen, presenting unknown stock as «none left», is what the row's three-state
+> rendering already prevents, and that is what the scenario now states.
 
 ### Requirement: The trace is shown as the only on-screen evidence that an agent ran, and it never carries what was asked
 
