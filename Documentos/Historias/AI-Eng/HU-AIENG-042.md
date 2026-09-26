@@ -291,7 +291,7 @@ drenaje automático **no existía** —es de C41, cinco días posterior—. **A 
   [c42-exploration-decisions.md](../../Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md)
 - **Ficha del plan:** [§3 · C42](../../Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Diseño RAG:** [proyecto-final-diseno-rag-joiabagur.md](../../Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Ticket:** [T-AIENG-042](../../../openspec/changes/add-frontend-agent-panel/ticket.md)
+- **Ticket:** [T-AIENG-042](../../../openspec/changes/archive/2026-09-27-add-frontend-agent-panel/ticket.md)
 - **Specs vivas que el change modifica:**
   [`sales-assistant-agent`](../../../openspec/specs/sales-assistant-agent/spec.md) ·
   [`assist-generation`](../../../openspec/specs/assist-generation/spec.md) ·
