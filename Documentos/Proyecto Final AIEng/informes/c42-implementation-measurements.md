@@ -685,7 +685,7 @@ argumentario.
 | 9 · Tramo 4 · el coste | ✅ 1/1 |
 | 10 · Medición | ✅ 8/8 — 10.7 publicada como la del arnés y no como la de .NET, con su razón en el §5.7 |
 | 11 · Specs y anotaciones | ✅ 5/5 |
-| 12 · Cierre | *(12.1 en manos del operario, con su guion en `c42-manual-check-runbook.md`)* |
+| 12 · Cierre | ✅ 5/5 — **12.1 recorrida con los dos roles y los cinco recorridos**, y es la que encontró los tres defectos del §5.8 y §5.9 |
 
 **Tests nuevos:** 10 en `ai-service`, **61** en `backend` —54 propios más los 7 modelos del agente que
 entran en la guarda de paridad del contrato— y **105** en `frontend` —99 más los 6 del estado degradado que la comprobación manual obligó a escribir—.
