@@ -55,12 +55,31 @@ docker logs jpv-pv-jbg-ai 2>&1 | grep pos_sync | tail -3   # debe decir «draine
 
 ## 1 · Los dos usuarios
 
-| Usuario | Rol | Tienda | Para qué |
-|---|---|---|---|
-| `op-aeroport` | Operator | Aeroport de Menorca | El recorrido normal. **Es la tienda con surtido y proyección**, la misma que mide el arnés |
-| `admin` | Administrator | *(ninguna)* | El ámbito «todas las tiendas», que **sólo se le ofrece a él** |
+| Usuario | Rol | Tienda | Contraseña | Para qué |
+|---|---|---|---|---|
+| `op-aeroport` | Operator | Aeroport de Menorca | *(la que le pusiste)* | El recorrido normal. **Es la tienda con surtido y proyección**, la misma que mide el arnés |
+| `admin` | Administrator | *(ninguna)* | `Admin123!` **verificada** | El ámbito «todas las tiendas», que **sólo se le ofrece a él** |
 
-Contraseña de desarrollo la habitual del entorno.
+> **La del administrador está comprobada contra la API levantada** (`login: 200`) y es la que siembra
+> `DatabaseSeeder`. **La de los operarios no la sé**: `op-aeroport`, `op-ciutadella` y `op-fornells` los
+> creaste en sesiones anteriores, no los siembra el *seeder*, y `Test123!` —que es la del molde de
+> tests— **da 401** contra este entorno. Si no la recuerdas, lo más rápido es crear un operario nuevo
+> desde el panel de usuarios con el `admin` y asignarlo a *Aeroport de Menorca*.
+
+### La sonda, ya comprobada extremo a extremo
+
+Antes de que empieces, el cable que la tarjeta lee está verificado con la API real y **sin gastar
+cuota ni llamar al proveedor**:
+
+```bash
+curl -s -b "$COOKIES" http://localhost:5056/api/ai/search/availability
+# {"pointOfSaleId":null,"semanticSearchAvailable":true,"assistedAnswerAvailable":true,
+#  "assistedAnswerUnavailableReason":null,"agentAvailable":true,"agentUnavailableReason":null}
+```
+
+`agentAvailable` y `agentUnavailableReason` llegan como valores propios, así que el estado 1 de la
+puerta está confirmado antes de abrir el navegador. Lo que queda por ver a mano son los estados 2 y 3
+y los otros cuatro recorridos.
 
 ---
 

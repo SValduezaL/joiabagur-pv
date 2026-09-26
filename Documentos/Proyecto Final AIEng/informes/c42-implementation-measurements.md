@@ -1,4 +1,4 @@
-# C42 — informe de implementación: el agente llega al operario, y las seis cosas que se refutaron por el camino
+# C42 — informe de implementación: el agente llega al operario, y las siete cosas que se refutaron por el camino
 
 **Change:** `add-frontend-agent-panel` · **Rama:** `c42-add-frontend-agent-panel` sobre `ai-eng`
 **Artefactos de partida:** `946eb42` (specs y tareas) · **Implementación:** 2026-09-26
@@ -223,7 +223,47 @@ fallaba. Reescrita como «el panel directo», que es además el rótulo del enla
 > nuevo, estaba en lo que lo nuevo le hacía a lo viejo, y sólo la comparación **por nombres** contra la
 > línea base lo señaló. Es la tercera vez que este repositorio paga por confiar en un recuento.
 
-### 5.5 · El brazo barato no se mide, y es una reducción declarada
+### 5.5 · La guarda de paridad del contrato no cubría al agente, y al cubrirla encontró un desajuste
+
+`AiContractSnapshotTests` es la recíproca del *snapshot* de Python: compara **propiedad a propiedad**
+los DTO de .NET contra `ai-service/openapi.json`, nombre en el cable y anulabilidad incluidas. Cubría
+diecinueve modelos y **ninguno era del agente**.
+
+Eso dejaba el hueco justo donde más duele. Los tests del cliente del agente deserializan un cuerpo
+JSON que **este repositorio escribió**, así que un nombre mal puesto en los **dos** lados —
+`toolCallsUsed` donde el contrato dice `tool_calls_used` — los habría pasado los dos y habría llegado
+a producción como un `null` silencioso. Y la ruta del agente es precisamente la que **nadie había
+llamado nunca**, así que no había nada más comprobando el cable.
+
+**Al añadir los siete DTO, la guarda encontró un desajuste a la primera:**
+
+```text
+Expected IsNullableInContract(declared) to be True because nullability of 'top_k' must match
+between AiAssistAgentRequest and schema AgentAssistRequest …, but found False.
+```
+
+`AiAssistAgentRequest.TopK` era `int?`; el contrato declara `top_k: int = Field(default=5, ge=1,
+le=20)`, **no anulable con defecto** — la misma forma que `AiAssistSaleRequest.Filters` ya usaba por
+el mismo motivo. Corregido a `int` con el defecto del contrato.
+
+> **Es la clase de defecto que C40 se comió por no correr `tsc --noEmit`**: verde en todas partes y
+> desalineado en el único sitio que importa. La diferencia es que aquí la guarda ya existía y sólo
+> había que extenderla.
+
+### 5.6 · La trampa del `.exe` vivo se manifestó primero como **silencio**
+
+`CLAUDE.md` documenta que un `JoiabagurPV.API.exe` corriendo bloquea `bin/Debug`, la compilación falla
+y `dotnet test` sale 0 con cero tests ejecutados. Ocurrió al correr la guarda de paridad con la API
+levantada para la comprobación manual, y el detalle que la documentación no daba es **cómo se ve**: el
+primer intento, con la salida filtrada a las líneas de resumen, **no imprimió absolutamente nada** —
+ni un error, ni un recuento—. Sin filtro salen veinte `MSBUILD warning MSB3026` de reintento y tres
+`error MSB3021`, todos nombrando el proceso que bloquea y su PID.
+
+**La lectura práctica:** si la salida filtrada de `dotnet test` viene vacía, no es que no haya nada que
+decir — es que no se compiló. Y la coincidencia de tener la API levantada para la 12.1 **mientras** se
+corren tests es exactamente la situación en la que pasa.
+
+### 5.7 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
 barato ya está **descartado por comportamiento y no por precio** —58,8 % de respuestas incompletas
@@ -304,6 +344,7 @@ argumentario.
 | 11 · Specs y anotaciones | ✅ 5/5 |
 | 12 · Cierre | *(12.1 en manos del operario, con su guion en `c42-manual-check-runbook.md`)* |
 
-**Tests nuevos:** 10 en `ai-service`, 54 en `backend`, 99 en `frontend`.
+**Tests nuevos:** 10 en `ai-service`, **61** en `backend` —54 propios más los 7 modelos del agente que
+entran en la guarda de paridad del contrato— y 99 en `frontend`.
 **`openspec validate --all --strict`: 63 passed, 0 failed.**
 **`dotnet build`: 0 errores. `npm run build`: verde. `tsc --noEmit` filtrado: sin errores nuevos.**
