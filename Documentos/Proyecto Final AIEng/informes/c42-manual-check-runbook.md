@@ -142,11 +142,39 @@ y los otros cuatro recorridos.
    - **«Cómo lo ha averiguado»** se abre y enseña la escalera de pasos con los nombres de las
      herramientas, si cada una fue bien, y tokens y milisegundos por vuelta. **No debe aparecer
      ningún argumento de herramienta ni contenido de observación.**
-5. **El pivote, que es lo que hay que provocar.** Pregunta por algo que la tienda no tenga —una
-   pieza agotada, o insiste con *«¿y si no queda?»*. Cuando el bucle llame a `buscar_sustitutos`, el
-   bloque tiene que traer **dos grupos rotulados**: «Coincidencias» primero y «Alternativas» después.
+5. **El pivote, que es lo que hay que provocar — y hay que nombrar la pieza por su REFERENCIA.**
+
+   ```
+   El cliente quiere la referencia SKU759, ¿la tenemos?
+   ```
+
+   Con eso el bucle hace `consultar_disponibilidad` → **`buscar_sustitutos`** y el bloque trae grupos
+   bajo **«Alternativas»**.
+
+   > **⚠ Con el NOMBRE de la pieza no pivota, y está medido.** «El cliente quiere el Anillo Luna
+   > Creciente S, ¿lo tenemos?» sobre la misma pieza agotada da
+   > `consultar_disponibilidad`❗`referencia_desconocida` → `buscar_catalogo` → `consultar_disponibilidad`
+   > y **ocho grupos de catálogo, ninguna alternativa**. El motivo es estructural: `buscar_catalogo`
+   > **no devuelve el nombre del producto**, así que el modelo recibe ocho candidatos identificados sólo
+   > por SKU y material y **no tiene con qué saber cuál es la pieza que el cliente nombró**; consulta la
+   > disponibilidad de otra, que sí tiene stock, y correctamente no pivota. Está en
+   > `openspec/DEFERRED_TASKS.md` como entrada de C42, con el experimento y las tres opciones de arreglo.
+   > **Fuera del alcance de C42**, que declara no tocar las seis herramientas.
+
+   **Piezas agotadas de verdad, comprobadas en `ai.pos_projection`:**
+
+   | Tienda | Referencia | Pieza | Hermanos con stock allí |
+   |---|---|---|---|
+   | Ciutadella Centre | `SKU759` | Anillo Luna Creciente S | 119 |
+   | Ciutadella Centre | `SKU783` | Colgante de Pléyades M | 119 |
+   | Ciutadella Centre | `SKU813` | Pulsera Constelación de Orion | 119 |
+   | Aeroport de Menorca | `SKU1136` | Anillo Marea de Coral | — |
+   | Aeroport de Menorca | `SKU1112` | Pendientes Marea Baja | 41 |
+
    - **⚠ Lo que hay que mirar con cuidado:** que un sustituto **nunca** salga bajo «Coincidencias».
      Ofrecer un segundo mejor haciéndolo pasar por lo que se pedía es lo que un cliente nota.
+   - Y que `buscar_sustitutos` aparezca en **«Cómo lo ha averiguado»**: es la prueba de que pivotó y no
+     de que la búsqueda trajo otra cosa.
 6. **El hilo.** Manda un segundo turno. El bloque anterior **colapsa a una línea con chips** («N
    piezas», «N vueltas») y el nuevo queda abierto. Pulsa la línea colapsada: se reabre, y se cierra
    el otro. **Sólo uno abierto a la vez.**

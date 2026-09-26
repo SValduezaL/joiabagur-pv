@@ -1124,6 +1124,70 @@ Dimensionar la cuota es parte de poner esta ruta en producción, no un detalle d
 
 ---
 
+## C42 · El pivote a sustitutos es inalcanzable cuando el operario nombra la pieza por su NOMBRE
+
+**Estado: medido con proveedor real, acotado y fuera del alcance de C42**, que declara no tocar las
+seis herramientas ni añadir una séptima. Encontrado por la **comprobación manual** de C42 y por nada
+más — las tres suites estaban verdes.
+
+> **El pivote a sustitutos es lo que el panel del agente existe para demostrar**, y está medido **3 de
+> 3** en `sin_existencias` con `gpt-4o`. Esta entrada dice que esa medición se tomó en **una situación
+> que no existe en la pantalla**.
+
+### El experimento que lo establece
+
+Una pieza agotada de verdad —`SKU759`, *Anillo Luna Creciente S*, `qty_bucket = '0'` en
+`ai.pos_projection` para `CIU-CENTRE`, comprobado— preguntada de las dos maneras contra el proveedor
+real por HTTP:
+
+| Cómo la nombra el operario | Herramientas que el bucle eligió | ¿Pivota? |
+|---|---|---|
+| **Por su referencia**, `SKU759` | `consultar_disponibilidad` → **`buscar_sustitutos`** | ✅ **Sí.** 6 grupos, **todos `sustitutos`** |
+| **Por su nombre**, «Anillo Luna Creciente S» | `consultar_disponibilidad`❗`referencia_desconocida` → `buscar_catalogo` → `consultar_disponibilidad` | ❌ **No.** 8 grupos, todos `catalogo` |
+
+### Y el mecanismo, que es estructural y no una torpeza del modelo
+
+**`buscar_catalogo` no devuelve el nombre de la pieza.** Su observación lleva
+`posicion`, `sku`, `materiales`, `variante` y `motivos` (`assist/tools.py`, `buscar_catalogo`). De modo
+que la cadena es:
+
+1. El modelo pasa el **nombre** a `consultar_disponibilidad`, que quiere un SKU → `referencia_desconocida`.
+2. Se recupera con `buscar_catalogo`, que devuelve ocho candidatos **identificados sólo por SKU,
+   material y variante**.
+3. **No tiene con qué saber cuál de los ocho es la pieza que el cliente nombró**, así que consulta la
+   disponibilidad de otra — que sí tiene stock — y, correctamente, no pivota.
+
+**El bucle hace lo correcto en cada paso.** Lo que falta es el puente del nombre al SKU, y las seis
+herramientas no lo tienen: la búsqueda semántica devuelve **vecinos**, no la pieza exacta.
+
+**Por qué el arnés no lo vio**, que es el mismo patrón que esta implementación ya encontró dos veces
+más: `scenario_turns` resuelve el marcador `{pieza}` a un **SKU** y lo escribe en el turno, así que en
+las 204 peticiones de C32b y en las 102 de C42 **el modelo siempre recibió la referencia servida**. Un
+operario teclea un nombre.
+
+### Qué haría falta cuando se haga, y la decisión que arrastra
+
+- **Lo más estrecho: que la observación de `buscar_catalogo` lleve el nombre del producto.** Un campo,
+  en la observación que ve el modelo y no en el payload de generación.
+- **Y el argumento de C30b contra ensanchar el payload no se le aplica tal cual**, que es lo que hace
+  esta opción defendible: aquella regla es sobre **numerales** —*«every field handed over widens the
+  whitelist the numeric gate admits»*— y un nombre no lleva cifras. Pero sigue siendo **una de las seis
+  herramientas congeladas**, así que lo decide quien las posea, no un change de frontal.
+- **Alternativa sin tocar las herramientas:** que la pantalla ofrezca la referencia. El panel del
+  agente ya enseña el SKU en cada fila, así que un operario que ve la pieza en un turno anterior puede
+  nombrarla por referencia en el siguiente. **Es un paliativo y no el arreglo**, porque el caso que
+  falla es justo el primer turno, cuando el cliente nombra algo que el operario aún no tiene en
+  pantalla.
+- **Y lo que NO hay que hacer:** colapsar `referencia_desconocida` con una búsqueda por nombre dentro de
+  `consultar_disponibilidad`. Esa herramienta responde sobre **una** pieza identificada; hacerla adivinar
+  cuál convertiría una respuesta sobre existencias en una búsqueda, que es precisamente la confusión que
+  el vocabulario cerrado de causas existe para evitar.
+
+**Mientras no se haga, el pivote se demuestra nombrando la referencia**, que es realista en un
+mostrador —la pieza lleva su etiqueta delante— y es lo que el *runbook* de la comprobación manual dice.
+
+---
+
 ## C32b · Once tests preexistentes de `ai-service` salen a la red con una clave falsa
 
 **Estado:** medido, **no corregido** y fuera del alcance de C32b: los tests son de C30b y C31, y

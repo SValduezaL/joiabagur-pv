@@ -1,4 +1,4 @@
-# C42 — informe de implementación: el agente llega al operario, y las doce cosas que se refutaron por el camino
+# C42 — informe de implementación: el agente llega al operario, y las trece cosas que se refutaron por el camino
 
 **Change:** `add-frontend-agent-panel` · **Rama:** `c42-add-frontend-agent-panel` sobre `ai-eng`
 **Artefactos de partida:** `946eb42` (specs y tareas) · **Implementación:** 2026-09-26
@@ -567,7 +567,46 @@ contador que sólo hubiera medido lo tecleado habría ido por unos 150 caractere
 > de verdad. Y el coste de una conversación completa de seis intercambios es **0,52 € con 87k tokens**,
 > que es la cifra que la barra fija existe para poner delante del operario antes de que pulse otra vez.
 
-### 5.9 · El brazo barato no se mide, y es una reducción declarada
+### 5.9 · ⚠ Y el hallazgo mayor de la comprobación manual: **el pivote es inalcanzable si el operario nombra la pieza por su nombre**
+
+**El pivote a sustitutos es lo que este panel existe para demostrar**, y está medido **3 de 3** en
+`sin_existencias` con `gpt-4o`. La comprobación manual estableció que **esa medición se tomó en una
+situación que no existe en la pantalla.**
+
+El experimento, sobre una pieza agotada de verdad —`SKU759`, con `qty_bucket = '0'` en
+`ai.pos_projection` para `CIU-CENTRE`, comprobado en la base— preguntada de las dos maneras contra el
+proveedor real por HTTP:
+
+| Cómo la nombra el operario | Herramientas que eligió el bucle | ¿Pivota? |
+|---|---|---|
+| **Por su referencia**, `SKU759` | `consultar_disponibilidad` → **`buscar_sustitutos`** | ✅ 6 grupos, **todos `sustitutos`** |
+| **Por su nombre** | `consultar_disponibilidad`❗`referencia_desconocida` → `buscar_catalogo` → `consultar_disponibilidad` | ❌ 8 grupos, **todos `catalogo`** |
+
+**El mecanismo es estructural y el bucle hace lo correcto en cada paso.** `buscar_catalogo` devuelve al
+modelo `posicion`, `sku`, `materiales`, `variante` y `motivos` — **nunca el nombre del producto**. Así
+que el modelo pasa el nombre a `consultar_disponibilidad` y recibe `referencia_desconocida`; se recupera
+buscando en catálogo; y recibe ocho candidatos **identificados sólo por SKU, material y variante**, sin
+nada con que saber cuál de los ocho es la pieza que el cliente nombró. Consulta la disponibilidad de
+otra, que sí tiene stock, y **correctamente** no pivota.
+
+> **Por qué el arnés no podía verlo, que es el mismo patrón que este informe ya cuenta dos veces más.**
+> `scenario_turns` resuelve el marcador `{pieza}` a un **SKU** y lo escribe en el turno, así que en las
+> 204 peticiones de C32b y en las 102 de C42 **el modelo siempre recibió la referencia servida**. Un
+> operario teclea un nombre. Las tres suites verdes, la pasada limpia, y la capacidad que el panel existe
+> para demostrar inalcanzable por el camino que un operario recorre.
+
+**Fuera del alcance de C42**, que declara no tocar las seis herramientas ni añadir una séptima. Queda
+en `openspec/DEFERRED_TASKS.md` como entrada propia, con el experimento, el mecanismo y **tres opciones
+de arreglo con su coste**: el campo `nombre` en la observación de `buscar_catalogo` —donde el argumento
+de C30b contra ensanchar **no se aplica tal cual**, porque es sobre numerales y un nombre no lleva
+cifras—; el paliativo de que el operario nombre la referencia que la fila ya enseña; y la que **no** hay
+que hacer, que es colapsar `referencia_desconocida` en una búsqueda por nombre dentro de
+`consultar_disponibilidad`.
+
+**Y el pivote sí se demuestra**, nombrando la referencia, que es realista en un mostrador porque la
+pieza lleva su etiqueta delante. Es lo que dice el *runbook*.
+
+### 5.10 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
 barato ya está **descartado por comportamiento y no por precio** —58,8 % de respuestas incompletas
