@@ -95,16 +95,16 @@
 
 ## 11. Specs, validación y anotaciones
 
-- [ ] 11.1 Revisar las seis deltas contra lo implementado y corregir cualquier desvío. **Las descripciones de requisito van en una sola línea física**, porque el validador lee sólo la primera. Validación: `openspec validate add-frontend-agent-panel --strict` en verde
-- [ ] 11.2 `openspec validate --all --strict` con **`0 failed`**, que es la puerta del proyecto y no la forma de un solo change. Validación: la línea de totales
-- [ ] 11.3 Cerrar la entrada de `DEFERRED_TASKS.md` de C32b **por refutación**, escribiendo la aritmética de una petición por minuto y marcándola como cerrada-refutada y no como hecha. Validación: la entrada lo dice
-- [ ] 11.4 Anotar `c32b-implementation-measurements.md`: la pasada duró más del doble del techo de rancidez sin drenaje disponible entonces, sus cifras de recuperación quedan como no medidas, y **el pivote se anota explícitamente como superviviente** porque parecería caer con el resto. Validación: la anotación está fechada y firmada como posterior
-- [ ] 11.5 Anotar la ficha C42 del plan de changes: el hallazgo del prompt **no gobierna** la línea de corte, y la referencia comparable es la del análogo de C40 y no la de los modos anclados. Validación: las dos frases corregidas
+- [x] 11.1 Revisar las seis deltas contra lo implementado y corregir cualquier desvío. **Las descripciones de requisito van en una sola línea física**, porque el validador lee sólo la primera. Validación: `openspec validate add-frontend-agent-panel --strict` en verde
+- [x] 11.2 `openspec validate --all --strict` con **`0 failed`**, que es la puerta del proyecto y no la forma de un solo change. Validación: la línea de totales
+- [x] 11.3 Cerrar la entrada de `DEFERRED_TASKS.md` de C32b **por refutación**, escribiendo la aritmética de una petición por minuto y marcándola como cerrada-refutada y no como hecha. Validación: la entrada lo dice
+- [x] 11.4 Anotar `c32b-implementation-measurements.md`: la pasada duró más del doble del techo de rancidez sin drenaje disponible entonces, sus cifras de recuperación quedan como no medidas, y **el pivote se anota explícitamente como superviviente** porque parecería caer con el resto. Validación: la anotación está fechada y firmada como posterior
+- [x] 11.5 Anotar la ficha C42 del plan de changes: el hallazgo del prompt **no gobierna** la línea de corte, y la referencia comparable es la del análogo de C40 y no la de los modos anclados. Validación: las dos frases corregidas
 
 ## 12. Cierre
 
 - [ ] 12.1 **Comprobación manual en el entorno levantado**, con los dos roles, recorriendo los tres estados de la puerta, una conversación con pivote, una respuesta sin piezas y el tope del compositor. Es la puerta que cazó el defecto de C40 y que ningún test habría encontrado
 - [ ] 12.2 Comparar las tres suites **por nombres** contra la línea base de 1.1, y comprobar que **el área propia está limpia**: cero nombres rojos nuevos en los ficheros que este change toca
-- [ ] 12.3 `tsc --noEmit` filtrado a los ficheros propios y `npm run build` en verde — **los dos**, porque el build es verde sobre un error de tipos
+- [x] 12.3 `tsc --noEmit` filtrado a los ficheros propios y `npm run build` en verde — **los dos**, porque el build es verde sobre un error de tipos
 - [ ] 12.4 Escribir `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` con las siete cifras, los desvíos respecto al ticket y lo que se haya refutado
 - [ ] 12.5 Actualizar la documentación de contexto que este change deje desfasada, según la tabla de actualización posterior a la implementación

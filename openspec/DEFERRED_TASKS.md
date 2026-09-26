@@ -1017,9 +1017,55 @@ When implementing deferred tasks:
 
 ## C32b · La política de *timeout* y de circuito de `POST /v1/assist/agent` en la capa .NET
 
-**Estado:** identificada, acotada y **no hecha**. Aplazada **con motivo**: hoy la ruta no tiene
-ningún consumidor. *(Sigue abierta tras C34, que dejó fuera la ruta del agente por decisión cerrada
-—sus marcadores hablan de varias piezas—.)*
+**Estado: CERRADA POR C42 el 2026-09-26 — el *timeout* hecho, el circuito CERRADO POR REFUTACIÓN.**
+La mitad del *timeout* se cumple como pedía; la del circuito **no se ejecuta, porque medir la ruta
+demostró que lo que esta entrada pide no es alcanzable**. El motivo, entero, abajo.
+
+> ### Lo que C42 hace, y lo que refuta *(2026-09-26)*
+>
+> **El *timeout* propio por ruta: hecho.** `AiGatewayOptions.AgentTimeoutMs = 18_000` sobre el cliente
+> con nombre `ai-agent`, con `HttpClient.Timeout` infinito y el presupuesto en el *pipeline*, suelo de
+> **15 s validado al arranque** —el `AGENT_DEADLINE_SECONDS` del servicio— y sin reintento en *timeout*
+> ni en 5xx. Deliberadamente **no ajustado al máximo observado** de 11.917 ms: apretarlo corta una
+> petición que Python **ya pagó entera**.
+>
+> **El circuito que cuenta `stop_reason=fallo_proveedor`: NO SE HACE, y es una refutación y no una
+> omisión.** Esta entrada pedía contarlo; el *pipeline* de la ruta hermana ya declaraba lo contrario
+> —*«a 200 the service degraded internally … is not a failure: Python degraded, and the breaker
+> protects from Python not answering»*—, y los dos documentos se contradecían. La contradicción se
+> resuelve del lado de `ai-assist`, por **tres** razones y no por una:
+>
+> 1. **Lo que un cortafuegos protege es que el servicio no conteste.** Estas respuestas son
+>    contestaciones. Uno que las contara se abriría sobre una ruta que **funciona como está diseñada**,
+>    y la consecuencia sería peor que el problema: negaría el servicio a un mostrador cuyo proveedor
+>    ya volvió.
+> 2. **La aritmética lo hace inalcanzable.** Con ~13.000 tokens por petición contra un techo de 25.000
+>    TPM —la misma cifra que esta entrada ya publicaba como restricción operativa— el sistema admite
+>    **una petición por minuto**. El cortafuegos de este proyecto abre por **proporción de fallos sobre
+>    un mínimo de muestras en una ventana**: con `BreakerSamplingDurationSeconds` en decenas de
+>    segundos y `MinimumThroughput` en unidades, **la ventana expira antes de acumular la primera
+>    muestra**. Un circuito que no puede abrirse no es una protección, es código que nadie ejecuta.
+> 3. **Y hay un obstáculo mecánico encima.** El predicado del cortafuegos recibe un
+>    `Outcome<HttpResponseMessage>` y **no ve el cuerpo**. Leerlo exigiría bufferizar la respuesta,
+>    parsear el JSON dos veces y acoplar el transporte al vocabulario cerrado del contrato. Un circuito
+>    de dominio en el servicio de aplicación sería correcto en capas y choca con el punto 2 igual.
+>
+> **Qué se hace en su lugar, porque la señal no se pierde.** La degradación se instrumenta: un
+> `LogWarning` con plantilla `ai_gateway_agent_degraded` que nombra el motivo de parada, la latencia,
+> las vueltas y las llamadas, emitido para `fallo_proveedor` y para `sin_cliente`. Así su tasa queda
+> observable sin que el circuito actúe sobre ella —que era el único coste real de la decisión—. Y
+> **quien avisa a la pantalla es la sonda**, `GET /api/ai/search/availability`, que gana
+> `agentAvailable` como valor propio: no gasta cupo, no llama al proveedor y se lee antes de entrar.
+>
+> **La tercera viñeta de *Qué hace falta*, la de `partial: true`, también está hecha**: el bloque de
+> respuesta lo dice sin alarma y nombrando el presupuesto agotado, y va el último porque sirve al
+> **2,0 %** de las peticiones del brazo servido.
+>
+> **Y la restricción operativa se hereda tal cual.** Una petición por minuto basta para un mostrador y
+> un evaluador, y **no** para dos mostradores simultáneos. Por eso el agente lleva su propia política
+> de cupo —`AiAgentAssist:RateLimitPermitLimit`, cuatro por minuto— en vez de compartir la de la
+> consulta libre: un puñado de conversaciones agotaría lo que la ruta barata necesita. Dimensionar la
+> cuota sigue siendo parte de poner esto en producción.
 
 > **Lo que C34 cambia en esta entrada** *(2026-09-21)*. La ruta determinista ya no declara 5 s: C34
 > registró el cliente `ai-assist` para `/v1/assist/sale` con **10 s y un suelo de 8 s validado al

@@ -117,7 +117,7 @@ describe('the card', () => {
 
     // The trade-off, on the door rather than after the bill: this route costs several times the
     // deterministic one, measured.
-    expect(screen.getByText(/m.s lento y m.s caro/i)).toBeInTheDocument();
+    expect(screen.getByText(/más lento y más caro/i)).toBeInTheDocument();
   });
 });
 

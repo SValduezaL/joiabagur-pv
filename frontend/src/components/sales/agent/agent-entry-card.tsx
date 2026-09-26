@@ -84,7 +84,10 @@ export function AgentEntryCard({ availability, settled }: AgentEntryCardProps) {
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>• Varios turnos sobre la misma conversación</p>
             <p>• Enseña qué ha consultado y por qué ha parado</p>
-            <p>• Más lento y más caro que buscar con ayuda</p>
+            {/* Named as «el panel directo» and deliberately not as its sibling's own title: a card
+                whose text repeats another tile's name makes that tile's link match two accessible
+                names, and the hub's test queries the tiles by name. Found by that test. */}
+            <p>• Más lento y más caro que el panel directo</p>
           </div>
           <Bot className="h-12 w-12 text-muted-foreground/50" />
         </div>

@@ -2177,6 +2177,28 @@ checkpoint venía del mismo drenaje. **Cualquier verificación de este change le
 > **La tasa real no está medida y es la primera cifra que C42 debe publicar**; la referencia
 > comparable es la de C30b sobre modos anclados con `v3`: `{{price}}` en 147 de 213 y `{{stock}}` en
 > 188 de 213.
+>
+> ### ⚠ Corregido por la segunda pasada de exploración de C42 · 2026-09-26 · **las dos frases de arriba son falsas**
+>
+> **Uno: este hallazgo NO gobierna la línea de corte.** La frase que ordena escribir marcadores es
+> **idéntica palabra por palabra** en `assist/v3.md:47` y en `assist/v4.md:59`, y la tarea del agente
+> (`v4.md:132-166`) **no menciona precio ni existencias**: hereda esa regla y nada más. Así que C40 ya
+> midió este caso exacto —misma frase, payload sin anclar— sobre 90 consultas libres contra el
+> proveedor real: **3 de 90 generaciones con marcador y 0 retiradas tras la reparación**. El defecto es
+> real y **su urgencia es pequeña**. Lo que de verdad retira el argumentario del agente es
+> `dangling_citation`: **85 incidencias y 72 supervivientes** en la pasada de C32b, con el 92,2 % de
+> las respuestas trayendo cero citas. Y «consume la reparación única» tampoco es lo que hace el
+> código: `assist/pitch.py:24` escribe *«One repair, not one per check»* y `repair_message` recibe la
+> lista entera, así que un marcador **se suma a la lista** y no gasta un turno que otra causa fuera a
+> usar. **Lo que gobierna la línea de corte es el consumidor .NET**: `IAiGatewayClient` tiene siete
+> métodos y ninguno es el del agente, que no es una degradación del 3 % sino el **100 %** del camino.
+>
+> **Dos: la referencia comparable no es la de C30b.** Los 147 de 213 y 188 de 213 son de los **modos
+> anclados**, donde hay UNA pieza y nombrar su precio es natural; en libre hay hasta quince agrupadas
+> y lo que se pide es comparar. La cabecera de `assist/v5.md` **ya había escrito que la proporción no
+> se traslada**, y la medición de C40 lo confirma: `v3` sobre 90 consultas libres escribió `{{price}}`
+> **2 veces** y `{{stock}}` **1**, en 2 de 90 generaciones. La referencia comparable es **ésa**, la del
+> análogo estructural de C40, y así se declara al publicar la cifra: **línea base prestada**.
 
 > **El agente no se sirve por defecto, y eso es criterio y no cautela.** Su única cifra comparativa
 > hoy dice **×3,0 de coste** y **13,1 % de retirada del argumentario** contra el 2,2 % de la ruta

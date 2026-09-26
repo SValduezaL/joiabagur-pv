@@ -163,6 +163,61 @@ el arnés resuelve, con test que lo exige donde hay `fixture` y lo prohíbe dond
 
 ## 3 · La pasada: `293fe5c6e470`, 204 peticiones, dos brazos
 
+> ## ⚠ Anotación posterior de C42 · 2026-09-26 · **las cifras de recuperación de esta pasada quedan como NO MEDIDAS**
+>
+> *Escrita cinco días después de este informe, por el change que instrumentó el arnés. No corrige
+> ningún número de aquí: acota qué describen.*
+>
+> **Esta pasada duró más del doble del techo de rancidez de la proyección, y entonces no existía el
+> drenaje automático que lo habría evitado.** La aritmética, toda del propio artefacto:
+>
+> ```text
+> provenance.paced_seconds  =  9.870,8 s  =  2 h 44 min
+> techo de rancidez         =      3.600 s  =  1 h     (jpv_pos_projection_max_age_seconds)
+> arreglo manual de C40     →  «caduca en una hora»     (informe de C41, §2.1)
+> drenaje programado        →  NO EXISTÍA: es de C41, cinco días POSTERIOR a esta pasada
+> ```
+>
+> **Y los dos caminos leen cosas distintas, que es lo que lo hace invisible.** El arnés resuelve su
+> surtido por `search.scope_buckets()`, un `SELECT` crudo que `retrieval/ports.py` declara *«read by
+> the evaluation only»* y que **no comprueba frescura ninguna**: devuelve etiquetas perfectas por
+> rancia que esté la proyección. El camino de servicio consulta el punto de control de sincronía y,
+> pasado el techo, **no aplica el prefiltro de disponibilidad** (`degraded=unscoped`). Así que a lo
+> sumo las **primeras ~74 de 204 filas** corrieron con el prefiltro aplicado, y es cota superior —la
+> procedencia no registra la antigüedad en t=0—. El conjunto de **calibración corre al final**, de
+> modo que sus filas van del orden de **1 h 45 min pasadas el techo**.
+>
+> **No se puede limpiar a posteriori, y que no se pueda es el hallazgo.** El corte ingenuo
+> primeras-74 contra el resto da 6,72 → 5,32 grupos de media y 9,5 % → 25,4 % de respuestas vacías,
+> pero **está confundido por composición**: las filas 1-74 son todas `load/gpt-4o` y el resto mezcla
+> `calibration` con el brazo barato. No hay forma de separar el efecto del ámbito del efecto del
+> brazo con lo que el artefacto guarda.
+>
+> **Qué queda no medido:** todo lo que dependa del surtido recuperado — **grupos y piezas por
+> respuesta, reparto coincidencias/sustitutos, y la tasa de respuestas sin piezas en su componente de
+> cola**. Trátese como no medido y no como medido a la baja.
+>
+> ### Y qué SOBREVIVE, que hay que decirlo porque parecería caer con el resto
+>
+> **El pivote 3 de 3 de `sin_existencias` en `gpt-4o` se sostiene, y con él la justificación de que
+> la etiqueta cualitativa baste para gobernar el pivote.** La razón es mecánica y está en el código:
+> `consultar_disponibilidad` llama a `search.availability_bucket(product_id, pos_id=pos_id)`
+> **directamente** (`assist/tools.py:873`), sin pasar por el guardia de rancidez, y devuelve la
+> antigüedad al modelo como `antiguedad_proyeccion_segundos` bajo la regla escrita en su propio
+> comentario: *«Freshness travels with the label, and a stale projection degrades the observation
+> instead of failing it: the rule is degrade, never remove»*. La etiqueta **no está guardada por la
+> rancidez; el prefiltro sí**. Son dos cosas distintas y no deben mezclarse al leer esta anotación.
+>
+> **Lo que impide que vuelva a pasar**, y por qué esta anotación no obliga a rehacer la pasada: C42
+> añade al arnés el registro de la antigüedad de la proyección **por fila** además de en la
+> procedencia, con su veredicto de rancidez contra el techo configurado, leída del punto de control de
+> sincronía y nunca de `ai.pos_projection.refreshed_at`. Una fila servida sin prefiltro es
+> identificable después en vez de promediarse con el resto. Y la precondición de la pasada pasa a
+> exigir el contenedor levantado con el drenaje programado de C41 encendido, comprobado en la sección
+> `projection` de `GET /health` antes de arrancar. **Se anota y no se rehace**, porque rehacerla
+> costaría 2 h 44 min y una cuota de proveedor para reproducir cifras que el change de evaluación va a
+> tomar de nuevo con los instrumentos puestos.
+
 Procedencia completa en el artefacto: `run_id`, `git_sha` (**`2c9fd6a…+dirty`**, declarado porque el
 árbol llevaba los cambios sin commitear), las cuatro versiones de prompt, los eslabones de
 credencial resueltos (`agent`, `router`, `assist`), 1.168 documentos de índice, surtido de 416 y las
