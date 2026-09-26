@@ -540,6 +540,33 @@ Con el administrador y **«todas las tiendas»**, observado en el entorno levant
 **La premisa de D9 queda verificada por observación**: ofrecer el ámbito global cuesta la capacidad de
 pivotar, y la línea que lo advierte al seleccionarlo no es estética.
 
+#### Y la economía del transcript, que era una predicción aritmética, queda **medida**
+
+El ticket la calculó así: `6 × 25 + 6 × 386 (p50) = 2.466 / 4.000`, y de ahí salió que la conversación
+son **seis intercambios y no doce**. Observado en la comprobación manual, al cerrarse el compositor:
+
+```text
+turnos 12/12 · 2.731/4.000 car.        ← el tope de TURNOS es el que muerde
+Sesión: 6 preguntas · 87k tokens · 0,52 €
+```
+
+Y corroborado petición a petición en el registro de embudo de la API, que apunta `transcript_chars` en
+cada una:
+
+| Turnos enviados | 1 | 3 | 5 | 7 |
+|---|---|---|---|---|
+| Caracteres | 24 | 536 | 679 | 1.121 |
+
+**La predicción y la medida coinciden dentro del 11 %** —2.466 predicho contra 2.731 medido— y el
+reparto es el que fija D6: **el tope de turnos se alcanza con los caracteres al 68 % de su límite**. Un
+contador que sólo hubiera medido lo tecleado habría ido por unos 150 caracteres de 4.000, o sea el
+**4 %**, con el rechazo por turnos ya ganado.
+
+> **Dos cosas que el log confirma de paso.** Los argumentarios llegan a **528 y 497 caracteres**, por
+> encima del p50 de 386 que C32b midió, así que el recorte por turno a 500 **no es decorativo**: recorta
+> de verdad. Y el coste de una conversación completa de seis intercambios es **0,52 € con 87k tokens**,
+> que es la cifra que la barra fija existe para poner delante del operario antes de que pulse otra vez.
+
 ### 5.9 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
