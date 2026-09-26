@@ -568,7 +568,7 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 
 **Changes asociados:** **C26** (`add-substitutes-retrieval` — **archivado el 2026-09-12**, 62/62), ~~C27~~ (**cortado**), **C30a**, **C30b**, **C31** *(archivado el 16 sep)*, **C32a** *(archivado el 20 sep)*, **C32b** *(archivado el 21 sep)* *(partidos el 20 sep)*, **C34** *(archivado el 22 sep)*, **C36** *(archivado el 24 sep)*, **C40** (`add-frontend-free-query-panel` — **archivado el 25 sep**, no previsto en ninguna ola: nace al comprobar C36 en demo), **C40_FIX** (`c40-fix-all-shops-scope-unreachable` — **archivado el 26 sep**, fuera de la numeración C: corrige a C40), **C42** (`add-frontend-agent-panel` — **abierto el 26 sep**, no previsto en ninguna ola: nace al valorar la cola pendiente del PF)
 
-> **Ampliado el 2026-09-26 — C42, y el motivo es que un pilar no se puede enseñar.** **C42** (`add-frontend-agent-panel`) se abre con historia ([HU-AIENG-042](Historias/AI-Eng/HU-AIENG-042.md)), ticket ([T-AIENG-042](../openspec/changes/add-frontend-agent-panel/ticket.md)) y **dos informes de exploración del mismo día** ([v1, contra el código](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md) · [v2, contra los artefactos ya escritos](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md)), en la rama `c42-add-frontend-agent-panel`. **No estaba en el plan**: sale de una sesión abierta para decidir entre implementar C38 entero o dar superficie al agente, y gana el segundo por lo que el §5 de la convocatoria escribe —*«el sistema debe poder probarse»*—. Recuento: **40 archivadas** —entra C41— y **3 pendientes**: **C42**, C38 y C39, en ese orden. **Va antes de C38** por la misma cadena de prompts que puso a C40 antes que a C38: aquí la tarea del agente sube de versión, así que unas cifras de generación tomadas antes describirían un prompt sustituido.
+> **Ampliado el 2026-09-26 — C42, y el motivo es que un pilar no se puede enseñar.** **C42** (`add-frontend-agent-panel`) se abre con historia ([HU-AIENG-042](Historias/AI-Eng/HU-AIENG-042.md)), ticket ([T-AIENG-042](../openspec/changes/archive/2026-09-27-add-frontend-agent-panel/ticket.md)) y **dos informes de exploración del mismo día** ([v1, contra el código](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md) · [v2, contra los artefactos ya escritos](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md)), en la rama `c42-add-frontend-agent-panel`. **No estaba en el plan**: sale de una sesión abierta para decidir entre implementar C38 entero o dar superficie al agente, y gana el segundo por lo que el §5 de la convocatoria escribe —*«el sistema debe poder probarse»*—. Recuento: **40 archivadas** —entra C41— y **3 pendientes**: **C42**, C38 y C39, en ese orden. **Va antes de C38** por la misma cadena de prompts que puso a C40 antes que a C38: aquí la tarea del agente sube de versión, así que unas cifras de generación tomadas antes describirían un prompt sustituido.
 >
 > **Ocho hallazgos y dieciséis decisiones, y la segunda pasada refuta a la primera con cifras del propio repositorio.** El v1 encontró una **regresión latente que C40 introdujo sin tocar el agente** —la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`— y concluyó que sin arreglarlo C42 entregaría *«un panel de agente sin prosa»*. **El v2 lo desmiente**: la frase que ordena marcadores es **idéntica palabra por palabra** en `v3.md:47` y `v4.md:59`, así que **C40 ya midió este caso** sobre 90 consultas libres con payload sin anclar — **3 de 90 generaciones con marcador y 0 retiradas tras la reparación única**, que además *«no es una por comprobación»* sino una sola con la lista entera de violaciones. La referencia que el v1 usó —C30b, `{{price}}` en 147 de 213— es de los modos **anclados**, y la cabecera de `assist/v5.md` ya había escrito por qué no se traslada: *«anclado hay una pieza y se la vende; en libre hay hasta quince agrupadas y lo que se pide es comparar»*. **El arreglo entra igual pero no gobierna la línea de corte: la gobierna el consumidor .NET, que no existe** —`IAiGatewayClient` tiene siete métodos y ninguno es el del agente, que es el 100 % y no el 3 %—. Y **la causa que de verdad retira el argumentario del agente ya estaba medida y no es el marcador**: `dangling_citation`, 85 en el primer intento y 72 supervivientes, con el **92,2 % de las respuestas trayendo cero citas**.
 >
@@ -871,24 +871,25 @@ Se miden por *changes* de OpenSpec, no por número de historias: la serie `HU-AI
 | **EP12** | Corpus y Enriquecimiento del Catálogo | C06a (hecho), C06b (hecho), C08 (hecho), C09 (hecho), C10 (hecho), C11 (hecho), **C23 (hecho)**, **FIX1 (hecho)** | 🔴 parcial |
 | **EP13** | Familias de Producto y Desambiguación | C07 (hecho), C18a (hecho), C18b (hecho), **C28 (hecho)** | 🟢 completa |
 | **EP14** | Búsqueda Semántica Híbrida | C12, C13, C14, C15, C16, C20, C21, **C22**, **C25** (hechos), **C41 (archivado 26 sep)** *(no previsto)* | 🟠 **parcial — reabierta** |
-| **EP15** | Venta Asistida, Sustitutos y Agentes | **C26 (archivado)**, ~~C27~~ *(cortado 12 sep)*, **C30a (archivado 13 sep)**, **C30b (archivado 14 sep)** *(partidos el 13 sep)*, **C31 (archivado 16 sep)**, **C32a (archivado 20 sep)**, **C32b (archivado 21 sep)** *(partidos el 20 sep)*, **C34 (archivado 22 sep)**, **C36 (archivado 24 sep)**, **C40 (archivado 25 sep)** *(no previsto)*, **C40_FIX (archivado 26 sep)** *(fuera de la numeración C: corrige a C40)*, **C42** *(abierto el 26 sep, no previsto — da superficie al único pilar del PF que no la tenía)* | 🟠 **parcial — reabierta** |
+| **EP15** | Venta Asistida, Sustitutos y Agentes | **C26 (archivado)**, ~~C27~~ *(cortado 12 sep)*, **C30a (archivado 13 sep)**, **C30b (archivado 14 sep)** *(partidos el 13 sep)*, **C31 (archivado 16 sep)**, **C32a (archivado 20 sep)**, **C32b (archivado 21 sep)** *(partidos el 20 sep)*, **C34 (archivado 22 sep)**, **C36 (archivado 24 sep)**, **C40 (archivado 25 sep)** *(no previsto)*, **C40_FIX (archivado 26 sep)** *(fuera de la numeración C: corrige a C40)*, **C42** *(archivado el 27 sep, 75/75 — no previsto; da superficie al único pilar del PF que no la tenía)* | 🟠 **parcial — reabierta** |
 | **EP16** | ~~Inventario Asistido y Señales de Demanda~~ | ~~C19, C29, C33, C35, C37~~ | ⛔ **anulada 31 ago** |
 | **EP17** | Evaluación y Observabilidad de IA | C04 (hecho), **C24 (hecho)**, C38, C39 · *(C25 amplía el arnés y el golden set desde EP14)* | 🔴 parcial |
 | **TOTAL PF** | | **48 fichas · 42 vivas** (5 anuladas, 1 cortada) — **40 archivadas, 3 pendientes** | |
 
-> **Actualizado el 2026-09-26, al abrir C42 y archivar C41 — y esta vez el recuento cuadra por dentro.**
-> **40 archivadas y 3 pendientes** —**C42**, C38 y C39, en ese orden—, y **48 fichas · 42 vivas**: entra
-> **C42** (`add-frontend-agent-panel`, EP15, no previsto en ninguna ola) y **C41 pasa de pendiente a
-> archivada**. La aritmética, que en la nota de abajo no cerraba y conviene dejar escrita: 48 fichas
-> menos 5 anuladas y 1 cortada dan **42 vivas**; de ésas, 3 están pendientes y **39 archivadas**; y las
-> **40** de la fila salen de sumarle **C40_FIX**, que está archivado y **fuera de la numeración C**, igual
-> que `FIX1` y `C25bis` están dentro de ella. Ésa es exactamente la unidad que faltaba para que «41
-> vivas» y «39 + 3» no sumaran lo mismo.
+> **Actualizado el 2026-09-27, al archivar C42 — y el recuento sigue cuadrando por dentro.**
+> **41 archivadas y 2 pendientes** —C38 y C39, en ese orden—, y **48 fichas · 42 vivas**: **C42 pasa de
+> pendiente a archivada** (`add-frontend-agent-panel`, EP15, no previsto en ninguna ola, **75/75 tareas**).
+> La aritmética, que conviene dejar escrita: 48 fichas menos 5 anuladas y 1 cortada dan **42 vivas**; de
+> ésas, 2 están pendientes y **40 archivadas**; y las **41** de la fila salen de sumarle **C40_FIX**, que
+> está archivado y **fuera de la numeración C**, igual que `FIX1` y `C25bis` están dentro de ella. Ésa es
+> exactamente la unidad que faltaba para que «41 vivas» y «40 + 2» no sumaran lo mismo.
 >
-> **El orden de las tres pendientes no es preferencia, es la cadena de prompts.** C40 subió a `assist/v5`
-> y movió la fase de la abstención; **C42 sube la tarea del agente a `assist/v6`**; y sólo entonces las
-> cifras de generación de C38 describen los prompts que se sirven. De ahí que C42 gane a C38 de
-> prerrequisito, anotado ya en la ficha de C38 del
+> **El orden de las dos pendientes no es preferencia, es la cadena de prompts.** C40 subió a `assist/v5`
+> y movió la fase de la abstención; **C42 subió la tarea del agente a `assist/v6`** —y con un hallazgo
+> que conviene llevarse a C38: medido antes y después, la caída del argumentario retirado del **13,1 %
+> al 1,2 % NO es atribuible a v6**, y el informe de C42 nombra los confundidores—; y sólo con los dos
+> hechos las cifras de generación de C38 describen los prompts que se sirven. De ahí que C42 ganara a
+> C38 de prerrequisito, anotado ya en la ficha de C38 del
 > [plan de changes](Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), que **manda sobre
 > este resumen**.
 >
