@@ -405,6 +405,98 @@ describe('the trace', () => {
   });
 });
 
+/* ------------------------------------------------- when the service did not answer at all */
+
+describe('an answer the AI service did not serve', () => {
+  /**
+   * **Found by the manual check of C42 and by nothing else.** With the every-shop scope against a
+   * stale container the gateway degraded, and the block claimed «el agente terminó por un motivo que
+   * esta pantalla no reconoce» over «0 vueltas · 0 consultas» — blaming the screen for a service that
+   * simply did not answer, and describing a loop that never ran.
+   */
+  const degraded = () =>
+    answer({
+      groups: [],
+      pitch: null,
+      pitchStatus: 'ai_unavailable',
+      aiAvailable: false,
+      degradedReason: 'ai_unavailable',
+      stopReason: '',
+      iterations: 0,
+      toolCallsUsed: 0,
+      trace: [],
+    });
+
+  it('should state the degradation instead of claiming an unrecognised stop reason', () => {
+    renderBlock(degraded());
+
+    expect(screen.getByTestId('agent-degraded')).toHaveTextContent(/no está disponible/i);
+    expect(screen.queryByTestId('agent-stop-reason')).not.toBeInTheDocument();
+    expect(screen.queryByText(/no reconoce/i)).not.toBeInTheDocument();
+  });
+
+  it('should not report turns and consultations for a loop that never ran', () => {
+    renderBlock(degraded());
+
+    expect(screen.queryByText(/0 vueltas/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 consultas/)).not.toBeInTheDocument();
+  });
+
+  it('should not claim the rows come from the catalogue when there are no rows', () => {
+    renderBlock(degraded());
+
+    // C36's block words `ai_unavailable` for the sale card it was written for — «Lo que ves viene del
+    // catálogo: el precio, las unidades y las variantes son reales» — which is false of a degraded
+    // agent turn, because there is nothing to see.
+    expect(screen.queryByText(/viene del cat/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-answer-group')).not.toBeInTheDocument();
+  });
+
+  it('should not word it as an empty search either', () => {
+    // Nothing was searched: the loop never started. Saying the catalogue came back empty would blame
+    // the catalogue for a service that did not answer.
+    expect(searchedAndFoundNothing(degraded())).toBe(false);
+    renderBlock(degraded());
+    expect(screen.queryByTestId('agent-searched-nothing')).not.toBeInTheDocument();
+  });
+
+  it('should name each degradation the backend can report', () => {
+    for (const reason of ['switched_off', 'credential_rejected', 'not_implemented', 'ai_unavailable']) {
+      const { unmount } = render(
+        <BrowserRouter>
+          <AgentAnswerBlock
+            answer={{ ...degraded(), degradedReason: reason }}
+            onSelect={vi.fn()}
+          />
+        </BrowserRouter>,
+      );
+
+      expect(screen.getByTestId('agent-degraded').textContent).not.toMatch(/no reconoce/i);
+      unmount();
+    }
+  });
+
+  it('should still show the strip when the service answered with a degradation of its own', () => {
+    // The other kind: the service DID answer and reported that its provider fell. That is a stop
+    // reason, it has copy of its own, and the counters mean something.
+    renderBlock(
+      answer({
+        groups: [],
+        pitch: '',
+        pitchStatus: 'not_generated',
+        aiAvailable: true,
+        stopReason: 'fallo_proveedor',
+        partial: true,
+        iterations: 1,
+        toolCallsUsed: 0,
+      }),
+    );
+
+    expect(screen.getByTestId('agent-stop-reason')).toHaveTextContent(/proveedor/i);
+    expect(screen.queryByTestId('agent-degraded')).not.toBeInTheDocument();
+  });
+});
+
 /* ---------------------------------------------------------------- 2.0 %: the cut answer, last */
 
 describe('an incomplete answer', () => {

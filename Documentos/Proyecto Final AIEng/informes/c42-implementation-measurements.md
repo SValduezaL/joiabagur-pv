@@ -1,4 +1,4 @@
-# C42 — informe de implementación: el agente llega al operario, y las diez cosas que se refutaron por el camino
+# C42 — informe de implementación: el agente llega al operario, y las doce cosas que se refutaron por el camino
 
 **Change:** `add-frontend-agent-panel` · **Rama:** `c42-add-frontend-agent-panel` sobre `ai-eng`
 **Artefactos de partida:** `946eb42` (specs y tareas) · **Implementación:** 2026-09-26
@@ -471,7 +471,63 @@ es la clase de gasto que esa decisión existe para evitar.
 extremo es una consulta a los logs en explotación, con tráfico real en vez de con un conjunto
 sintético. Es una cifra mejor que la que una segunda pasada habría dado.
 
-### 5.8 · El brazo barato no se mide, y es una reducción declarada
+### 5.8 · ⚠ La comprobación manual encontró dos defectos, y **ninguna de las tres suites podía verlos**
+
+Esto es la justificación de la puerta 12.1, escrita con lo que encontró. Síntoma reportado por el
+operario: con el administrador y **una tienda seleccionada** el agente contesta bien; con **«todas las
+tiendas»** *todas* las respuestas caen con aviso de asistente no disponible y cero piezas.
+
+#### Defecto 1 · El contenedor servía código anterior al change, y `restart` no lo arregla
+
+`docker compose restart` **reutiliza la imagen**. La que estaba corriendo se construyó al comprobar la
+precondición del drenaje, **antes** del tramo de `ai-service`, así que el contenedor servía la ruta del
+agente con `get_service_principal` — el que **rechaza con 401 un token sin `pos_id`**. Verificado
+dentro del contenedor: no tenía `v6.md` y su ruta seguía con el principal antiguo.
+
+De ahí que el fallo fuera **parcial y por eso desconcertante**: sólo el ámbito global viaja sin la
+reclamación, así que sólo él caía. .NET lo degradaba a `credential_rejected` y servía la respuesta con
+`aiAvailable: false`, que es lo correcto.
+
+> **Y la razón de que ninguna suite lo viera es la que importa: nada ejercitaba la ruta del agente por
+> HTTP.** El arnés de evaluación importa `run_agent` y lo llama **en proceso** —las 102 peticiones de la
+> pasada no pasaron por el contenedor—; los tests de integración de .NET usan una pasarela falsa; y los
+> tests de ruta de Python levantan la app con `TestClient`. Las tres capas verdes, y el cable entre las
+> dos últimas sin recorrer por nadie. **Es exactamente la clase de defecto que C40 dejó pasar con 136
+> escenarios en verde**, y es la razón por la que esta puerta está en la definición de hecho.
+>
+> Reconstruida la imagen, la ruta responde **200 con y sin `pos_id`**, comprobado por HTTP con los dos
+> tokens. La precondición —y el porqué— van al *runbook*.
+
+#### Defecto 2 · El bloque afirmaba un motivo de parada que no existía. **Éste es de código y sobrevivía al arreglo del contenedor**
+
+Con la pasarela degradada, la respuesta llega sin motivo de parada y sin contadores, y el bloque
+mostraba:
+
+```text
+El agente terminó por un motivo que esta pantalla no reconoce
+0 vueltas · 0 consultas
+El asistente no está disponible
+Lo que ves viene del catálogo: el precio, las unidades y las variantes son reales…
+```
+
+**Tres cosas falsas a la vez.** La primera culpa a la pantalla de un servicio que simplemente no
+contestó —el motivo no es que no se reconozca, es que no hay motivo—. La segunda describe un bucle que
+no corrió. Y la tercera es la copia de C36 para `ai_unavailable`, escrita para **la ficha de venta**,
+donde sí hay una pieza delante: aquí no hay ninguna fila, así que «lo que ves viene del catálogo» no
+describe nada.
+
+**Arreglado keyándolo en `aiAvailable`:** cuando el servicio no contestó, la tira dice **la
+degradación** —que el servicio ya traía en `degradedReason` y que `degradedReasonText` ya traducía, y
+que el bloque no usaba— y no se pinta ni el motivo de parada, ni los contadores, ni el bloque de C36.
+Cuando el servicio **sí** contestó reportando que su proveedor cayó, eso **sí** es un motivo de parada
+con copia propia y los contadores significan algo, y la tira lo dice así.
+
+**Seis tests nuevos** cubren el estado, incluido el que separa las dos degradaciones. La que ninguno
+tenía: **no había un solo test del bloque con `aiAvailable: false`**, y ésa es la lección de método —
+los estados degradados de la pasarela se probaron en el servicio de aplicación y no en la pantalla que
+los pinta.
+
+### 5.9 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
 barato ya está **descartado por comportamiento y no por precio** —58,8 % de respuestas incompletas
@@ -553,6 +609,6 @@ argumentario.
 | 12 · Cierre | *(12.1 en manos del operario, con su guion en `c42-manual-check-runbook.md`)* |
 
 **Tests nuevos:** 10 en `ai-service`, **61** en `backend` —54 propios más los 7 modelos del agente que
-entran en la guarda de paridad del contrato— y 99 en `frontend`.
+entran en la guarda de paridad del contrato— y **105** en `frontend` —99 más los 6 del estado degradado que la comprobación manual obligó a escribir—.
 **`openspec validate --all --strict`: 63 passed, 0 failed.**
 **`dotnet build`: 0 errores. `npm run build`: verde. `tsc --noEmit` filtrado: sin errores nuevos.**

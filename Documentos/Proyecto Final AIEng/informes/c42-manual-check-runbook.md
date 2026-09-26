@@ -39,6 +39,33 @@ ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5056 \
 > tienda es un acto explícito. Para esta comprobación se enciende por defecto; **en un despliegue se
 > enciende tienda por tienda con `AiAgentAssist:EnabledPointOfSaleIds`.**
 
+### ⚠ La precondición que se descubrió en la propia comprobación: **el contenedor tiene que llevar el código de este change**
+
+**Reconstruir la imagen no es opcional, y `docker compose restart` no basta.** `restart` reutiliza la
+imagen; si ésta se construyó antes de los cambios de `ai-service`, el contenedor sirve la ruta del
+agente **tal como estaba**: con `get_service_principal`, que **rechaza con 401 un token sin `pos_id`**.
+
+El síntoma es desconcertante porque es **parcial**: con una tienda seleccionada el agente contesta
+perfectamente, y sólo el ámbito «todas las tiendas» cae —con el aviso de asistente no disponible y cero
+piezas—, porque es el único caso en que el token viaja sin la reclamación.
+
+```bash
+cd backend
+docker compose build jbg-ai && docker compose up -d jbg-ai
+
+# Y se comprueba, en vez de suponerse:
+docker exec jpv-pv-jbg-ai ls /app/prompts/assist/          # tiene que aparecer v6.md
+docker exec jpv-pv-jbg-ai python -c \
+  "from jbg_ai.assist.constants import AGENT_PITCH_PROMPT_VERSION as v; print(v)"   # assist/v6
+```
+
+> **Y por qué nadie lo había visto antes**, que es la parte que importa: **nada ejercitaba la ruta del
+> agente por HTTP.** El arnés de evaluación importa `run_agent` y lo llama **en proceso**; los tests de
+> integración de .NET usan una pasarela falsa; y los tests de ruta de Python levantan la app con
+> `TestClient`, no el contenedor. Las tres capas estaban verdes y el cable entre las dos últimas no lo
+> había recorrido nadie. **Es exactamente la clase de defecto que esta comprobación existe para cazar**,
+> y la cazó a la primera.
+
 ### La precondición que el arnés necesita y la pantalla también
 
 El drenaje programado de C41 vive en el ciclo de vida de `jbg-ai` y **necesita la API .NET sirviendo

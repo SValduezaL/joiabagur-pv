@@ -26,7 +26,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AssistedSearchResultRow } from '@/components/sales/assisted-search-result-row';
 import { PitchBlock } from '@/components/sales/sales-assist-card/pitch-block';
 import { AgentTrace } from './agent-trace';
-import { agentWarningText, isBudgetStop, originText, stopReasonText } from './agent-copy';
+import {
+  agentWarningText,
+  degradedReasonText,
+  isBudgetStop,
+  originText,
+  stopReasonText,
+} from './agent-copy';
 import type { AgentAssistResponse } from '@/types/ai-agent.types';
 import type { AssistedSearchResult } from '@/types/ai-search.types';
 
@@ -80,28 +86,45 @@ export function AgentAnswerBlock({
 
   return (
     <div data-testid="agent-answer-block" data-stop-reason={answer.stopReason} className="space-y-4">
-      {/* The status strip: why it stopped, how many turns, how many consultations. Translated from
-          the reported stop reason and never derived from the two counters beside it. */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Badge data-testid="agent-stop-reason" variant="secondary">
-          {stopReasonText(answer.stopReason)}
-        </Badge>
-        <span className="text-muted-foreground">
-          {answer.iterations} {answer.iterations === 1 ? 'vuelta' : 'vueltas'} ·{' '}
-          {answer.toolCallsUsed}{' '}
-          {answer.toolCallsUsed === 1 ? 'consulta' : 'consultas'}
-        </span>
-      </div>
+      {/* **The strip says one of two things, and which one depends on whether the service answered.**
+          Found by the manual check of C42 and not by any test: when the gateway degrades, the response
+          carries no stop reason and no counters, and claiming one told the operator «el agente terminó
+          por un motivo que esta pantalla no reconoce» — which blames the screen for a service that
+          simply did not answer, next to «0 vueltas · 0 consultas» about a loop that never ran. */}
+      {answer.aiAvailable ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {/* Translated from the reported stop reason and never derived from the counters beside it. */}
+          <Badge data-testid="agent-stop-reason" variant="secondary">
+            {stopReasonText(answer.stopReason)}
+          </Badge>
+          <span className="text-muted-foreground">
+            {answer.iterations} {answer.iterations === 1 ? 'vuelta' : 'vueltas'} ·{' '}
+            {answer.toolCallsUsed}{' '}
+            {answer.toolCallsUsed === 1 ? 'consulta' : 'consultas'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge data-testid="agent-degraded" variant="secondary">
+            {degradedReasonText(answer.degradedReason)}
+          </Badge>
+        </div>
+      )}
 
-      {/* The argument and its citations, from C36's block, untouched. It already renders the five
-          states that carry no prose, so an answer with no text still says something true. */}
-      <PitchBlock
-        pitchStatus={answer.pitchStatus}
-        pitch={answer.pitch}
-        citations={answer.citations}
-        clarificationQuestion={answer.clarificationQuestion}
-        degradedReason={answer.degradedReason}
-      />
+      {/* The argument and its citations, from C36's block, untouched — **and deliberately not
+          rendered when the service did not answer.** That block's copy for `ai_unavailable` reads
+          «Lo que ves viene del catálogo: el precio, las unidades y las variantes son reales», which
+          is true of the sale card it was written for and false here, where there is nothing to see:
+          a degraded agent turn carries no rows at all. The strip above already says what happened. */}
+      {answer.aiAvailable && (
+        <PitchBlock
+          pitchStatus={answer.pitchStatus}
+          pitch={answer.pitch}
+          citations={answer.citations}
+          clarificationQuestion={answer.clarificationQuestion}
+          degradedReason={answer.degradedReason}
+        />
+      )}
 
       {/* Warnings about the conversation. Present in 3.9 % of answers, so nothing renders when the
           list is empty rather than an empty section. */}
