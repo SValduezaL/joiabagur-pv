@@ -24,8 +24,27 @@ public class AiAssistAgentRequest
     /// <summary>The conversation so far, oldest turn first.</summary>
     public List<AiAgentTurn> Turns { get; set; } = [];
 
-    /// <summary>Groups wanted after hydration. Null takes the contract's default.</summary>
-    public int? TopK { get; set; }
+    /// <summary>Groups wanted after hydration.</summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>Non-nullable with a default, which is the contract's own shape</strong> —
+    /// <c>top_k: int = Field(default=5, ge=1, le=20)</c> — and the shape
+    /// <see cref="AiAssistSaleRequest.Filters"/> already uses for the same reason:
+    /// <c>AiContractSnapshotTests</c> holds nullability in parity between the two sides, and a
+    /// nullable member here would claim the contract returns an explicit null where it does not.
+    /// </para>
+    /// <para>
+    /// <strong>Found by that test</strong>, which is the whole reason the agent's DTOs were added to
+    /// it: this property started out as <c>int?</c>, the client's own tests passed over it because
+    /// they deserialise a body this repository wrote, and the parity guard caught it at build time —
+    /// which is the place this class exists to move such things to.
+    /// </para>
+    /// <para>
+    /// The default matches the contract's rather than being chosen here; the caller overrides it with
+    /// its configured candidate window.
+    /// </para>
+    /// </remarks>
+    public int TopK { get; set; } = 5;
 }
 
 /// <summary>
