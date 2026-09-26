@@ -527,6 +527,19 @@ tenía: **no había un solo test del bloque con `aiAvailable: false`**, y ésa e
 los estados degradados de la pasarela se probaron en el servicio de aplicación y no en la pantalla que
 los pinta.
 
+#### Y lo que la comprobación confirmó, tras los dos arreglos
+
+Con el administrador y **«todas las tiendas»**, observado en el entorno levantado:
+
+| Lo que se ve | Qué confirma |
+|---|---|
+| **Precios sí, existencias no** | La hidratación con ámbito global reporta cantidad y existencias como **desconocidas y no como cero**, y la fila lo dice en vez de afirmar «sin existencias» |
+| El bucle consulta **catálogo, conocimiento, familias y disponibilidad** | Las cuatro herramientas se eligen con el ámbito ausente: la omisión de la reclamación **no mutila el bucle**, sólo el prefiltro |
+| `consultar_disponibilidad` **se invoca igual** | El escenario *«with no scope the loop reports no scope rather than no stock»*, confirmado **en el entorno** y no sólo a nivel de bucle: la etiqueta vale `sin_ambito`, que no es «agotado», y por eso **el pivote no se dispara** — que es la consecuencia que D9 obliga a declarar en pantalla |
+
+**La premisa de D9 queda verificada por observación**: ofrecer el ámbito global cuesta la capacidad de
+pivotar, y la línea que lo advierte al seleccionarlo no es estética.
+
 ### 5.9 · El brazo barato no se mide, y es una reducción declarada
 
 La pasada se toma **sólo sobre `gpt-4o`**, el arm que se sirve: 102 peticiones en vez de 204. El brazo
