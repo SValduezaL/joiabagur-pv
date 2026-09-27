@@ -1,0 +1,395 @@
+{
+  "rescored_from": {
+    "artefact": "c32b-agent-sweep-17fbdd15a18c.json",
+    "sha256_lf": "613020762afd815ab2b4f95dde2d335842269d22a5d912cb437d5b3c33a71277",
+    "run_id": "17fbdd15a18c",
+    "partial": false
+  },
+  "rescored_with": {
+    "git_sha": "a5ac75708f94ffd86c74d88d43c9f6de0d045db5",
+    "taken_at": "2026-09-27T19:56:12+00:00"
+  },
+  "stage_models": {
+    "router": "openai/gpt-4o",
+    "pitch": "openai/gpt-4o-mini",
+    "loop": "the arm of each row"
+  },
+  "stage_models_source": "recorded in the provenance",
+  "legacy_router_usage": null,
+  "prices_usd_per_million": {
+    "openai/gpt-4o": [
+      2.5,
+      10.0
+    ],
+    "openai/gpt-4o-mini": [
+      0.15,
+      0.6
+    ]
+  },
+  "summary": {
+    "openai/gpt-4o::calibration": {
+      "requests": 20,
+      "partial": 0,
+      "stop_reasons": {
+        "sin_mas_herramientas": 16,
+        "aclaracion": 1,
+        "rechazado": 3
+      },
+      "tokens_prompt": {
+        "n": 20,
+        "p50": 10346.5,
+        "p95": 19574,
+        "max": 25840,
+        "mean": 10603.0
+      },
+      "tokens_total": {
+        "n": 20,
+        "p50": 10580.0,
+        "p95": 20082,
+        "max": 26344,
+        "mean": 10765.6
+      },
+      "tokens_governed": {
+        "n": 20,
+        "p50": 7763.0,
+        "p95": 13333,
+        "max": 22326,
+        "mean": 8740.1
+      },
+      "context_chars": {
+        "n": 20,
+        "p50": 854.5,
+        "p95": 6399,
+        "max": 17132,
+        "mean": 2351.8
+      },
+      "wall_ms": {
+        "n": 20,
+        "p50": 4203.1,
+        "p95": 7276.4,
+        "max": 8182.3,
+        "mean": 3721.5
+      },
+      "iterations": {
+        "n": 20,
+        "p50": 2.0,
+        "p95": 4.0,
+        "max": 4.0,
+        "mean": 2.1
+      },
+      "provider_calls": {
+        "n": 20,
+        "p50": 4.0,
+        "p95": 6.0,
+        "max": 7.0,
+        "mean": 3.8
+      },
+      "provider_calls_over_ceiling": 0,
+      "growth_by_turn": {
+        "1": {
+          "requests": 17,
+          "prompt_tokens_p50": 1940,
+          "context_chars_p50": 516
+        },
+        "2": {
+          "requests": 14,
+          "prompt_tokens_p50": 2492.0,
+          "context_chars_p50": 1898.0
+        },
+        "3": {
+          "requests": 9,
+          "prompt_tokens_p50": 2966,
+          "context_chars_p50": 3007
+        },
+        "4": {
+          "requests": 2,
+          "prompt_tokens_p50": 5195.0,
+          "context_chars_p50": 10196.0
+        }
+      },
+      "tool_usage": {
+        "buscar_catalogo": 5,
+        "buscar_sustitutos": 3,
+        "listar_familia": 1,
+        "consultar_conocimiento": 9,
+        "consultar_disponibilidad": 13,
+        "pedir_aclaracion": 1
+      },
+      "tools_never_chosen": [],
+      "invented_tool_names": [],
+      "failure_causes": {},
+      "pitch_ran": 11,
+      "pitch_withheld": 0,
+      "pitch_violation_causes": {
+        "figure_not_in_context": 2,
+        "claim_not_in_pitch": 2
+      },
+      "pitch_placeholders": {
+        "price_total": 0,
+        "stock_total": 0,
+        "generations_with_a_price_placeholder": 0,
+        "generations_with_a_stock_placeholder": 0
+      },
+      "projection_freshness": {
+        "rows_recorded": 20,
+        "rows_stale": 0,
+        "age_seconds": {
+          "n": 20,
+          "p50": 110.9,
+          "p95": 475.6,
+          "max": 540.7,
+          "mean": 191.1
+        }
+      },
+      "pitch_availability_terms": {
+        "arguments_measured": 11,
+        "arguments_with_terms": 3,
+        "terms": 3
+      },
+      "expectations": {
+        "ok": 17,
+        "miss": 2,
+        "miss_declared": 1,
+        "missed": [
+          "C14",
+          "C17"
+        ],
+        "declared": [
+          "C19"
+        ],
+        "not_comparable": []
+      },
+      "cost_usd_total": 0.4592,
+      "cost_usd_per_request": 0.022958,
+      "cost_usd_per_request_by_stage": {
+        "router": 0.008423,
+        "loop": 0.014205,
+        "pitch": 0.00033
+      },
+      "unpriced_models": []
+    },
+    "openai/gpt-4o::load": {
+      "requests": 82,
+      "partial": 0,
+      "stop_reasons": {
+        "sin_mas_herramientas": 72,
+        "aclaracion": 9,
+        "rechazado": 1
+      },
+      "tokens_prompt": {
+        "n": 82,
+        "p50": 13210.5,
+        "p95": 19383,
+        "max": 20874,
+        "mean": 13120.4
+      },
+      "tokens_total": {
+        "n": 82,
+        "p50": 13375.0,
+        "p95": 19601,
+        "max": 21083,
+        "mean": 13307.0
+      },
+      "tokens_governed": {
+        "n": 82,
+        "p50": 10619.0,
+        "p95": 16816,
+        "max": 18247,
+        "mean": 10759.4
+      },
+      "context_chars": {
+        "n": 82,
+        "p50": 1827.5,
+        "p95": 4675,
+        "max": 7294,
+        "mean": 2121.8
+      },
+      "wall_ms": {
+        "n": 82,
+        "p50": 4718.8,
+        "p95": 6834.2,
+        "max": 8718.9,
+        "mean": 4773.1
+      },
+      "iterations": {
+        "n": 82,
+        "p50": 3.0,
+        "p95": 5.0,
+        "max": 5.0,
+        "mean": 3.0
+      },
+      "provider_calls": {
+        "n": 82,
+        "p50": 5.0,
+        "p95": 7.0,
+        "max": 7.0,
+        "mean": 4.8
+      },
+      "provider_calls_over_ceiling": 0,
+      "growth_by_turn": {
+        "1": {
+          "requests": 81,
+          "prompt_tokens_p50": 1977,
+          "context_chars_p50": 1664
+        },
+        "2": {
+          "requests": 73,
+          "prompt_tokens_p50": 2621,
+          "context_chars_p50": 1816
+        },
+        "3": {
+          "requests": 72,
+          "prompt_tokens_p50": 2708.0,
+          "context_chars_p50": 1849.0
+        },
+        "4": {
+          "requests": 10,
+          "prompt_tokens_p50": 3225.0,
+          "context_chars_p50": 3319.5
+        },
+        "5": {
+          "requests": 7,
+          "prompt_tokens_p50": 3464,
+          "context_chars_p50": 3441
+        }
+      },
+      "tool_usage": {
+        "buscar_catalogo": 74,
+        "buscar_sustitutos": 8,
+        "listar_familia": 6,
+        "consultar_conocimiento": 21,
+        "consultar_disponibilidad": 81,
+        "pedir_aclaracion": 10
+      },
+      "tools_never_chosen": [],
+      "invented_tool_names": [],
+      "failure_causes": {},
+      "pitch_ran": 72,
+      "pitch_withheld": 1,
+      "pitch_violation_causes": {
+        "dangling_citation": 8
+      },
+      "pitch_placeholders": {
+        "price_total": 0,
+        "stock_total": 0,
+        "generations_with_a_price_placeholder": 0,
+        "generations_with_a_stock_placeholder": 0
+      },
+      "projection_freshness": {
+        "rows_recorded": 82,
+        "rows_stale": 0,
+        "age_seconds": {
+          "n": 82,
+          "p50": 357.9,
+          "p95": 870.7,
+          "max": 1193.4,
+          "mean": 381.6
+        }
+      },
+      "pitch_availability_terms": {
+        "arguments_measured": 72,
+        "arguments_with_terms": 4,
+        "terms": 4
+      },
+      "expectations": null,
+      "cost_usd_total": 2.3173,
+      "cost_usd_per_request": 0.028259,
+      "cost_usd_per_request_by_stage": {
+        "router": 0.008312,
+        "loop": 0.019539,
+        "pitch": 0.000409
+      },
+      "unpriced_models": []
+    }
+  },
+  "pivot_rates": {
+    "openai/gpt-4o": {
+      "sin_existencias": {
+        "scenarios": 3,
+        "pivoted": 3,
+        "pivot_required": 3,
+        "pivot_forbidden": 0,
+        "infra_pivots": 0,
+        "over_pivots": 0,
+        "ids": [
+          "C07",
+          "C11",
+          "C12"
+        ],
+        "pivot_rate": 1.0,
+        "failure": "ninguno"
+      },
+      "ultimas_unidades": {
+        "scenarios": 1,
+        "pivoted": 0,
+        "pivot_required": 0,
+        "pivot_forbidden": 1,
+        "infra_pivots": 0,
+        "over_pivots": 0,
+        "ids": [
+          "C08"
+        ],
+        "pivot_rate": 0.0,
+        "failure": "ninguno"
+      },
+      "disponible": {
+        "scenarios": 1,
+        "pivoted": 0,
+        "pivot_required": 0,
+        "pivot_forbidden": 1,
+        "infra_pivots": 0,
+        "over_pivots": 0,
+        "ids": [
+          "C09"
+        ],
+        "pivot_rate": 0.0,
+        "failure": "ninguno"
+      },
+      "sin_ambito": {
+        "scenarios": 1,
+        "pivoted": 0,
+        "pivot_required": 0,
+        "pivot_forbidden": 1,
+        "infra_pivots": 0,
+        "over_pivots": 0,
+        "ids": [
+          "C10"
+        ],
+        "pivot_rate": 0.0,
+        "failure": "ninguno"
+      }
+    }
+  },
+  "expectations": {
+    "as_run": {
+      "openai/gpt-4o": {
+        "ok": 17,
+        "miss": 2,
+        "miss_declared": 1,
+        "missed": [
+          "C14",
+          "C17"
+        ],
+        "declared": [
+          "C19"
+        ],
+        "not_comparable": []
+      }
+    },
+    "current": {
+      "openai/gpt-4o": {
+        "ok": 17,
+        "miss": 2,
+        "miss_declared": 1,
+        "missed": [
+          "C14",
+          "C17"
+        ],
+        "declared": [
+          "C19"
+        ],
+        "not_comparable": []
+      }
+    }
+  }
+}

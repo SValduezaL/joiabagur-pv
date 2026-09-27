@@ -69,10 +69,32 @@ El usuario aterriza en la pantalla de login; tras autenticarse, accede al dashbo
 
 - Backend: .NET 10 SDK, PostgreSQL 14+ (o Docker para desarrollo).
 - Frontend: Node.js 20+ y npm, navegador moderno (Chrome 90+, Edge 90+, Safari 14+).
+- Servicio de IA (`jbg-ai`): Docker, o Python 3.11 con [uv](https://docs.astral.sh/uv/) para ejecutarlo en el anfitrión. La base de datos necesita la extensión **pgvector**, que trae la imagen que usa el Compose de desarrollo.
+
+**Qué escucha dónde, en desarrollo**
+
+| Pieza | Puerto | Cómo se arranca |
+|---|---|---|
+| PostgreSQL con pgvector | `5433` | `docker compose up -d postgres` desde `backend/` |
+| pgAdmin *(opcional)* | `8080` | mismo Compose, servicio `pgadmin` |
+| Servicio de IA `jbg-ai` | `8001` | mismo Compose, servicio `jbg-ai` |
+| API .NET | `5056` | `dotnet run` en el anfitrión |
+| SPA React | `3000` | `npm run dev` en el anfitrión |
 
 **Pasos**
 
-1. **Backend**
+1. **Servicios de apoyo (base de datos y servicio de IA)**
+   ```bash
+   cd backend
+   docker compose up -d postgres
+   docker compose up --build jbg-ai
+   curl http://127.0.0.1:8001/health
+   ```
+   `jbg-ai` **arranca sin base de datos y sin ninguna clave de proveedor**: es un requisito de su spec y no un accidente, para que un entorno a medio provisionar se pueda diagnosticar en lugar de fallar al importar. Con `STUB_MODE=true` responde formas válidas sin llamar a nada. Las claves reales de proveedor y las rutas de *feed* viven en `backend/.env`, que es el único sitio del que el Compose las interpola; el detalle de cuál hace falta para cada ruta —y qué **503** nombra la que falta— está en [ai-service/README.md](ai-service/README.md).
+
+   El navegador **nunca** llama a este servicio: sólo lo hace la API .NET, con un JWT interno HS256 sobre la red de Docker.
+
+2. **Backend**
    ```bash
    cd backend/src/JoiabagurPV.API
    dotnet restore
@@ -83,7 +105,7 @@ El usuario aterriza en la pantalla de login; tras autenticarse, accede al dashbo
 
    Los ficheros `appsettings*.json` ya vienen versionados con valores de desarrollo que funcionan tal cual; para ajustar algo en tu máquina, crea `appsettings.Local.json` (ignorado por git) o usa user-secrets, en lugar de editar los ficheros versionados. Las migraciones EF Core se aplican solas en cada arranque, junto con la siembra del usuario administrador; para aplicarlas a mano, `dotnet ef database update --project ../JoiabagurPV.Infrastructure`.
 
-2. **Frontend**
+3. **Frontend**
    ```bash
    cd frontend
    npm install --legacy-peer-deps
@@ -91,12 +113,14 @@ El usuario aterriza en la pantalla de login; tras autenticarse, accede al dashbo
    ```
    La UI queda disponible en `http://localhost:3000`. El fichero `.env.development` ya apunta a `http://localhost:5056/api`, el mismo puerto que fija el perfil de arranque del backend; solo hay que tocar `VITE_API_BASE_URL` si cambias uno de los dos.
 
-3. **Usuario por defecto (desarrollo)**  
+4. **Usuario por defecto (desarrollo)**  
    Usuario: `admin`. Contraseña: `Admin123!`. Cambiar la contraseña tras el primer acceso.
 
-4. **Tests**
+5. **Tests** — **las tres suites se ejecutan en serie, nunca a la vez.** En paralelo, `vitest` satura la máquina y los tests de integración del backend pierden la tubería con nombre del demonio de Docker, así que dan cientos de fallos que no son del código.
    - Backend: `cd backend/src/JoiabagurPV.Tests` y `dotnet test`.
    - Frontend: `cd frontend` y `npm run test`.
+   - Servicio de IA: `cd ai-service` y `uv run pytest`. No llama a ningún proveedor: el cliente generativo se conduce con un doble que falla si alguien lo llama de verdad.
+   - **Léase la línea de resumen y no el código de salida.** `vitest` sale `0` al canalizarse, y `dotnet test` sale `0` si la compilación falló. Las dos suites de aplicación traen fallos preexistentes documentados en [Documentos/testing-backend.md](Documentos/testing-backend.md) y [Documentos/testing-frontend.md](Documentos/testing-frontend.md): un cambio está limpio si los **nombres** de los tests en rojo caen en el mismo conjunto, no si coincide el número.
 
 Para despliegue en AWS (EC2, nginx, Docker API+SPA, RDS, S3, ECR, OIDC) y CI/CD, ver [Documentos/Guias/deploy-aws-production.md](Documentos/Guias/deploy-aws-production.md). Migración desde App Runner/CloudFront: [Documentos/Guias/deploy-aws-ec2-migration.md](Documentos/Guias/deploy-aws-ec2-migration.md).
 
@@ -107,6 +131,20 @@ Para despliegue en AWS (EC2, nginx, Docker API+SPA, RDS, S3, ECR, OIDC) y CI/CD,
 ### 2.1. Diagrama de arquitectura
 
 La aplicación sigue una arquitectura monolítica simple con backend y frontend separados, desplegados en contenedores y servicios cloud en régimen free-tier. Se eligió este enfoque para reducir complejidad operativa, mantener un único despliegue y optimizar costes; el sacrificio es menor escalado independiente por componente.
+
+**La única frontera de proceso es la del servicio de IA, y está donde está por una razón.** `jbg-ai` es un contenedor propio en Python porque es donde vive el ecosistema de recuperación vectorial y de clientes de modelo; lo que **no** se movió con él es la autoridad. **.NET conserva la verdad de precio, existencias y permisos**, y la aplica *después* de que la IA proponga: la IA ordena candidatos, .NET hidrata cada uno con lo que dice el inventario de esa tienda y descarta lo que ese punto de venta no lleva. Un fallo del servicio de IA degrada a un buscador léxico acotado a la misma tienda y se reporta como tal; **nunca** deja la pantalla vacía ni sirve una cifra que no venga de PostgreSQL.
+
+**Los cinco pilares del Proyecto Final, y dónde está cada uno:**
+
+| Pilar | Dónde vive | Superficie de operario |
+|---|---|---|
+| **CAG** — el catálogo entero en el contexto, sin recuperación | `ai-service/evals/`, como configuración de línea base | ninguna, y a propósito: existe para **medir por qué existe RAG** |
+| **RAG** — dos índices vectoriales en el esquema `ai` | `ai.product_document` (productos) y `ai.knowledge_chunk` (corpus comercial) | búsqueda asistida, consulta libre y ficha de venta |
+| **Agentes** | `assist/agent.py` — bucle de *function calling* sobre seis herramientas de sólo lectura | `/sales/new/agent` |
+| **Evaluación** | `ai-service/evals/` — golden set versionado, arnés y líneas base | ninguna, y nadie la espera: sus cifras son filas de un informe |
+| **Despliegue** | `terraform/demo/` y `compose.demo.yaml`, en una cuenta AWS distinta de producción | la URL pública |
+
+**Los dos índices no se fusionan nunca.** Un producto se ordena y se hidrata; un fragmento de conocimiento se **cita**. Sus puntuaciones no son comparables, y tratarlas como si lo fueran es la forma más rápida de que una respuesta cite una fuente que no la sostiene.
 
 ```mermaid
 flowchart TB
@@ -122,26 +160,42 @@ flowchart TB
     subgraph Backend["BACKEND API .NET 10"]
         API["ASP.NET Core Web API"]
         EF["Entity Framework Core"]
+        Auth["Autoridad de precio,<br/>stock y permisos"]
         API --> EF
+        API --> Auth
     end
-    DB["PostgreSQL"]
+    subgraph AIS["jbg-ai (Python/FastAPI) — red interna, NO expuesto en nginx"]
+        AI["Recuperación híbrida<br/>+ generación + agente"]
+        IdxP[("ai.product_document<br/>1.200 docs · pgvector")]
+        IdxK[("ai.knowledge_chunk<br/>161 fragmentos")]
+        Proj[("ai.pos_projection<br/>+ ai.pos_shop")]
+        AI --> IdxP
+        AI --> IdxK
+        AI --> Proj
+    end
+    DB["PostgreSQL 15+ (esquema public)"]
     Storage["Object Storage S3/Blob"]
-    AI["jbg-ai (Python/FastAPI)<br/>red interna, no expuesto en nginx"]
+    LLM(["Proveedor LLM y de embeddings"])
     Cliente -->|HTTPS| Nginx
     Nginx --> Gateway
     Gateway -->|HTTP interno| Backend
     Backend --> DB
     Backend --> Storage
-    Backend -->|JWT interno HS256| AI
+    Backend -->|JWT interno HS256| AIS
+    AI -.->|sólo jbg-ai tiene la clave| LLM
+    Backend -.->|feeds de índice<br/>X-Index-Feed-Key| AIS
 ```
+
+**Tres cosas que el dibujo dice y conviene leer.** El navegador **no tiene ninguna flecha** hacia `jbg-ai`: el servicio que custodia la clave del proveedor no es alcanzable desde Internet, y esa frontera se cumple en tres capas independientes —grupo de seguridad, puertos publicados y ausencia de ruta—. El esquema `ai` es **sólo de `jbg-ai`**, que no lee nunca el esquema `public`; lo que necesita del catálogo y del inventario le llega por los *feeds* de índice, autenticados con su propia clave. Y la copia del surtido por tienda (`ai.pos_projection`) se **refresca al arrancar y cada diez minutos**, porque cuando dependía de que alguien se acordara llegó a estar veinte días desfasada sin que ninguna pantalla lo dijera.
 
 ### 2.2. Descripción de componentes principales
 
 - **Backend:** ASP.NET Core Web API (.NET 10), C#, Entity Framework Core, PostgreSQL 15+, JWT para autenticación, Serilog para logging, patrón Repository y capa de servicios. Documentación de API con Scalar.
-- **Frontend:** React 19, TypeScript, Vite, Metronic React (Layout 8), Radix UI, Tailwind CSS, React Hook Form + Zod, TensorFlow.js para inferencia y entrenamiento en el navegador.
+- **Frontend:** React 19, TypeScript, Vite, Metronic React (Layout 8), Radix UI, Tailwind CSS, React Hook Form + Zod, TensorFlow.js para inferencia y entrenamiento en el navegador. **Cuatro vías de entrada a la venta**: registro manual (`/sales/new`), escaneo de código de barras o QR (`/sales/new/scan`), búsqueda con ayuda en lenguaje natural (`/sales/new/assisted`, con su segunda vía de respuesta asistida) y conversación con el agente (`/sales/new/agent`); más la **ficha de venta** de una pieza (`/sales/new/assist/:productId`), a la que se llega desde cualquiera de ellas.
 - **Base de datos:** PostgreSQL con índices para ventas, inventario y productos; connection pooling y paginación (máx. 50 ítems por página).
 - **Almacenamiento:** Servicio de ficheros abstracto (local en desarrollo, S3/Blob en producción) para fotos de productos, ventas y devoluciones.
-- **Servicio de IA (`jbg-ai`):** Microservicio Python 3.11 con FastAPI en contenedor propio, para recuperación vectorial y generación con LLM. El navegador nunca lo llama: solo el backend .NET, con un JWT interno HS256 sobre la red Docker. .NET conserva la autoridad sobre precio, stock y permisos.
+- **Servicio de IA (`jbg-ai`):** Microservicio Python 3.11 con FastAPI en contenedor propio, para recuperación vectorial y generación con LLM. El navegador nunca lo llama: solo el backend .NET, con un JWT interno HS256 sobre la red Docker. .NET conserva la autoridad sobre precio, stock y permisos. Persistencia con SQLAlchemy 2 + psycopg 3 + Alembic, **sólo sobre el esquema `ai`** y con el *pool* limitado a cinco conexiones. `ai-service/openapi.json` es un **contrato congelado** con el lado .NET: si su prueba de estabilidad falla, la frontera se movió.
+- **Evaluación (`ai-service/evals/`):** golden set versionado en el repositorio —consultas, juicios graduados, vectores de consulta congelados y el criterio de anotación escrito **antes** del primer juicio—, arnés de líneas base y barrido, y los informes por corrida bajo `evals/results/`. Dos corridas cuya procedencia no coincida se reportan como **no comparables** en vez de compararse. Los agregados de una pasada del agente se recalculan con `agent_sweep --rescore` **sin llamar al proveedor ni a la base de datos**.
 
 ### 2.3. Descripción de alto nivel del proyecto y estructura de ficheros
 
@@ -161,13 +215,19 @@ flowchart TB
 - `data/catalog/real/generated/`: corpus JSONL versionado (`data_origin: real`). El xlsx crudo permanece gitignored.
 - `data/catalog/synthetic/generated/`: corpus JSONL sintético (`data_origin: synthetic`; 764 líneas; híbrido 1.200 con el real).
 - `data/world/`: receta YAML de 12 POS (`pos-profiles.yaml`, en git). JSONL de ventas y `pg_dump` gitignored.
-- `terraform/`: Pila de infraestructura AWS de producción (EC2, RDS, S3, ECR, SSM, OIDC).
+- `data/knowledge/`: corpus comercial de la joyería, **32 documentos Markdown** en git, troceados por sección en 161 fragmentos citables. Es el segundo índice del sistema y **no viaja en el contexto de construcción de `ai-service/`**: el `Dockerfile` lo recibe como contexto adicional, que es la forma en que llega a la imagen.
+- `deploy/demo/`: paquete de despliegue del entorno de demostración —`compose.demo.yaml` en la raíz, el `Caddyfile` del proxy, `deploy.sh` y `verify.sh`— más el *runbook*. **Nada de esto va dentro de una imagen**, y por eso el filtro de rutas del flujo de despliegue es una lista negra y no una lista blanca.
+- `terraform/`: Pila de infraestructura AWS de producción (EC2, RDS, S3, ECR, SSM, OIDC). `terraform/demo/` es la pila del entorno de demostración, con **su propio estado y en otra cuenta**.
 
 ### 2.4. Infraestructura y despliegue
 
 En producción (AWS): EC2 con nginx (TLS) y un contenedor Docker con API .NET + SPA React; RDS PostgreSQL; S3 (`prod-jpv-files`) para ficheros; ECR; parámetros en SSM; despliegue con GitHub Actions y OIDC. Backups RDS según Terraform (p. ej. 7 días). Detalle en [Documentos/Guias/deploy-aws-production.md](Documentos/Guias/deploy-aws-production.md).
 
 **Entorno de demostración del Proyecto Final de IA (C17):** despliegue independiente en una **cuenta AWS distinta**, con su propio estado de Terraform ([terraform/demo/](terraform/demo/)) y su propio flujo de despliegue. Cuatro contenedores —proxy Caddy con TLS automático, API con la SPA, servicio de IA y PostgreSQL con pgvector— de los que **sólo el proxy publica puertos**: el servicio que custodia la clave del proveedor no es alcanzable desde Internet, y esa frontera se cumple en tres capas independientes (grupo de seguridad, puertos publicados y ausencia de ruta). Los secretos se leen del almacén de parámetros al entorno del proceso y **nunca a disco**. Runbook en [deploy/demo/README.md](deploy/demo/README.md).
+
+**El despliegue se verifica desde dentro del anfitrión, y la verificación puede tumbarlo.** El servicio de IA es privado por diseño, así que no es alcanzable desde el ejecutor de la canalización: la comprobación posterior al despliegue se ejecuta **dentro de la máquina** por el servicio de gestión de sistemas, y falla el despliegue si el índice está vacío, si el modelo de *embeddings* configurado discrepa del que grabó el índice, si la base de datos no responde, si falta la credencial del proveedor, si el servicio no conoce **ninguna tienda activa** o alguna activa no tiene surtido asignado, si el corpus de conocimiento no tiene ni un fragmento, o si la ruta del agente no contesta. **Cada una de esas condiciones existe porque su ausencia dejó pasar un despliegue roto**: un índice vacío, una proyección vacía y un corpus vacío parecieron éxito antes de que se les obligara a fallar.
+
+**El repositorio no tiene integración continua efectiva, y se dice en lugar de insinuarse.** `test-backend.yml` y `test-frontend.yml` disparan sobre `branches: [main, develop]`, y **ninguna de esas dos ramas existe**, así que no se han ejecutado nunca. Arreglarlo entra como informativo y **no como puerta**: con fallos preexistentes en las dos suites de aplicación, *una puerta sobre una suite roja no es una puerta*. Queda anotado en [openspec/DEFERRED_TASKS.md](openspec/DEFERRED_TASKS.md).
 
 ### 2.5. Seguridad
 
@@ -182,7 +242,8 @@ En producción (AWS): EC2 con nginx (TLS) y un contenedor Docker con API .NET + 
 
 - **Backend:** xUnit, Moq, FluentAssertions; tests unitarios de servicios y validadores; tests de integración con Testcontainers (PostgreSQL). Nomenclatura tipo `Method_Scenario_ExpectedResult`. Los controladores críticos (por ejemplo ventas) tienen tests de integración que cubren creación, validación de stock, método de pago y permisos.
 - **Frontend:** Vitest, React Testing Library, MSW para simular API; pruebas de componentes y de flujos; E2E con Playwright (en progreso). Documentación en [Documentos/testing-backend.md](Documentos/testing-backend.md) y [Documentos/testing-frontend.md](Documentos/testing-frontend.md).
-- **Servicio de IA (`jbg-ai`):** pytest con el `TestClient` de FastAPI (`uv run pytest`); cubre autenticación de servicio, conformidad de los contratos, respuestas stub, extracción de catálogo con LLM falso (`tests/enrichment/`), retriever vectorial con fakes (`tests/retrieval/`), búsqueda y direccionamiento sobre el corpus de conocimiento (`tests/knowledge/`), la venta asistida completa —estructura, citas, redacción del argumentario con sus tres comprobaciones deterministas, desde C31 el enrutador de intención con sus dos rechazos, la repregunta determinista y el *fail-open*, y desde C32a el registro de herramientas: el conjunto congelado afirmado **por nombre**, el invariante de solo-lectura ejercido contra un puerto que sí escribe registrado a propósito, y una prueba de anti-vacuidad que fija qué puerto se ve capturar a cada herramienta, porque una comprobación que no encontrara nada que inspeccionar pasaría sobre una lista vacía, y desde C32b el bucle agéntico: una prueba por motivo de parada y por presupuesto, el reloj acotando la petición entera y la inyección en un turno anterior comprobada sobre los mensajes que recibe el proveedor— (`tests/assist/`), el conjunto de enrutado de 119 casos y su criterio de veto, y los instrumentos y el arnés de la pasada del agente (`tests/evals/`) y estabilidad del snapshot OpenAPI. Los tests no llaman a proveedores LLM, APIs de embeddings ni RDS: el cliente generativo se conduce con un doble que revienta si alguien lo llama de verdad.
+- **Servicio de IA (`jbg-ai`):** pytest con el `TestClient` de FastAPI (`uv run pytest`); cubre autenticación de servicio, conformidad de los contratos, respuestas stub, extracción de catálogo con LLM falso (`tests/enrichment/`), retriever vectorial con fakes (`tests/retrieval/`), búsqueda y direccionamiento sobre el corpus de conocimiento (`tests/knowledge/`), la venta asistida completa —estructura, citas, redacción del argumentario con sus tres comprobaciones deterministas, desde C31 el enrutador de intención con sus dos rechazos, la repregunta determinista y el *fail-open*, y desde C32a el registro de herramientas: el conjunto congelado afirmado **por nombre**, el invariante de solo-lectura ejercido contra un puerto que sí escribe registrado a propósito, y una prueba de anti-vacuidad que fija qué puerto se ve capturar a cada herramienta, porque una comprobación que no encontrara nada que inspeccionar pasaría sobre una lista vacía, y desde C32b el bucle agéntico: una prueba por motivo de parada y por presupuesto, el reloj acotando la petición entera y la inyección en un turno anterior comprobada sobre los mensajes que recibe el proveedor— (`tests/assist/`), el conjunto de enrutado de 119 casos y su criterio de veto, y los instrumentos y el arnés de la pasada del agente (`tests/evals/`) y estabilidad del snapshot OpenAPI. **Y desde C41 y C43**, el drenaje programado de la proyección de surtido y el *feed* de actividad de tienda: que el drenaje de arranque **reintente cada uno de los dos por separado** —el defecto que un despliegue destapó cuatro horas después de introducirse—, que dos drenajes simultáneos declinen con el cerrojo en vez de entrelazar el cursor, y que una tabla vacía **haga fallar** la verificación en lugar de pasar en vacío. Los tests no llaman a proveedores LLM, APIs de embeddings ni RDS: el cliente generativo se conduce con un doble que revienta si alguien lo llama de verdad.
+- **Lo que las tres suites no ven, y por eso hay recorrido manual.** **Seis** de los changes del Proyecto Final nacieron de una comprobación a mano y de ninguna ola, y **ninguno de los seis lo vio ningún test**: un panel sirviendo por su ruta degradada durante todo el proyecto, filtros descartándose en silencio, un ámbito de búsqueda inalcanzable, una proyección veinte días desfasada, un agente entregado que nadie llamaba, y un falso positivo que marcaba en rojo un despliegue sano. El detalle está en el [informe de cierre](Documentos/Proyecto%20Final%20AIEng/informes/c39b-implementation-measurements.md).
 
 ---
 
@@ -229,11 +290,24 @@ Descripción completa y resto de entidades (Return, ReturnSale, Collection, etc.
 
 Otras entidades (ProductPhoto, PaymentMethod, PointOfSalePaymentMethod, Return, ReturnSale, Collection, ProductSearchEvent, ProductAiProfile, ProductFamily, ProductFamilyMember, FamilyReviewVerdict, etc.) se describen con detalle en [Documentos/modelo-de-datos.md](Documentos/modelo-de-datos.md).
 
+**El esquema `ai`, que es del Proyecto Final y no de .NET.** Todo lo anterior vive en el esquema `public` y pertenece a .NET. El esquema `ai` pertenece al servicio Python, y **la frontera no es una convención sino un permiso**: el rol `jbg_ai` recibe `permission denied` al leer cualquier tabla de `public`, así que obtiene los datos de negocio por HTTP a través de los *feeds* paginados. Sus migraciones son **Alembic**, independientes de EF Core, y sus tablas usan `snake_case`.
+
+| Tabla | Qué guarda |
+|---|---|
+| `ai.product_document` | una fila por producto, con su `embedding vector(1536)` y su `tsv` generada en español |
+| `ai.knowledge_document` / `ai.knowledge_chunk` | el corpus comercial y sus fragmentos citables, cada uno con su `claim_scope` |
+| `ai.pos_projection` | el surtido por punto de venta — **`qty_bucket` (`0` / `1-2` / `3+`), nunca la cantidad exacta**, porque la copia puede desfasarse y el número real lo pone .NET |
+| `ai.pos_shop` | qué tiendas existen y **cuáles están activas**, retrato completo sin cursor |
+| `ai.sync_checkpoint` / `ai.sync_failure` | el *bookmark* de cada *feed* y la cola de ítems fallidos |
+| `ai.eval_run` / `ai.eval_case` / `ai.eval_result` | el historial de evaluación, con la tupla de procedencia que decide la comparabilidad |
+
+**Las columnas que referencian entidades de .NET (`product_id`, `pos_id`, `family_id`) son `uuid` planos sin clave ajena**, a propósito: una restricción real acoplaría el ciclo de vida de una proyección que se reconstruye al de las tablas transaccionales. Descripción completa, con los vocabularios cerrados y los índices, en [Documentos/modelo-de-datos.md](Documentos/modelo-de-datos.md).
+
 ---
 
 ## 4. Especificación de la API
 
-A continuación se describen seis endpoints principales en formato OpenAPI (resumen). La API base es `/api` y requiere cabecera `Authorization: Bearer <token>` para endpoints protegidos, salvo `GET /api/ai/index-feed/*`, que autentica con `X-Index-Feed-Key`.
+A continuación se describen los endpoints principales en formato OpenAPI (resumen). La API base es `/api` y requiere cabecera `Authorization: Bearer <token>` para endpoints protegidos, salvo `GET /api/ai/index-feed/*`, que autentica con `X-Index-Feed-Key`.
 
 ### POST /api/sales — Crear venta
 
@@ -378,6 +452,22 @@ Devuelve los **tres** interruptores —búsqueda rápida, respuesta asistida y, 
 
 **Responde de un ámbito y no de una tienda.** `pointOfSaleId` es **opcional**: con una tienda informa de ella, y **omitido** informa del ámbito «todas las tiendas» devolviendo el identificador **nulo**. Un valor que no sirve —vacío, con espacios, ilegible o un GUID truncado— es **400**, porque la ausencia es que el parámetro no esté y cualquier otra cosa es un valor que tiene que ser usable. Es la misma distinción que aplica `POST /api/ai/search/assisted`, y por el mismo motivo: sin tienda el prefiltro de disponibilidad **no se aplica**, mientras un identificador en blanco sería un comodín por accidente.
 
+### GET /api/ai/index-feed/* — Lo que .NET le cuenta al servicio de IA
+
+Las **tres** rutas por las que el esquema `ai` se entera de lo que pasa en el esquema `public`. No llevan token de usuario: autentican con **`X-Index-Feed-Key`**, porque su cliente es un proceso y no una persona. Son la contrapartida del permiso que le niega a `jbg_ai` leer `public` por SQL.
+
+| Ruta | Qué emite | Paginación |
+|---|---|---|
+| `GET /api/ai/index-feed/catalog` | el catálogo con el texto y los atributos que se indexan | *keyset*, **50** por página |
+| `GET /api/ai/index-feed/pos-availability` | el surtido y las existencias por punto de venta | *keyset* incremental sobre el *watermark* de inventario, **200** por página |
+| `GET /api/ai/index-feed/pos-shops` | **qué tiendas existen y cuáles están activas** | ninguna: **retrato completo, sin cursor** |
+
+**La tercera no tiene cursor a propósito, y es la única de las tres que no lo tiene.** Un cambio de estado de una tienda —abrir, cerrar— **no mueve ninguna fila de inventario**, así que un *feed* incremental por *watermark* nunca lo emitiría y una columna añadida al de disponibilidad habría nacido rancia para siempre. Doce filas caben en una respuesta, y reemplazarlas todas en una transacción es más simple y más correcto que cualquier cursor.
+
+### GET /api/ai/health — El diagnóstico, servido por .NET porque el navegador no alcanza a Python
+
+Devuelve el informe de salud del servicio de IA a la tarjeta del panel de administración: **sólo administradores**, y sobre un cliente HTTP **sin cortacircuitos**, porque su trabajo es diagnosticar el sistema precisamente cuando el camino principal está fallando. Reporta si la base de datos responde, cuántos documentos hay indexados, si la credencial del proveedor está configurada, el contraste entre el modelo de *embeddings* configurado y el que grabó el índice —una discrepancia ahí devuelve resultados sin sentido **sin dar ningún error**— y el estado de la proyección de surtido: su edad, su techo de rancidez, las páginas con fallos **por *feed*** y los puntos de venta **activos** que no tienen surtido asignado. **Nunca llama al proveedor** y se cachea una ventana corta, porque el *pool* de conexiones está limitado a cinco.
+
 ---
 
 ## 5. Historias de usuario
@@ -480,4 +570,9 @@ Se documentan tres tickets principales a partir de las especificaciones OpenSpec
 - [Guía de deploy AWS](Documentos/Guias/deploy-aws-production.md).
 - [README del backend](backend/README.md), [del frontend](frontend/README.md), [del servicio de IA `jbg-ai`](ai-service/README.md) y [de la pila Terraform](terraform/README.md).
 - [Plan de changes del Proyecto Final de IA](Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y [especificaciones funcionales v2](Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md).
+- **[Informe de cierre del Proyecto Final](Documentos/Proyecto%20Final%20AIEng/informes/c39b-implementation-measurements.md)**: la frontera contable entre el MVP y el Proyecto Final con el criterio con el que se cuenta, el resumen de fases, la **taxonomía de métodos de búsqueda con la cifra medida de cada uno**, el éxito de tarea del agente, las limitaciones declaradas con su vía de cierre y **lo que no se ha verificado**, nombre a nombre.
+- [Guion del vídeo de entrega](Documentos/Proyecto%20Final%20AIEng/informes/c39b-video-script.md): siete tramos, la cuenta y la consulta exacta de cada uno, y las dos cosas en rojo explicadas antes de que aparezcan.
+- [Informes de medición del Proyecto Final](Documentos/Proyecto%20Final%20AIEng/informes/): un informe por change, con las cifras y los artefactos que las sostienen.
+- [Runbook del entorno de demostración](deploy/demo/README.md): despliegue, secretos, cuentas de demostración (§5.8) y el paquete de CA de la máquina de desarrollo (§1.3).
+- [Tareas diferidas](openspec/DEFERRED_TASKS.md): lo que queda declarado y sin arreglar, con su vía de cierre.
 - [Procedimiento de User Stories](Documentos/Procedimientos/Procedimiento-UserStories.md) y [Procedimiento de Tickets de Trabajo](Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md).
