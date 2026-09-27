@@ -97,7 +97,7 @@
 ## 6. Cierre
 
 - [x] 6.1 Informe `c39a-bis-implementation-measurements.md` con las cifras del entorno desplegado, el recorrido con su evidencia, las latencias, y **lo que se refutó** de las predicciones de C39a. Validación: cada afirmación con su medición al lado o declarada como no medida.
-- [x] 6.2 Cerrar en [HU-AIENG-043](../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md) los escenarios que este change verifica, dejando constancia de cuáles quedaron cubiertos por C39a y cuáles por éste. Validación: los catorce escenarios con su veredicto.
+- [x] 6.2 Cerrar en [HU-AIENG-043](../../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md) los escenarios que este change verifica, dejando constancia de cuáles quedaron cubiertos por C39a y cuáles por éste. Validación: los catorce escenarios con su veredicto.
 - [x] 6.3 Poner al día el §0 del plan y las fichas de C39a y C39a-bis con el resultado del despliegue. Validación: ninguna afirmación de las fichas contradicha por los dos informes.
 - [x] 6.4 Anotar en `openspec/DEFERRED_TASKS.md` lo que el recorrido destape **sin arreglarlo**, y la deriva de rama que C39a dejó declarada: nada compara lo desplegado con la rama que debería servirse. Validación: cada entrada con su experimento y su vía de cierre.
 - [x] 6.5 **Comprobar la restricción propia de este change sobre el diff completo**: cero ficheros fuera de `openspec/**`, `Documentos/**`, `**/README.md`, `CLAUDE.md`, `AGENTS.md` y `terraform/**`. Validación: la lista de modificados, fichero a fichero, y la confirmación de que el merge a `demo` **no** dispara `deploy-demo.yml`.
