@@ -1,7 +1,7 @@
 # T-AIENG-021: Hybrid search — lexical branch, three-list RRF fusion and demoting structural filters (C21)
 
 > Ticket técnico del change OpenSpec `add-hybrid-search-rrf`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-021](../../../Documentos/Historias/AI-Eng/HU-AIENG-021.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C21, §0), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§5, §6.4, §7.3, §7.6), [informe de mediciones del 2026-09-02](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md), y código de `ai-service/src/`, `backend/src/` y `frontend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-021](../../../../Documentos/Historias/AI-Eng/HU-AIENG-021.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C21, §0), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§5, §6.4, §7.3, §7.6), [informe de mediciones del 2026-09-02](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md), y código de `ai-service/src/`, `backend/src/` y `frontend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -20,7 +20,7 @@ C21 enchufa los dos cables. Y el problema que resuelve está medido, no supuesto
 
 ### Las nueve mediciones que gobiernan el diseño
 
-Todas del **2026-09-02**, contra el PostgreSQL local (1.168 documentos vivos) y contra `openai/text-embedding-3-small` real. El registro completo, con las 36 configuraciones barridas, está en [c21-hybrid-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md).
+Todas del **2026-09-02**, contra el PostgreSQL local (1.168 documentos vivos) y contra `openai/text-embedding-3-small` real. El registro completo, con las 36 configuraciones barridas, está en [c21-hybrid-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md).
 
 **1. Cobertura del corpus — decide qué puede filtrar y qué no.**
 
@@ -463,16 +463,16 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-021](../../../Documentos/Historias/AI-Eng/HU-AIENG-021.md)
+- **HU origen:** [HU-AIENG-021](../../../../Documentos/Historias/AI-Eng/HU-AIENG-021.md)
 - **Change OpenSpec:** `openspec/changes/add-hybrid-search-rrf/` · rama `c21-add-hybrid-search-rrf`
-- **Mediciones que gobiernan el diseño:** [c21-hybrid-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md) (2026-09-02) · [c20-query-expansion-reach.md](../../../ai-service/evals/results/c20-query-expansion-reach.md)
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C21, §0 del 2026-09-01, §4 grafo) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§5, §6.2, §6.4, §7.3, §7.6)
-- **Apuntes del Máster (guía, no dogma):** [Búsqueda híbrida](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) (RRF, `ts_rank`, el problema del término exacto; propone `k=60` sin pesos y paralelizar rama contra rama — aquí se mide y se corrige) · [Filtrado contextual y temporal](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) (*«los filtros duros se reservan para metadatos en los que se confía; lo dudoso, como mucho, pondera»*)
+- **Mediciones que gobiernan el diseño:** [c21-hybrid-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md) (2026-09-02) · [c20-query-expansion-reach.md](../../../../ai-service/evals/results/c20-query-expansion-reach.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C21, §0 del 2026-09-01, §4 grafo) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§5, §6.2, §6.4, §7.3, §7.6)
+- **Apuntes del Máster (guía, no dogma):** [Búsqueda híbrida](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) (RRF, `ts_rank`, el problema del término exacto; propone `k=60` sin pesos y paralelizar rama contra rama — aquí se mide y se corrige) · [Filtrado contextual y temporal](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) (*«los filtros duros se reservan para metadatos en los que se confía; lo dudoso, como mucho, pondera»*)
 - **Specs vivas:** `vector-retrieval` · `query-expansion` · `ai-vector-schema` · `ai-service-runtime` · `assisted-search-panel` · `ai-assisted-search` · `ai-search-telemetry`
 - **Precedentes:** C05 (`tsv` generada y GIN, sin consumidor) · C11 (cliente de embeddings congelado, caché sin cota) · C14 (umbral, etapas de log, patrón stub/real) · C15 (hidratación autoritativa, buscador degradado de .NET) · C16 (insignia de origen preparada por escrito para C21) · C20 (grupos de equivalencia, flag en la firma) · C18a/C18b (medir antes de creerse la ficha)
-- **Deuda que este change paga a medias:** [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) — singleton **sí**; `RetrievalTimeoutMs` 2500 → 800 ms **no**
+- **Deuda que este change paga a medias:** [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) — singleton **sí**; `RetrievalTimeoutMs` 2500 → 800 ms **no**
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

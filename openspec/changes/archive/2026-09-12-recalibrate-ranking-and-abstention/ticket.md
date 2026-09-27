@@ -1,12 +1,12 @@
 # T-AIENG-025: Two-stage fusion, business-signals ranking and retrieval abstention (C25)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-024](../archive/2026-09-11-add-eval-harness-golden-set-and-baselines/ticket.md)
+> siguen [T-AIENG-024](../../archive/2026-09-11-add-eval-harness-golden-set-and-baselines/ticket.md)
 > y el resto de los tickets del Proyecto Final.
 
-**HU origen:** [HU-AIENG-025](../../../Documentos/Historias/AI-Eng/HU-AIENG-025.md)
+**HU origen:** [HU-AIENG-025](../../../../Documentos/Historias/AI-Eng/HU-AIENG-025.md)
 **Change:** `recalibrate-ranking-and-abstention` (C25) · **Épica:** EP14 (con efecto en EP17)
-**Mediciones y decisiones:** [c25-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)
+**Mediciones y decisiones:** [c25-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)
 
 ---
 
@@ -42,12 +42,12 @@ dato.
 
 | Pieza | Estado hoy | Qué hace C25 |
 |---|---|---|
-| [`retrieval/fusion.py`](../../../ai-service/src/jbg_ai/retrieval/fusion.py) | RRF ponderado, puro y sin dominio. Su docstring ya anuncia que C25 lo importaría | **Sin cambios en la fórmula**; se compone en dos etapas |
-| [`retrieval/orchestrator.py`](../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | Fusión **plana de tres listas** con `w_typed`/`w_expanded`/`w_vector` | Fusión en **dos etapas** con pesos por rama; modo plano conservado |
-| `LexicalHit.coordination` en [`ports.py`](../../../ai-service/src/jbg_ai/retrieval/ports.py) | Se calcula en SQL, viaja en el *hit* y **el orquestador no lo lee nunca** | Lo consume la regla adaptativa. Cuarto cable pelado, tras `tsv`, la expansión y `qty_bucket` |
-| `_SCOPE_CTE` / `_SCOPE_JOIN` en [`search.py`](../../../ai-service/src/jbg_ai/retrieval/search.py) | Un solo flag `scoped` hace dos cosas: `INNER JOIN` **y** `s.qty_bucket`. Sin escopar, `NULL AS qty_bucket` | Se separan: `scope_pos_id` (INNER, restringe) y `signal_pos_id` (LEFT, sólo lee) |
+| [`retrieval/fusion.py`](../../../../ai-service/src/jbg_ai/retrieval/fusion.py) | RRF ponderado, puro y sin dominio. Su docstring ya anuncia que C25 lo importaría | **Sin cambios en la fórmula**; se compone en dos etapas |
+| [`retrieval/orchestrator.py`](../../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | Fusión **plana de tres listas** con `w_typed`/`w_expanded`/`w_vector` | Fusión en **dos etapas** con pesos por rama; modo plano conservado |
+| `LexicalHit.coordination` en [`ports.py`](../../../../ai-service/src/jbg_ai/retrieval/ports.py) | Se calcula en SQL, viaja en el *hit* y **el orquestador no lo lee nunca** | Lo consume la regla adaptativa. Cuarto cable pelado, tras `tsv`, la expansión y `qty_bucket` |
+| `_SCOPE_CTE` / `_SCOPE_JOIN` en [`search.py`](../../../../ai-service/src/jbg_ai/retrieval/search.py) | Un solo flag `scoped` hace dos cosas: `INNER JOIN` **y** `s.qty_bucket`. Sin escopar, `NULL AS qty_bucket` | Se separan: `scope_pos_id` (INNER, restringe) y `signal_pos_id` (LEFT, sólo lee) |
 | `sales_30d` / `sales_90d` / `last_sale_at` | Persistidos en `ai.pos_projection` desde C22, con **un test guardián** que impide leerlos | `sales_30d` entra en los *hits*; **cae el guardián** |
-| `demotion_rank` en [`filters.py`](../../../ai-service/src/jbg_ai/retrieval/filters.py) | Clave lexicográfica `(precio, talla, material, stock)`. Su docstring declara ser *«the seam C25 replaces»* | Score continuo **sólo** en el último bloque |
+| `demotion_rank` en [`filters.py`](../../../../ai-service/src/jbg_ai/retrieval/filters.py) | Clave lexicográfica `(precio, talla, material, stock)`. Su docstring declara ser *«the seam C25 replaces»* | Score continuo **sólo** en el último bloque |
 | `qty_bucket` en evaluación | `v2-hibrido.yaml` lleva `pos_prefilter: false`. **En las 192 filas del run la penalización no se disparó ni una vez** | `signal_pos_id` con el POS de referencia |
 | `jpv_retrieval_distance_threshold` | 0,65; deja pasar 1.168 de 1.168. Abstención **0,000** sobre fuera-de-dominio en las tres configuraciones de pipeline | Re-fijado tras M1 |
 | `evals/sweep.py` | Rejilla fija `WEIGHT_VECTOR_GRID × BRANCH_DEPTH_GRID`, con proveedor en cada punto | Rejilla de `ρ` de una dimensión + fases `capture`/`rescore` |
@@ -387,13 +387,13 @@ responde.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-025](../../../Documentos/Historias/AI-Eng/HU-AIENG-025.md)
-- **Mediciones y las quince decisiones:** [c25-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)
-- **Informes que dejaron el trabajo preparado:** [c24-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-implementation-measurements.md) · [c22-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md) · [c21-hybrid-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md)
-- **Diseño RAG** [§7.6, §11.1, §11.2, §15](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) · **Plan de changes, ficha C25** [aquí](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **HU origen:** [HU-AIENG-025](../../../../Documentos/Historias/AI-Eng/HU-AIENG-025.md)
+- **Mediciones y las quince decisiones:** [c25-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)
+- **Informes que dejaron el trabajo preparado:** [c24-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-implementation-measurements.md) · [c22-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md) · [c21-hybrid-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md)
+- **Diseño RAG** [§7.6, §11.1, §11.2, §15](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) · **Plan de changes, ficha C25** [aquí](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Specs vivas:** `openspec/specs/hybrid-fusion/` · `pos-projection/` · `retrieval-evaluation/` · `vector-retrieval/` · `query-expansion/`
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Apuntes:** [S10 · Filtrado contextual y temporal](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) · [S10 · Búsqueda híbrida](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) · [S16 · Un sistema debe saber decir «No lo sé»](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Apuntes:** [S10 · Filtrado contextual y temporal](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) · [S10 · Búsqueda híbrida](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) · [S16 · Un sistema debe saber decir «No lo sé»](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
 
 ---
 

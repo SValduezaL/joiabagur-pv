@@ -54,7 +54,7 @@
 - [x] 7.3 Test de **disponibilidad sin cifras** y con frescura declarada
 - [x] 7.4 Test de **«sin ámbito» distinto de «agotado»**, en los dos casos: principal sin punto de venta y pieza sin fila de proyección
 - [x] 7.5 Test de **determinismo de la repregunta** y de rechazo del eje fuera del enum
-- [x] 7.6 Comprobar que los **nueve escenarios** de [HU-AIENG-032a](../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md) tienen test nombrado, y dejar la tabla de trazabilidad en el informe
+- [x] 7.6 Comprobar que los **nueve escenarios** de [HU-AIENG-032a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md) tienen test nombrado, y dejar la tabla de trazabilidad en el informe
 
 ## 8. Cierre
 

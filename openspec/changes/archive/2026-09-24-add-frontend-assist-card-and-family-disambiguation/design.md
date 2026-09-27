@@ -60,12 +60,12 @@ generación entera.
 
 Las cuatro marcadas **(cerrada)** se tomaron con el desarrollador en la exploración. Las alternativas
 descartadas de cada una están en el
-[informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md).
+[informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md).
 
 ### D1. Cinco códigos alcanzables, y ninguna copia muerta (D-A, cerrada)
 
 `classify_query` corre **sólo en el modo de consulta libre**
-([`orchestrator.py:270-280`](../../../ai-service/src/jbg_ai/assist/orchestrator.py#L270-L280)) y las
+([`orchestrator.py:270-280`](../../../../ai-service/src/jbg_ai/assist/orchestrator.py#L270-L280)) y las
 dos rutas de C34 son siempre ancladas. Por tanto `clarificationQuestion` es **constante nulo** y
 `query_out_of_domain` y `query_not_in_catalogue` **no pueden llegar a esta pantalla**.
 

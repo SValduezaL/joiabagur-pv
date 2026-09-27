@@ -1,7 +1,7 @@
 # T-AIENG-012: .NET index-feed endpoints with keyset cursor, tombstones and service API key (C12)
 
 > Ticket técnico del change OpenSpec `add-dotnet-index-feed-endpoints`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-012](../../../Documentos/Historias/AI-Eng/HU-AIENG-012.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C12, §0 C07, §6.3), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.2, D10, D11), sesión de exploración 2026-08-25, código real de `backend/src/` y `ai-service/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-012](../../../../Documentos/Historias/AI-Eng/HU-AIENG-012.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C12, §0 C07, §6.3), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.2, D10, D11), sesión de exploración 2026-08-25, código real de `backend/src/` y `ai-service/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -129,7 +129,7 @@ SHA-256 UTF-8 de los `productId` indexables ordenados, hex minúsculas 64 chars.
 
 ### Informe AutoBulk (entregable de este ticket; la corrida no)
 
-Crear [`Documentos/Proyecto Final AIEng/informes/c12-catalog-autobulk-runbook.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md) al **final** del apply, cuando los feeds existan y el *runbook* pueda incluir un `GET` de verificación. Es un procedimiento, no un acta: **no** se ejecuta el lote en C12.
+Crear [`Documentos/Proyecto Final AIEng/informes/c12-catalog-autobulk-runbook.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md) al **final** del apply, cuando los feeds existan y el *runbook* pueda incluir un `GET` de verificación. Es un procedimiento, no un acta: **no** se ejecuta el lote en C12.
 
 El fichero debe contener, como mínimo:
 
@@ -273,15 +273,15 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-012](../../../Documentos/Historias/AI-Eng/HU-AIENG-012.md)
+- **HU origen:** [HU-AIENG-012](../../../../Documentos/Historias/AI-Eng/HU-AIENG-012.md)
 - **Change OpenSpec:** `openspec/changes/add-dotnet-index-feed-endpoints/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C12, §0 C07) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2)
-- **Apuntes del Máster (guía):** [S9 capa de datos / API Key vs JWT](../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/La%20capa%20de%20datos%20como%20servicio%20-%20Aislar%20y%20Securizar%20el%20Retriever.md) · [S11 reindexación](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C12, §0 C07) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2)
+- **Apuntes del Máster (guía):** [S9 capa de datos / API Key vs JWT](../../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/La%20capa%20de%20datos%20como%20servicio%20-%20Aislar%20y%20Securizar%20el%20Retriever.md) · [S11 reindexación](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md)
 - **Specs vivas:** `product-family` · `product-ai-profile` · `catalog-source-text` · `ai-vector-schema` · `ai-service-auth` (no se modifica el JWT hacia Python)
 - **Precedentes:** `AiCatalogController` · `AiServiceTokenFactory` (solo emisor .NET→Python) · `ProductFamilyService.ReplaceMembersAsync` · `ApplicationDbContext.SaveChangesAsync` (`UpdatedAt`)
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
 - **Runbook (a crear en apply):** `Documentos/Proyecto Final AIEng/informes/c12-catalog-autobulk-runbook.md`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

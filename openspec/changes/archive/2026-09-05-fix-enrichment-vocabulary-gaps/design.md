@@ -4,7 +4,7 @@
 
 C09 fixed `piece_type` as a **closed** vocabulary of eight hypernyms in `enrichment/vocabularies.yaml`. That list is replicated in four other places: the prompt duplicates it as plain text, the frontend mirrors it in `materials-vocabulary.ts`, and two live specs state it normatively. A fifth consumer, C20's query dictionary, does **not** replicate it — `_base_layer()` derives its equivalence classes from the same YAML, so a term added there grows a query class on its own.
 
-C18a found eleven products the vocabulary could not name and booked the fix as a change. Everything below was measured on **2026-09-05** against the local PostgreSQL (15.19), read-only, over the 1.168 live rows of `ai.product_document`, the 1.200 rows of `ProductAiProfiles` and the `ai.pos_projection` rows C22 left. No provider calls. Full record in [`fix1-exploration-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md).
+C18a found eleven products the vocabulary could not name and booked the fix as a change. Everything below was measured on **2026-09-05** against the local PostgreSQL (15.19), read-only, over the 1.168 live rows of `ai.product_document`, the 1.200 rows of `ProductAiProfiles` and the `ai.pos_projection` rows C22 left. No provider calls. Full record in [`fix1-exploration-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md).
 
 Six measurements govern this design. **Two of them contradict the ficha.**
 

@@ -82,7 +82,7 @@ salen del rojo                                →  4
 
 1. **Los cuatro pasan ejecutados aislados sobre el árbol con C34**: `5 / 0` (fila 11 de la tabla).
 2. **Los tres de `InventoryIntegrationTests` son la rotación documentada**:
-   [testing-backend.md](../../../Documentos/testing-backend.md) registra que la clase *«baraja los suyos
+   [testing-backend.md](../../../../Documentos/testing-backend.md) registra que la clase *«baraja los suyos
    de una vez a otra»*. El commit no toca inventario.
 3. **`Update_WithValidData_ShouldReturnUpdatedProduct` falla por el reloj.** El mensaje es *«Expected
    updated.UpdatedAt to be on or after <2026-09-21 21:40:13.279962>, but found <2026-09-21
@@ -215,7 +215,7 @@ tres son superconjuntos del texto vivo, no sustituciones**:
 
 ### 3.2. El `SHALL`/`MUST` en la primera línea física, en los 21 requisitos
 
-La regla de [CLAUDE.md](../../../CLAUDE.md) sobre el validador, comprobada con el mismo *parser*:
+La regla de [CLAUDE.md](../../../../CLAUDE.md) sobre el validador, comprobada con el mismo *parser*:
 **21 de 21** requisitos llevan `SHALL` o `MUST` en la primera línea física de su descripción. Y
 `openspec validate --all --strict` lo confirma por su lado.
 
@@ -224,7 +224,7 @@ La regla de [CLAUDE.md](../../../CLAUDE.md) sobre el validador, comprobada con e
 ## 4. Los trece escenarios de la HU
 
 Trazados uno a uno en el **§8 del
-[informe de implementación](../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-implementation-measurements.md)**.
+[informe de implementación](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-implementation-measurements.md)**.
 Aquí las observaciones de método:
 
 1. **El escenario 2 tenía un hueco que sólo se vio al trazarlo**: *«si el corpus no cubre la pregunta,
@@ -692,7 +692,7 @@ Contra la línea base, en las dos corridas de cierre:
 Todo lo que rota está identificado:
 
 - **`InventoryIntegrationTests`**, la clase que
-  [testing-backend.md](../../../Documentos/testing-backend.md) documenta como *«baraja los suyos de una
+  [testing-backend.md](../../../../Documentos/testing-backend.md) documenta como *«baraja los suyos de una
   vez a otra»*: aporta los 7 ↔ 7 de la primera corrida y 5 ↔ 5 de la segunda. Los nombres **no se
   repiten entre corridas** ni coinciden con los que el §1.1 vio rotar — que es justo lo que hace una
   rotación por orden de ejecución.

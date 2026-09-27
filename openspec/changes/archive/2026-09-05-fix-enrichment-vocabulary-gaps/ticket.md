@@ -1,7 +1,7 @@
 # T-AIENG-FIX1: Close the enrichment vocabulary gaps — four piece types, `enrichment/v2` and a 22-product cohort (FIX1)
 
 > Ticket técnico del change OpenSpec `fix-enrichment-vocabulary-gaps`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-FIX1](../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md) y las mediciones de [fix1-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md).
+> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-FIX1](../../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md) y las mediciones de [fix1-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -161,7 +161,7 @@ Reenriquecer los 1.200 · `filigrana` · campo nuevo de clasificación de produc
 
 ## Criterios de Aceptación
 
-Los diez escenarios están en [HU-AIENG-FIX1](../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md#criterios-de-aceptación). Los números que los verifican, medidos antes y después:
+Los diez escenarios están en [HU-AIENG-FIX1](../../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md#criterios-de-aceptación). Los números que los verifican, medidos antes y después:
 
 | Comprobación | Antes | Después |
 |---|---:|---:|
@@ -210,7 +210,7 @@ Los diez escenarios están en [HU-AIENG-FIX1](../../../Documentos/Historias/AI-E
 
 ## Preguntas Abiertas → Decisiones
 
-Las nueve decisiones de diseño se cerraron en la sesión de exploración del 2026-09-05 y están en la tabla de [HU-AIENG-FIX1](../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md#decisiones-de-diseño-ya-acordadas). Quedan abiertas tres, con opción por defecto:
+Las nueve decisiones de diseño se cerraron en la sesión de exploración del 2026-09-05 y están en la tabla de [HU-AIENG-FIX1](../../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md#decisiones-de-diseño-ya-acordadas). Quedan abiertas tres, con opción por defecto:
 
 | # | Pregunta | Opción por defecto si no hay respuesta antes del apply |
 |---|---|---|
@@ -230,15 +230,15 @@ Las nueve decisiones de diseño se cerraron en la sesión de exploración del 20
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-FIX1](../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md)
+- **HU origen:** [HU-AIENG-FIX1](../../../../Documentos/Historias/AI-Eng/HU-AIENG-FIX1.md)
 - **Change:** [`openspec/changes/fix-enrichment-vocabulary-gaps/`](./)
-- **Mediciones:** [fix1-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md)
-- **Origen del hallazgo:** [c18a-family-suggestion-report.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md), hallazgos (b) y (c)
-- **Plan de changes:** [ficha FIX1](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) del §3 y su propuesta en el §0
-- **Diseño RAG:** [`proyecto-final-diseno-rag-joiabagur.md`](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) — vocabularios cerrados y decisión 6 sobre el espejo del frontend
+- **Mediciones:** [fix1-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-exploration-measurements.md)
+- **Origen del hallazgo:** [c18a-family-suggestion-report.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md), hallazgos (b) y (c)
+- **Plan de changes:** [ficha FIX1](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) del §3 y su propuesta en el §0
+- **Diseño RAG:** [`proyecto-final-diseno-rag-joiabagur.md`](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) — vocabularios cerrados y decisión 6 sobre el espejo del frontend
 - **Specs vivas:** `openspec/specs/catalog-enrichment-pipeline/`, `openspec/specs/query-expansion/`
-- **Runbook de la corrida:** [c12-catalog-autobulk-runbook.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md)
-- **Procedimientos:** [User Stories](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Runbook de la corrida:** [c12-catalog-autobulk-runbook.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md)
+- **Procedimientos:** [User Stories](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

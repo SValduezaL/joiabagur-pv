@@ -1,20 +1,20 @@
 # T-AIENG-036: Sale assist card and family disambiguation — one request per visit, explicit variant confirmation and scoped citations (C36)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya siguen
-> [T-AIENG-034](../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md),
-> [T-AIENG-016](../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md) y el resto de
+> [T-AIENG-034](../../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md),
+> [T-AIENG-016](../../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md) y el resto de
 > tickets del Proyecto Final.
 >
 > **Fuentes de verdad:** `openspec/project.md`,
-> [HU-AIENG-036](../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md),
-> [informe de exploración](../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md)
+> [HU-AIENG-036](../../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md),
+> [informe de exploración](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md)
 > (siete hallazgos, diez decisiones, tres mediciones reproducibles),
-> [ficha C36](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
-> [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+> [ficha C36](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
+> [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
 > (§7.7, §7.8, §15.12, §15.13), la spec viva
-> [`ai-sales-assist`](../../specs/ai-sales-assist/spec.md) y el código real de `frontend/src/`.
+> [`ai-sales-assist`](../../../specs/ai-sales-assist/spec.md) y el código real de `frontend/src/`.
 
-**HU origen:** [HU-AIENG-036](../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md)
+**HU origen:** [HU-AIENG-036](../../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md)
 **Change:** `add-frontend-assist-card-and-family-disambiguation` (C36) · **Épica:** EP15
 **Rama:** `c36-add-frontend-assist-card-and-family-disambiguation` · **Anterior en la rama:** C34 ·
 **Siguiente:** C38
@@ -47,14 +47,14 @@ el 21 al explorar C34—, siempre **antes de que existiera el consumidor**. La e
 2026-09-22 la contrastó con el árbol, y cuatro hallazgos gobiernan el diseño:
 
 1. **Tres de las cinco filas de copy que la ficha hereda de C31 no pueden llegar al card.**
-   `classify_query` corre **sólo en M1** ([`orchestrator.py:270-280`](../../../ai-service/src/jbg_ai/assist/orchestrator.py#L270-L280))
+   `classify_query` corre **sólo en M1** ([`orchestrator.py:270-280`](../../../../ai-service/src/jbg_ai/assist/orchestrator.py#L270-L280))
    y las dos rutas de C34 son siempre ancladas, así que `clarification_question` es constante `null` y
    los dos códigos de rechazo son inalcanzables. Escribir su castellano daría **dos tests verdes sobre
    caminos imposibles**.
 2. **`size_label_missing` salta en el 58,3 % de los cards** y está anticorrelacionado con tener
    familia: **4,0 %** con ella contra **92,5 %** sin ella. Informa del estado del enriquecimiento, no
    de la pieza. El propio orquestador ya rechazó un cálculo de este aviso por esa razón exacta
-   ([`orchestrator.py:661`](../../../ai-service/src/jbg_ai/assist/orchestrator.py#L661)).
+   ([`orchestrator.py:661`](../../../../ai-service/src/jbg_ai/assist/orchestrator.py#L661)).
 3. **Los datos baratos del card y los caros llegan soldados.** El grupo, los cuatro avisos y el stock
    no necesitan ni un token y sólo se obtienen pagando una generación de **p50 4,42 s / p95 7,13 s**
    (C34 §4). `GET /api/product-families/{id}` existe y es accesible a cualquier autenticado, pero está
@@ -409,29 +409,29 @@ de venta, y **no** suprima ningún dato que el backend haya emitido.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-036](../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md)
-- **Informe de exploración:** [c36-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md)
+- **HU origen:** [HU-AIENG-036](../../../../Documentos/Historias/AI-Eng/HU-AIENG-036.md)
+- **Informe de exploración:** [c36-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md)
 - **Plan y diseño:**
-  - [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C36;
-  - [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md), §7.7, §7.8, §15.12 y §15.13.
+  - [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C36;
+  - [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md), §7.7, §7.8, §15.12 y §15.13.
 - **Specs vivas:**
-  - [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md) *(se modifica; y es el patrón)*
-  - [`ai-sales-assist`](../../specs/ai-sales-assist/spec.md) *(lo que el card consume)*
-  - [`assist-generation`](../../specs/assist-generation/spec.md) · [`substitutes-retrieval`](../../specs/substitutes-retrieval/spec.md)
-  - [`knowledge-corpus`](../../specs/knowledge-corpus/spec.md) · [`product-family`](../../specs/product-family/spec.md)
-  - [`frontend`](../../specs/frontend/spec.md) · [`frontend-testing`](../../specs/frontend-testing/spec.md)
+  - [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md) *(se modifica; y es el patrón)*
+  - [`ai-sales-assist`](../../../specs/ai-sales-assist/spec.md) *(lo que el card consume)*
+  - [`assist-generation`](../../../specs/assist-generation/spec.md) · [`substitutes-retrieval`](../../../specs/substitutes-retrieval/spec.md)
+  - [`knowledge-corpus`](../../../specs/knowledge-corpus/spec.md) · [`product-family`](../../../specs/product-family/spec.md)
+  - [`frontend`](../../../specs/frontend/spec.md) · [`frontend-testing`](../../../specs/frontend-testing/spec.md)
 - **Precedentes:**
-  - [T-AIENG-016](../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md): el patrón de pantalla que consume IA aquí.
-  - [T-AIENG-034](../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md): el contrato que se consume.
-  - [T-AIENG-030a](../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md): la forma de la respuesta y los códigos.
+  - [T-AIENG-016](../../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md): el patrón de pantalla que consume IA aquí.
+  - [T-AIENG-034](../../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md): el contrato que se consume.
+  - [T-AIENG-030a](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md): la forma de la respuesta y los códigos.
 - **Apuntes del Máster (guía, no dogma):**
-  - [S4 · De interfaz conversacional a interfaz de producto](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md): hornear en la interfaz lo que se puede pedir.
-  - [S11 · Citación y atribución verificable](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md): resuelve, localiza, trazable — y *«demasiada citación cansa»*.
-  - [S16 · Un sistema debe saber decir «no lo sé»](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md): la abstención honesta dice qué haría falta.
-- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md). Se **abren** dos: `generate=false` en `/sales-assist` y telemetría del card. Siguen abiertas *«C32b — política de timeout y circuito de `/v1/assist/agent`»* y *«C34 — el corpus no viaja en la imagen de `jbg-ai`»*, ésta con más peso: sin corpus, la caja de pregunta responde siempre `knowledge_not_covered`.
-- **Testing:** [testing-frontend.md](../../../Documentos/testing-frontend.md), sección *Estado de la suite: fallos conocidos*.
-- **Componentes:** [analisis-metronic-frontend.md](../../../Documentos/Propuestas/analisis-metronic-frontend.md).
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+  - [S4 · De interfaz conversacional a interfaz de producto](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md): hornear en la interfaz lo que se puede pedir.
+  - [S11 · Citación y atribución verificable](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md): resuelve, localiza, trazable — y *«demasiada citación cansa»*.
+  - [S16 · Un sistema debe saber decir «no lo sé»](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md): la abstención honesta dice qué haría falta.
+- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md). Se **abren** dos: `generate=false` en `/sales-assist` y telemetría del card. Siguen abiertas *«C32b — política de timeout y circuito de `/v1/assist/agent`»* y *«C34 — el corpus no viaja en la imagen de `jbg-ai`»*, ésta con más peso: sin corpus, la caja de pregunta responde siempre `knowledge_not_covered`.
+- **Testing:** [testing-frontend.md](../../../../Documentos/testing-frontend.md), sección *Estado de la suite: fallos conocidos*.
+- **Componentes:** [analisis-metronic-frontend.md](../../../../Documentos/Propuestas/analisis-metronic-frontend.md).
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

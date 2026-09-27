@@ -1,7 +1,7 @@
 # T-AIENG-020: Query-side synonym dictionary for the lexical branch (C20)
 
 > Ticket técnico del change OpenSpec `add-synonym-dictionary`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-020](../../../Documentos/Historias/AI-Eng/HU-AIENG-020.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C20 reescrita y entrada de §0 del 2026-09-01), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.3, §7.4, §7.6), sesión de exploración 2026-09-01 medida contra el Postgres local y el proveedor real, y código de `ai-service/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-020](../../../../Documentos/Historias/AI-Eng/HU-AIENG-020.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C20 reescrita y entrada de §0 del 2026-09-01), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.3, §7.4, §7.6), sesión de exploración 2026-09-01 medida contra el Postgres local y el proveedor real, y código de `ai-service/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -304,15 +304,15 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-020](../../../Documentos/Historias/AI-Eng/HU-AIENG-020.md)
+- **HU origen:** [HU-AIENG-020](../../../../Documentos/Historias/AI-Eng/HU-AIENG-020.md)
 - **Change OpenSpec:** `openspec/changes/add-synonym-dictionary/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C20, entrada de §0 del 2026-09-01) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.3, §7.4, §7.6)
-- **Apuntes del Máster (guía, no dogma):** [Búsqueda híbrida](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) (RRF, `ts_rank`, el problema del término exacto) · [Expansión y descomposición de consultas](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Expansion%20y%20descomposicion%20de%20consultas.md) (proponen multi-query con LLM; aquí se elige diccionario por latencia, coste y reproducibilidad)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C20, entrada de §0 del 2026-09-01) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.3, §7.4, §7.6)
+- **Apuntes del Máster (guía, no dogma):** [Búsqueda híbrida](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Busqueda%20hibrida.md) (RRF, `ts_rank`, el problema del término exacto) · [Expansión y descomposición de consultas](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Expansion%20y%20descomposicion%20de%20consultas.md) (proponen multi-query con LLM; aquí se elige diccionario por latencia, coste y reproducibilidad)
 - **Specs vivas:** `vector-retrieval` · `catalog-enrichment-pipeline` · `catalog-source-text` · `ai-vector-schema` · `ai-service-runtime` · `ai-service-api-contracts`
 - **Precedentes:** C09 (`vocabularies.yaml`, `fold()`, `resolve()`) · C11 (`source-text/v1`, cliente congelado) · C14 (etapas de log, umbral, patrón stub/real) · C18a/C18b (medir antes de creerse la ficha) · C19 (por qué no se duplica una definición)
-- **Deuda ajena que este change no paga:** [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) — singleton del cliente de embeddings y `RetrievalTimeoutMs` 2500→800 ms, ambos de C21/C22
+- **Deuda ajena que este change no paga:** [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) — singleton del cliente de embeddings y `RetrievalTimeoutMs` 2500→800 ms, ambos de C21/C22
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

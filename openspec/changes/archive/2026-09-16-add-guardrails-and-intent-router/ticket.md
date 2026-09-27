@@ -1,13 +1,13 @@
 # T-AIENG-031: Intent router and guardrails — two gates, two published figures, and the system's right to say "I don't know" (C31)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-030b](../archive/2026-09-14-add-assist-pitch-generation/ticket.md),
-> [T-AIENG-030a](../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md) y
-> [T-AIENG-026](../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
+> siguen [T-AIENG-030b](../../archive/2026-09-14-add-assist-pitch-generation/ticket.md),
+> [T-AIENG-030a](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md) y
+> [T-AIENG-026](../../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
 
-**HU origen:** [HU-AIENG-031](../../../Documentos/Historias/AI-Eng/HU-AIENG-031.md)
+**HU origen:** [HU-AIENG-031](../../../../Documentos/Historias/AI-Eng/HU-AIENG-031.md)
 **Change:** `add-guardrails-and-intent-router` (C31) · **Épica:** EP15
-**Rama:** `c31-add-guardrails-and-intent-router` · **Conjunto de enrutado:** [`evals/routing/cases.yaml`](../../../ai-service/evals/routing/cases.yaml)
+**Rama:** `c31-add-guardrails-and-intent-router` · **Conjunto de enrutado:** [`evals/routing/cases.yaml`](../../../../ai-service/evals/routing/cases.yaml)
 
 ---
 
@@ -68,14 +68,14 @@ puertas** y publica **dos cifras que nunca se suman**.
 
 | Pieza | Estado verificado | Qué implica |
 |---|---|---|
-| [`assist/modes.py`](../../../ai-service/src/jbg_ai/assist/modes.py) | Resuelve M1/M2/M3 **por anclas y nunca por palabras**; `intent` ∈ {`product_pitch`, `unclassified`} | El hueco está marcado, no improvisado. Su docstring promete: *«ese router reemplazará a `unclassified`, nunca a `product_pitch`»* |
-| [`assist/orchestrator.py`](../../../ai-service/src/jbg_ai/assist/orchestrator.py) | Genera en M2 y M3; en M1 **no llama al proveedor**; `clarification_question=None` con comentario *«Declarado de C31»* | El cableado tiene **un punto de entrada exacto**, antes de `retrieve_products` |
-| [`assist/llm.py`](../../../ai-service/src/jbg_ai/assist/llm.py) | Costura con temperatura 0, `num_retries: 0`, `response_format`, `complete` inyectable, *timeout* propio | **La costura se replica**; la clase no se reutiliza |
-| [`assist/prompt.py`](../../../ai-service/src/jbg_ai/assist/prompt.py) | `QUERY_OPEN`/`QUERY_CLOSE`; lista blanca numérica desde `as_data()` y **nunca desde el prompt renderizado**; `PitchPayload` es **de una pieza** | La mitigación de inyección **ya está y no se rehace**. El *payload* de M1 **no existe** |
-| [`assist/constants.py`](../../../ai-service/src/jbg_ai/assist/constants.py) | `DEFAULT_ASSIST_MODEL`, `PITCH_TIMEOUT_SECONDS`, `MAX_PITCH_PROVIDER_CALLS = 2`, vocabularios cerrados | El patrón de constante-con-medición-al-lado, que este change extiende |
-| [`knowledge/search.py`](../../../ai-service/src/jbg_ai/knowledge/search.py) | `distance_threshold` **por parámetro**; defecto `0,51` | El guardarraíl de M3, **gratis y ya medido** |
-| [`api/schemas/assist.py`](../../../ai-service/src/jbg_ai/api/schemas/assist.py) | `intent: str` **plano**, `clarification_question: str \| None`, `warnings: list[str]` | **Cero movimiento de forma** en `openapi.json` |
-| [`evals/routing/cases.yaml`](../../../ai-service/evals/routing/cases.yaml) | Escrito el 2026-09-14; 5 clases por referencia + 10 casos `both` | El conjunto de evaluación **ya existe** |
+| [`assist/modes.py`](../../../../ai-service/src/jbg_ai/assist/modes.py) | Resuelve M1/M2/M3 **por anclas y nunca por palabras**; `intent` ∈ {`product_pitch`, `unclassified`} | El hueco está marcado, no improvisado. Su docstring promete: *«ese router reemplazará a `unclassified`, nunca a `product_pitch`»* |
+| [`assist/orchestrator.py`](../../../../ai-service/src/jbg_ai/assist/orchestrator.py) | Genera en M2 y M3; en M1 **no llama al proveedor**; `clarification_question=None` con comentario *«Declarado de C31»* | El cableado tiene **un punto de entrada exacto**, antes de `retrieve_products` |
+| [`assist/llm.py`](../../../../ai-service/src/jbg_ai/assist/llm.py) | Costura con temperatura 0, `num_retries: 0`, `response_format`, `complete` inyectable, *timeout* propio | **La costura se replica**; la clase no se reutiliza |
+| [`assist/prompt.py`](../../../../ai-service/src/jbg_ai/assist/prompt.py) | `QUERY_OPEN`/`QUERY_CLOSE`; lista blanca numérica desde `as_data()` y **nunca desde el prompt renderizado**; `PitchPayload` es **de una pieza** | La mitigación de inyección **ya está y no se rehace**. El *payload* de M1 **no existe** |
+| [`assist/constants.py`](../../../../ai-service/src/jbg_ai/assist/constants.py) | `DEFAULT_ASSIST_MODEL`, `PITCH_TIMEOUT_SECONDS`, `MAX_PITCH_PROVIDER_CALLS = 2`, vocabularios cerrados | El patrón de constante-con-medición-al-lado, que este change extiende |
+| [`knowledge/search.py`](../../../../ai-service/src/jbg_ai/knowledge/search.py) | `distance_threshold` **por parámetro**; defecto `0,51` | El guardarraíl de M3, **gratis y ya medido** |
+| [`api/schemas/assist.py`](../../../../ai-service/src/jbg_ai/api/schemas/assist.py) | `intent: str` **plano**, `clarification_question: str \| None`, `warnings: list[str]` | **Cero movimiento de forma** en `openapi.json` |
+| [`evals/routing/cases.yaml`](../../../../ai-service/evals/routing/cases.yaml) | Escrito el 2026-09-14; 5 clases por referencia + 10 casos `both` | El conjunto de evaluación **ya existe** |
 | `IAiGatewayClient` (.NET) | Cinco métodos, **ninguno de assist** | `/v1/assist/sale` sigue con **cero consumidores**: la ventana barata para mover contrato |
 
 ### Los tres hallazgos que gobiernan el diseño
@@ -364,19 +364,19 @@ Cinco, todas con **opción por defecto declarada** que se aplicará si no hay re
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-031](../../../Documentos/Historias/AI-Eng/HU-AIENG-031.md)
-- **Conjunto de enrutado:** [`ai-service/evals/routing/cases.yaml`](../../../ai-service/evals/routing/cases.yaml) — 109 casos existentes por referencia + 10 `both` con 8 pares de control
-- **Golden set y su criterio:** [`queries.jsonl`](../../../ai-service/evals/golden/queries.jsonl) · [`criterion.md`](../../../ai-service/evals/golden/criterion.md)
-- **Fixture de fuera de dominio de C23:** [`out-of-domain.yaml`](../../../data/knowledge/_eval/out-of-domain.yaml)
-- **Change predecesor:** [`archive/2026-09-14-add-assist-pitch-generation/`](../archive/2026-09-14-add-assist-pitch-generation/)
-- **Decisiones heredadas:** [c30b-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md) (D2 y D8 en particular) · [c30-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md) (D-G)
-- **Mediciones que este change consume:** [c30b-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-implementation-measurements.md) (latencia por llamada, tasa de reparación) · [c23-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md) (el hueco de 8 milésimas)
-- **Diseño:** §11.2, §15.12 y §15.13 — [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** ficha de C31 en el §3, y la anotación de C34 del 14 sep — [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Capability que se modifica:** [`assist-generation`](../../specs/assist-generation/spec.md)
-- **Capabilities consumidas:** [`knowledge-corpus`](../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../specs/retrieval-abstention/spec.md) · [`vector-retrieval`](../../specs/vector-retrieval/spec.md) · [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md)
-- **Apunte del máster:** *Un sistema debe saber decir «No lo sé»* — [S16](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/)
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **HU origen:** [HU-AIENG-031](../../../../Documentos/Historias/AI-Eng/HU-AIENG-031.md)
+- **Conjunto de enrutado:** [`ai-service/evals/routing/cases.yaml`](../../../../ai-service/evals/routing/cases.yaml) — 109 casos existentes por referencia + 10 `both` con 8 pares de control
+- **Golden set y su criterio:** [`queries.jsonl`](../../../../ai-service/evals/golden/queries.jsonl) · [`criterion.md`](../../../../ai-service/evals/golden/criterion.md)
+- **Fixture de fuera de dominio de C23:** [`out-of-domain.yaml`](../../../../data/knowledge/_eval/out-of-domain.yaml)
+- **Change predecesor:** [`archive/2026-09-14-add-assist-pitch-generation/`](../../archive/2026-09-14-add-assist-pitch-generation/)
+- **Decisiones heredadas:** [c30b-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md) (D2 y D8 en particular) · [c30-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md) (D-G)
+- **Mediciones que este change consume:** [c30b-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-implementation-measurements.md) (latencia por llamada, tasa de reparación) · [c23-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md) (el hueco de 8 milésimas)
+- **Diseño:** §11.2, §15.12 y §15.13 — [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** ficha de C31 en el §3, y la anotación de C34 del 14 sep — [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Capability que se modifica:** [`assist-generation`](../../../specs/assist-generation/spec.md)
+- **Capabilities consumidas:** [`knowledge-corpus`](../../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../../specs/retrieval-abstention/spec.md) · [`vector-retrieval`](../../../specs/vector-retrieval/spec.md) · [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md)
+- **Apunte del máster:** *Un sistema debe saber decir «No lo sé»* — [S16](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
 
 ---
 
@@ -384,5 +384,5 @@ Cinco, todas con **opción por defecto declarada** que se aplicará si no hay re
 
 | Fecha | Cambio |
 |---|---|
-| 2026-09-15 | **Implementado.** La medición **enmienda la opción por defecto nº 4 de este ticket**: «mismo `gpt-4o-mini` de partida» no sobrevive al veto. Sobre los 119 casos, mismo prompt y temperatura 0, `gpt-4o-mini` silencia **3** consultas contestables —falso positivo 6,25 %— y **falla el veto de D12**, mientras `gpt-4o` silencia **0**, acierta **48/48** en `catalog` y pasa. Tres revisiones de prompt llevaron la cifra de quince silenciadas a tres y **no lograron cerrarla**; el modelo la cerró sin tocar una palabra del prompt. Es **D9 vindicado**: la variable separada es lo único que permitió mover el modelo del clasificador sin invalidar las 120 generaciones de C30b. Y **el riesgo mayor de este ticket no se materializó**: la lista blanca numérica de M1 resultó de **~13 numerales y no de cinco** —la recuperación devuelve 15 candidatos, no 5— y la puerta numérica rechazó **cero**; lo que tumbaba el argumentario de M1 era `dangling_citation`, porque la sección de tarea de `catalog` no decía que no hubiera citas. Cifras completas en [c31-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c31-implementation-measurements.md) |
+| 2026-09-15 | **Implementado.** La medición **enmienda la opción por defecto nº 4 de este ticket**: «mismo `gpt-4o-mini` de partida» no sobrevive al veto. Sobre los 119 casos, mismo prompt y temperatura 0, `gpt-4o-mini` silencia **3** consultas contestables —falso positivo 6,25 %— y **falla el veto de D12**, mientras `gpt-4o` silencia **0**, acierta **48/48** en `catalog` y pasa. Tres revisiones de prompt llevaron la cifra de quince silenciadas a tres y **no lograron cerrarla**; el modelo la cerró sin tocar una palabra del prompt. Es **D9 vindicado**: la variable separada es lo único que permitió mover el modelo del clasificador sin invalidar las 120 generaciones de C30b. Y **el riesgo mayor de este ticket no se materializó**: la lista blanca numérica de M1 resultó de **~13 numerales y no de cinco** —la recuperación devuelve 15 candidatos, no 5— y la puerta numérica rechazó **cero**; lo que tumbaba el argumentario de M1 era `dangling_citation`, porque la sección de tarea de `catalog` no decía que no hubiera citas. Cifras completas en [c31-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c31-implementation-measurements.md) |
 | 2026-09-14 | Creación del ticket a partir de HU-AIENG-031 y de la exploración de C31. Recoge el hallazgo que reencuadra el change —**«fuera de dominio» son dos conjuntos y la ficha del plan los mezcla**: las 20 consultas de la categoría son oficios vecinos y no preguntas ajenas a la joyería, así que un clasificador de intención puro no movería el 18 de 20 con el que la ficha se justifica—, y las tres decisiones que salen de medir: **el enrutador cuesta una llamada y sólo en M1**, porque una petición reparada ya está en ~4.400 ms de los 5.000 de `AssistTimeoutMs`; **el guardarraíl de M3 es gratis**, porque el umbral `0,51` de C23 ya separa con un hueco de 8 milésimas; y **el conjunto de evaluación ya existía repartido**, con las cuatro consultas `ambigua` declaradas sin juicios desde el 2026-09-11 porque *«la respuesta correcta es una repregunta»* |

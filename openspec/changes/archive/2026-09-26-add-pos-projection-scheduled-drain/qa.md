@@ -2,7 +2,7 @@
 
 > Registro de las comprobaciones **realmente ejecutadas** sobre la implementación del change, con sus resultados y su evidencia.
 > **Fecha:** exploración, artefactos e implementación el **2026-09-26** · **Rama:** `c41-add-pos-projection-scheduled-drain` · **Artefactos de partida:** `55bacb6` (historia, ticket enriquecido, `epicas.md` y ficha del plan), publicado en `origin` · **Implementación NO commiteada**: lo que este documento verifica es el árbol de trabajo sobre `55bacb6`.
-> **Idioma:** cuerpo en español, identificadores técnicos en inglés, por coherencia con [ticket.md](ticket.md) y con la [HU](../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md).
+> **Idioma:** cuerpo en español, identificadores técnicos en inglés, por coherencia con [ticket.md](ticket.md) y con la [HU](../../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md).
 > **Alcance:** **32/32 tareas**, con **dos ejecutadas por cobertura de test en vez de contra el entorno vivo** y declaradas como tales (§9).
 > **Este change NO mueve el contrato:** `ai-service/openapi.json` con el **mismo `sha256`** antes y después, sin diff, sin regenerar (§5).
 > **Este change NO crea migraciones:** ni revisión de Alembic ni migración de EF Core (§5).

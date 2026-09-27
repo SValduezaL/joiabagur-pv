@@ -1,7 +1,7 @@
 # T-AIENG-009: Catalog enrichment pipeline — closed-vocab extraction with per-field provenance (C09)
 
 > Ticket técnico del change OpenSpec `add-catalog-enrichment-pipeline`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-009](../../../Documentos/Historias/AI-Eng/HU-AIENG-009.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C09, §0 16–23 ago), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.1, §7.3, §7.8, §8.5), sesiones de exploración 2026-08-23 (incluye LiteLLM / `stone_type` / concurrencia), código real de `ai-service/src/` y `backend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-009](../../../../Documentos/Historias/AI-Eng/HU-AIENG-009.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C09, §0 16–23 ago), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.1, §7.3, §7.8, §8.5), sesiones de exploración 2026-08-23 (incluye LiteLLM / `stone_type` / concurrencia), código real de `ai-service/src/` y `backend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -268,14 +268,14 @@ Las 1 y 2 de la primera redacción **están cerradas** (2026-08-23): `stone_type
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-009](../../../Documentos/Historias/AI-Eng/HU-AIENG-009.md)
+- **HU origen:** [HU-AIENG-009](../../../../Documentos/Historias/AI-Eng/HU-AIENG-009.md)
 - **Change OpenSpec:** `openspec/changes/add-catalog-enrichment-pipeline/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C09, §0) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.1, §7.3, §7.4, §7.8, §8.5)
-- **Apuntes del Máster (S3 / S4):** [Abstracción de proveedores](../../../Documentos/Sesiones%20Master%20AIEng/S3_Patrones_Diseños_Wrappers_Modelos/Abstracci%C3%B3n%20de%20proveedores%20y%20estrategias%20de%20fallback.md) (LiteLLM) · [Extracción de datos estructurados](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Extraccion%20de%20datos%20estructurados.md) · [Guardrails y validación de outputs](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C09, §0) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.1, §7.3, §7.4, §7.8, §8.5)
+- **Apuntes del Máster (S3 / S4):** [Abstracción de proveedores](../../../../Documentos/Sesiones%20Master%20AIEng/S3_Patrones_Diseños_Wrappers_Modelos/Abstracci%C3%B3n%20de%20proveedores%20y%20estrategias%20de%20fallback.md) (LiteLLM) · [Extracción de datos estructurados](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Extraccion%20de%20datos%20estructurados.md) · [Guardrails y validación de outputs](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md)
 - **Specs vivas:** `ai-service-api-contracts` · `product-ai-profile` · `real-catalog-corpus` · `synthetic-catalog-corpus` · `ai-service-runtime`
 - **Precedentes:** `jbg_ai/data/llm.py` (parse, no reutilizar el puerto) · `jbg_ai/api/schemas/enrich.py` · `jbg_ai/stubs/responses.py` · `ProductAiProfileService.cs` · `ProfileReviewPolicy.cs` · `scripts/catalog/.../grouping.py` (tokens de talla)
 - **Contrato:** `ai-service/openapi.json` — **no se modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

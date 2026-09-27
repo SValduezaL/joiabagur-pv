@@ -1,7 +1,7 @@
 # T-AIENG-002: Freeze jbg-ai HTTP contracts and internal service auth (C02)
 
 > Ticket técnico del change OpenSpec `add-ai-service-contracts-and-auth`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG y plan de changes), specs de `openspec/specs/` y [HU-AIENG-002](../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG y plan de changes), specs de `openspec/specs/` y [HU-AIENG-002](../../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -14,9 +14,9 @@
 
 ## Contexto y Problema
 
-Tras C01 ([HU-AIENG-001](../../../Documentos/Historias/AI-Eng/HU-AIENG-001.md), change archivado `init-ai-service-skeleton`), `jbg-ai` solo expone `GET /health`. Sin contrato congelado ni autenticación de servicio, el cliente tipado .NET (C03) y el resto de la ruta crítica no pueden avanzar: las dos personas del Proyecto Final se bloquearían mutuamente durante semanas.
+Tras C01 ([HU-AIENG-001](../../../../Documentos/Historias/AI-Eng/HU-AIENG-001.md), change archivado `init-ai-service-skeleton`), `jbg-ai` solo expone `GET /health`. Sin contrato congelado ni autenticación de servicio, el cliente tipado .NET (C03) y el resto de la ruta crítica no pueden avanzar: las dos personas del Proyecto Final se bloquearían mutuamente durante semanas.
 
-El plan ([proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C02) exige modelos completos "§6.8", pero el diseño v3 ([proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)) termina en **§6.4**. La tabla de contratos está en [proyecto-final-diseno-rag-joiabagur-3devs.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur-3devs.md) §6.8; v3 aporta `materials[]`, familias con `variant_label`, sobre-recuperación (§7.6), placeholders de precio y stock (§7.7) e `inventory/propose`. Este ticket reconstruye el contrato desde ambas fuentes y lo congela.
+El plan ([proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C02) exige modelos completos "§6.8", pero el diseño v3 ([proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)) termina en **§6.4**. La tabla de contratos está en [proyecto-final-diseno-rag-joiabagur-3devs.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.8; v3 aporta `materials[]`, familias con `variant_label`, sobre-recuperación (§7.6), placeholders de precio y stock (§7.7) e `inventory/propose`. Este ticket reconstruye el contrato desde ambas fuentes y lo congela.
 
 **Estado actual del código (verificado en el repositorio):**
 
@@ -237,13 +237,13 @@ Condiciones verificables para dar el ticket por hecho:
 
 ## Enlaces o Referencias
 
-- **User Story:** [HU-AIENG-002.md](../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md)
-- **HU prerrequisito:** [HU-AIENG-001.md](../../../Documentos/Historias/AI-Eng/HU-AIENG-001.md) (change archivado `init-ai-service-skeleton`)
+- **User Story:** [HU-AIENG-002.md](../../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md)
+- **HU prerrequisito:** [HU-AIENG-001.md](../../../../Documentos/Historias/AI-Eng/HU-AIENG-001.md) (change archivado `init-ai-service-skeleton`)
 - **Change:** `openspec/changes/add-ai-service-contracts-and-auth/`
-- **Plan:** ficha C02 en [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Plan:** ficha C02 en [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Diseño:** v3 §6.1–6.4, §7.6–7.7 · 3devs §6.8
 - **Contexto de proyecto:** `openspec/project.md`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

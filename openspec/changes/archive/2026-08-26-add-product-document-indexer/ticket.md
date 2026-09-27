@@ -1,7 +1,7 @@
 # T-AIENG-013: Product-document indexer from catalog feed (C13)
 
 > Ticket técnico del change OpenSpec `add-product-document-indexer`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-013](../../../Documentos/Historias/AI-Eng/HU-AIENG-013.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C13, §0 C06a/C12, §6.3), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.2, §8.1.1), sesión de exploración 2026-08-26, código real de `ai-service/src/` y `backend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-013](../../../../Documentos/Historias/AI-Eng/HU-AIENG-013.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C13, §0 C06a/C12, §6.3), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.2, §8.1.1), sesión de exploración 2026-08-26, código real de `ai-service/src/` y `backend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -287,15 +287,15 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-013](../../../Documentos/Historias/AI-Eng/HU-AIENG-013.md)
+- **HU origen:** [HU-AIENG-013](../../../../Documentos/Historias/AI-Eng/HU-AIENG-013.md)
 - **Change OpenSpec:** `openspec/changes/add-product-document-indexer/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C13) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2, §8.1.1)
-- **Apuntes del Máster (guía, no dogma):** [S8 esquema](../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Diseño%20del%20esquema%20y%20busqueda%20semantica.md) · [S9 RAG](../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Del%20CAG%20estatico%20al%20flujo%20RAG%20-%20Las%20cuatro%20etapas%20y%20por%20que%20el%20Retrievel%20domina.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C13) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2, §8.1.1)
+- **Apuntes del Máster (guía, no dogma):** [S8 esquema](../../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Diseño%20del%20esquema%20y%20busqueda%20semantica.md) · [S9 RAG](../../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Del%20CAG%20estatico%20al%20flujo%20RAG%20-%20Las%20cuatro%20etapas%20y%20por%20que%20el%20Retrievel%20domina.md)
 - **Specs vivas:** `catalog-source-text` · `index-feed` · `ai-vector-schema` · `ai-service-api-contracts` · `ai-service-auth` · `ai-service-runtime`
 - **Precedentes:** C09 (`enrich.py` stub/real) · C11 (`ProductSourceText`, `LiteLlmEmbeddingClient`) · C12 (`IndexFeedPageDto`, `X-Index-Feed-Key`) · C05 (Alembic a mano, CHECK no ENUM)
 - **Contrato Python:** `ai-service/openapi.json` — **sí se modifica**
-- **Runbook AutoBulk:** [c12-catalog-autobulk-runbook.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md) (ya ejecutado; no es trabajo de este ticket)
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Runbook AutoBulk:** [c12-catalog-autobulk-runbook.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c12-catalog-autobulk-runbook.md) (ya ejecutado; no es trabajo de este ticket)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

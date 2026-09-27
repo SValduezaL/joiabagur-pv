@@ -1,20 +1,20 @@
 # T-AIENG-041: Keep `ai.pos_projection` fresh by schedule and report its age on the administrator card (C41)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya siguen
-> [T-AIENG-040](../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) y el resto de tickets
+> [T-AIENG-040](../../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) y el resto de tickets
 > del Proyecto Final.
 >
 > **Fuentes de verdad:** `openspec/project.md`, las specs vivas
-> [`pos-projection`](../../specs/pos-projection/spec.md),
-> [`ai-service-runtime`](../../specs/ai-service-runtime/spec.md),
-> [`demo-deployment`](../../specs/demo-deployment/spec.md) y
-> [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md), y **el código real**, que es de
+> [`pos-projection`](../../../specs/pos-projection/spec.md),
+> [`ai-service-runtime`](../../../specs/ai-service-runtime/spec.md),
+> [`demo-deployment`](../../../specs/demo-deployment/spec.md) y
+> [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md), y **el código real**, que es de
 > donde sale todo lo que este ticket afirma.
 
 **Change:** `add-pos-projection-scheduled-drain` (C41) · **Épica:** **EP14 — Búsqueda Semántica
 Híbrida** *(corregido el 26 sep: este ticket decía EP15)*
 **Abierto:** 2026-09-25 · **Enriquecido:** 2026-09-26, tras la exploración contra el código y contra la
-base local · **Historia:** [HU-AIENG-041](../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md)
+base local · **Historia:** [HU-AIENG-041](../../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md)
 **Origen:** no es una historia de producto — sale de una **sesión de pruebas manuales** posterior al
 cierre de C40, y eso condiciona cómo hay que leerlo.
 
@@ -61,7 +61,7 @@ No es la primera vez, y **tampoco la segunda**. Son **tres**, y no todas del mis
 
 | # | Cuándo | Entorno | Modo | Efecto |
 |---|---|---|---|---|
-| 1 | C34 | **demo** | Proyección **vacía** | `count_scope = 0` → **503 en toda recuperación**; .NET degrada a léxico con 200, *«así que desde fuera el entorno parece sano»*. Deuda abierta en [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) |
+| 1 | C34 | **demo** | Proyección **vacía** | `count_scope = 0` → **503 en toda recuperación**; .NET degrada a léxico con 200, *«así que desde fuera el entorno parece sano»*. Deuda abierta en [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) |
 | 2 | C40 (§8 del informe) | local | **Rancia**, 19,7 días | `degraded=unscoped`. **Y el arreglo aplicado no funcionó** — ver §6 |
 | 3 | C41 (este ticket) | local | **Rancia**, 20 días | `degraded=unscoped`. Arreglado con `sync-pos --full` |
 
@@ -72,7 +72,7 @@ ticket.
 
 El ticket decía *«la frescura no tiene dueño»*. Es más preciso decir esto:
 
-> **El planificador existe y vive en prosa.** [`ai-service/README.md:330`](../../../ai-service/README.md#L330)
+> **El planificador existe y vive en prosa.** [`ai-service/README.md:330`](../../../../ai-service/README.md#L330)
 > lleva desde C22 una receta de cron cada diez minutos, y **es inejecutable en la topología que
 > desplegamos**: empieza por `cd /srv/jbg-ai`, una ruta de host, y `jbg-ai` se despliega como
 > contenedor — la demo drena con `docker exec -i jbg-demo-ai …`. **Por eso nadie la instaló nunca.**
@@ -102,7 +102,7 @@ proyección. Hay dos filtros y sólo uno es la frontera:
 | | Dónde | Qué hace | ¿Frontera? |
 |---|---|---|---|
 | Prefiltro de `ai.pos_projection` | `retrieval/projection.py`, antes de ordenar | Estrecha la **ventana de candidatos** al surtido de la tienda | **No** |
-| `Carried()` | [`AssistedSearchRepository.cs:156-162`](../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/AssistedSearchRepository.cs) | Parte de `Inventories` con `PointOfSaleId == pointOfSaleId && IsActive && Product.IsActive` | **Sí** |
+| `Carried()` | [`AssistedSearchRepository.cs:156-162`](../../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/AssistedSearchRepository.cs) | Parte de `Inventories` con `PointOfSaleId == pointOfSaleId && IsActive && Product.IsActive` | **Sí** |
 
 La segunda corre en **toda** respuesta, y su consulta arranca desde `Inventory` precisamente para que
 la regla de visibilidad sea **estructural** y no una condición que alguien pueda olvidar. Es el
@@ -115,7 +115,7 @@ debajo de una página en al menos **seis de cada veinte** búsquedas, y en el pe
 solo producto**.
 
 **Y degradar es la decisión correcta**, no un descuido. El *docstring* de
-[`projection.py:139-142`](../../../ai-service/src/jbg_ai/retrieval/projection.py) lo escribe así:
+[`projection.py:139-142`](../../../../ai-service/src/jbg_ai/retrieval/projection.py) lo escribe así:
 
 > **Stale** — older than the ceiling. The scope is dropped for this request and the age is reported.
 > The page may come back short; **no valid product is hidden from the authority that hydrates it**,
@@ -131,21 +131,21 @@ algo vendible no lo es. **Este ticket no toca esa decisión.**
 
 | Pieza | Estado | Evidencia |
 |---|---|---|
-| `sync-pos [--full]`, checkpoint propio, *tombstone* en borrado suave, página fallida a `ai.sync_failure` | ✅ real desde C22, ~250 líneas comentadas y probadas | [`pos_orchestrator.py`](../../../ai-service/src/jbg_ai/indexing/pos_orchestrator.py) |
-| El guard de frescura lee `ai.sync_checkpoint.last_incremental_sync_at` | ✅ y **nunca** `refreshed_at` | [`search.py:79-83`](../../../ai-service/src/jbg_ai/retrieval/search.py#L79-L83) |
-| `resolve_scope` ya calcula `reported_age` y `stale` | ✅ **transportarlos, no computarlos** | [`projection.py:120-165`](../../../ai-service/src/jbg_ai/retrieval/projection.py#L120) |
-| `ProjectionFreshness`, caché de 10 s | ✅ mismo patrón y razón que el informe de salud de C17 | [`projection.py:80-105`](../../../ai-service/src/jbg_ai/retrieval/projection.py#L80) |
-| Receta de cron cada 10 min | ⚠️ **existe en prosa y es inejecutable** (`cd /srv/jbg-ai`) | [`README.md:330`](../../../ai-service/README.md#L330) |
-| `verify.sh` falla el despliegue por cuatro condiciones | ⚠️ **ninguna es la proyección** | [`verify.sh`](../../../deploy/demo/verify.sh) |
-| `GET /health` es *mapping* abierto en los dos lados | ✅ **enriquecerlo no mueve el contrato** | [`health_report.py`](../../../ai-service/src/jbg_ai/api/health_report.py) · [`AiHealthResponse.cs`](../../../backend/src/JoiabagurPV.Application/DTOs/Ai/AiHealthResponse.cs) |
-| Tarjeta de estado de `jbg-ai` en el dashboard de administrador | ✅ desde C17, con `unreachable` de primera clase | [`AdminDashboard.tsx`](../../../frontend/src/pages/dashboard/AdminDashboard.tsx) |
+| `sync-pos [--full]`, checkpoint propio, *tombstone* en borrado suave, página fallida a `ai.sync_failure` | ✅ real desde C22, ~250 líneas comentadas y probadas | [`pos_orchestrator.py`](../../../../ai-service/src/jbg_ai/indexing/pos_orchestrator.py) |
+| El guard de frescura lee `ai.sync_checkpoint.last_incremental_sync_at` | ✅ y **nunca** `refreshed_at` | [`search.py:79-83`](../../../../ai-service/src/jbg_ai/retrieval/search.py#L79-L83) |
+| `resolve_scope` ya calcula `reported_age` y `stale` | ✅ **transportarlos, no computarlos** | [`projection.py:120-165`](../../../../ai-service/src/jbg_ai/retrieval/projection.py#L120) |
+| `ProjectionFreshness`, caché de 10 s | ✅ mismo patrón y razón que el informe de salud de C17 | [`projection.py:80-105`](../../../../ai-service/src/jbg_ai/retrieval/projection.py#L80) |
+| Receta de cron cada 10 min | ⚠️ **existe en prosa y es inejecutable** (`cd /srv/jbg-ai`) | [`README.md:330`](../../../../ai-service/README.md#L330) |
+| `verify.sh` falla el despliegue por cuatro condiciones | ⚠️ **ninguna es la proyección** | [`verify.sh`](../../../../deploy/demo/verify.sh) |
+| `GET /health` es *mapping* abierto en los dos lados | ✅ **enriquecerlo no mueve el contrato** | [`health_report.py`](../../../../ai-service/src/jbg_ai/api/health_report.py) · [`AiHealthResponse.cs`](../../../../backend/src/JoiabagurPV.Application/DTOs/Ai/AiHealthResponse.cs) |
+| Tarjeta de estado de `jbg-ai` en el dashboard de administrador | ✅ desde C17, con `unreachable` de primera clase | [`AdminDashboard.tsx`](../../../../frontend/src/pages/dashboard/AdminDashboard.tsx) |
 | .NET lee o escribe el esquema `ai` | ❌ **cero referencias** en todo `backend/src` | — |
-| La frontera `ai.*` está acotada por *grants* | ✅ estructural, no convencional | [`bootstrap.sql`](../../../ai-service/migrations/bootstrap.sql) |
-| `GET /api/ai/search/availability` no llama al servicio de IA | ✅ **`MUST` de spec viva**; además el método es **síncrono** | [`ai-free-query-search/spec.md`](../../specs/ai-free-query-search/spec.md) |
-| Superficie `/v1`: 11 rutas más `/health`, enumeradas en un `MUST` | ✅ añadir una es cambio normativo | [`openapi.json`](../../../ai-service/openapi.json) |
-| `pos-projection` prohíbe el planificador en proceso | ⚠️ **es lo que este change deroga** | [`pos-projection/spec.md`](../../specs/pos-projection/spec.md) |
+| La frontera `ai.*` está acotada por *grants* | ✅ estructural, no convencional | [`bootstrap.sql`](../../../../ai-service/migrations/bootstrap.sql) |
+| `GET /api/ai/search/availability` no llama al servicio de IA | ✅ **`MUST` de spec viva**; además el método es **síncrono** | [`ai-free-query-search/spec.md`](../../../specs/ai-free-query-search/spec.md) |
+| Superficie `/v1`: 11 rutas más `/health`, enumeradas en un `MUST` | ✅ añadir una es cambio normativo | [`openapi.json`](../../../../ai-service/openapi.json) |
+| `pos-projection` prohíbe el planificador en proceso | ⚠️ **es lo que este change deroga** | [`pos-projection/spec.md`](../../../specs/pos-projection/spec.md) |
 | Lock de cualquier tipo | ❌ **no existe ninguno** en todo el repositorio | — |
-| `uvicorn` sin `--workers`, `mem_limit: 512m`, pool de 5 | ✅ instancia única **en la práctica**, no por garantía | [`Dockerfile`](../../../ai-service/Dockerfile) |
+| `uvicorn` sin `--workers`, `mem_limit: 512m`, pool de 5 | ✅ instancia única **en la práctica**, no por garantía | [`Dockerfile`](../../../../ai-service/Dockerfile) |
 
 **Estado de la base local, medido el 26 sep** (lectura, sin modificar nada):
 
@@ -228,7 +228,7 @@ verificación de este change lee el checkpoint.**
 
 ## 6 · El hallazgo que obliga a anotar el informe de C40
 
-El §8 del [informe de C40](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md)
+El §8 del [informe de C40](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md)
 declara: *«La proyección del punto de venta se refrescó. Llegaba con 19,7 días y el servicio la
 declaraba `degraded=unscoped` […] Se actualizaron `refreshed_at` y `computed_as_of` en 1.176 filas»*.
 
@@ -418,7 +418,7 @@ del informe de salud es aditiva en los dos lados.
 ## 10 · Criterios de Aceptación
 
 Los diez escenarios en Dado/Cuando/Entonces están en la historia
-[HU-AIENG-041](../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md#criterios-de-aceptación). En
+[HU-AIENG-041](../../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md#criterios-de-aceptación). En
 resumen: el entorno se drena al arrancar (1, 2), se mantiene fresco solo (3), dos drenajes no se pisan
 **y el CLI tampoco** (4), el administrador ve la frescura (5), un fallo no rompe nada y no se traga
 (6), un despliegue con la proyección vacía ya no pasa (7), la rancidez sigue degradando y nunca
@@ -497,7 +497,7 @@ Las seis del §4 original, cerradas:
 | 6 | ¿Qué dice la insignia? | **No hay insignia de operario** (D11). Tres estados en la tarjeta de administrador, y el aviso es de **completitud, no de corrección** |
 
 Las siete que quedan abiertas, con su opción por defecto, están en la
-[historia](../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md#preguntas-abiertas): nombres de los
+[historia](../../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md#preguntas-abiertas): nombres de los
 ajustes, conmutador encendido por defecto, clave del lock, reintento del arranque, base de conteo de
 `shops_without_scope`, formato de la edad en la tarjeta y firma de la anotación del informe de C40.
 
@@ -521,27 +521,27 @@ ni escriba el esquema `ai`, y **no** cambie el comportamiento de degradación.
 
 ## 15 · Enlaces o Referencias
 
-- **Historia origen:** [HU-AIENG-041](../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md)
+- **Historia origen:** [HU-AIENG-041](../../../../Documentos/Historias/AI-Eng/HU-AIENG-041.md)
 - **Change:** `openspec/changes/add-pos-projection-scheduled-drain/` (C41)
-- **Ficha del plan:** [§3 · C41](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Diseño RAG:** [§6.2, §6.3, §7.6, §12](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Specs vivas modificadas:** [`pos-projection`](../../specs/pos-projection/spec.md) ·
-  [`ai-service-runtime`](../../specs/ai-service-runtime/spec.md) ·
-  [`demo-deployment`](../../specs/demo-deployment/spec.md)
+- **Ficha del plan:** [§3 · C41](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Diseño RAG:** [§6.2, §6.3, §7.6, §12](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Specs vivas modificadas:** [`pos-projection`](../../../specs/pos-projection/spec.md) ·
+  [`ai-service-runtime`](../../../specs/ai-service-runtime/spec.md) ·
+  [`demo-deployment`](../../../specs/demo-deployment/spec.md)
 - **Specs que NO se tocan, y es alcance:**
-  [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md) ·
-  [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md) ·
-  [`vector-retrieval`](../../specs/vector-retrieval/spec.md)
-- **Historias anteriores:** [HU-AIENG-022](../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md) ·
-  [HU-AIENG-017](../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md)
-- **Deuda que cierra:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md), entrada de C34
+  [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md) ·
+  [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md) ·
+  [`vector-retrieval`](../../../specs/vector-retrieval/spec.md)
+- **Historias anteriores:** [HU-AIENG-022](../../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md) ·
+  [HU-AIENG-017](../../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md)
+- **Deuda que cierra:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md), entrada de C34
 - **Informe a anotar:**
-  [`c40-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md), §8
+  [`c40-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md), §8
 - **Procedimientos:**
-  [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) ·
-  [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md) ·
-  [testing-frontend.md](../../../Documentos/testing-frontend.md)
+  [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) ·
+  [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md) ·
+  [testing-frontend.md](../../../../Documentos/testing-frontend.md)
 
 ---
 

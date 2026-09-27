@@ -1,7 +1,7 @@
 # T-AIENG-007: Product family as an explicit, editable business entity — declarative membership, one family per product, and storage reserved for the assisted flow (C07)
 
 > Ticket técnico del change OpenSpec `add-product-family-entity`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG §3 decisión 2, §6.2, §6.3, §7.4, §7.5, §7.8; plan de changes; especificaciones funcionales v2 §1, §4.4 y §4.6), specs vivas de `openspec/specs/`, el contrato `ai-service/openapi.json`, el código real de `backend/src/`, y [HU-AIENG-007](../../../Documentos/Historias/AI-Eng/HU-AIENG-007.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG §3 decisión 2, §6.2, §6.3, §7.4, §7.5, §7.8; plan de changes; especificaciones funcionales v2 §1, §4.4 y §4.6), specs vivas de `openspec/specs/`, el contrato `ai-service/openapi.json`, el código real de `backend/src/`, y [HU-AIENG-007](../../../../Documentos/Historias/AI-Eng/HU-AIENG-007.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -290,10 +290,10 @@ Nomenclatura .NET `Method_Scenario_ExpectedResult`.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-007](../../../Documentos/Historias/AI-Eng/HU-AIENG-007.md)
+- **HU origen:** [HU-AIENG-007](../../../../Documentos/Historias/AI-Eng/HU-AIENG-007.md)
 - **Change OpenSpec:** `openspec/changes/add-product-family-entity/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C07, §0 revisiones, reglas de asignación, reglas transversales de testing) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (**§3 decisión 2**, §6.2, §6.3, §7.2, §7.4, **§7.5**, §7.8) · [especificaciones funcionales v2](../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) (§1 campos eliminados, §4.4 reglas funcionales, §4.6 modelo de datos)
-- **Apuntes del Máster (S6):** [Calidad del Dato y decisiones de Arquitectura](../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Calidad%20del%20Dato%20y%20decisiones%20de%20Arquitectura.md) · [Limpieza, Normalizacion y Validacion de datos](../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Limpieza,%20Normalizacion%20y%20Validacion%20de%20datos.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C07, §0 revisiones, reglas de asignación, reglas transversales de testing) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (**§3 decisión 2**, §6.2, §6.3, §7.2, §7.4, **§7.5**, §7.8) · [especificaciones funcionales v2](../../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) (§1 campos eliminados, §4.4 reglas funcionales, §4.6 modelo de datos)
+- **Apuntes del Máster (S6):** [Calidad del Dato y decisiones de Arquitectura](../../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Calidad%20del%20Dato%20y%20decisiones%20de%20Arquitectura.md) · [Limpieza, Normalizacion y Validacion de datos](../../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Limpieza,%20Normalizacion%20y%20Validacion%20de%20datos.md)
 - **Specs vivas relacionadas (ninguna se modifica):** `openspec/specs/product-management/spec.md` (`Collection`, el otro eje) · `openspec/specs/product-ai-profile/spec.md` (ignora la familia a propósito) · `openspec/specs/ai-vector-schema/spec.md` (consumidor aguas abajo, ya reserva `family_id`)
 - **Precedentes de código, verificados línea a línea:**
   - `ComponentTemplateConfiguration.cs:31` (`Cascade` padre → hijos) y `ComponentTemplateItemConfiguration.cs:33` (`Restrict` hijo → entidad referenciada, más unicidad compuesta) — **el reparto de borrado que C07 reproduce**
@@ -305,7 +305,7 @@ Nomenclatura .NET `Method_Scenario_ExpectedResult`.
   - `SchemaAssert.cs:41,52,67,83,120,138` (las seis preguntas ya disponibles, `IndexIsUniqueAsync` incluida) y `ProductAiProfileSchemaTests.cs` — el arnés heredado, que **no hay que extender**
   - `TestDataMother.cs:35‑70` (ocho fábricas fluidas, ninguna de familia) — dónde encaja `ProductFamilyMother`
 - **Contrato:** `ai-service/openapi.json` — **este change NO lo modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

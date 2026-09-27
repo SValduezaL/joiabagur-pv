@@ -1,7 +1,7 @@
 # T-AIENG-06b: Synthetic catalog augmentation with LLM CLI and local ingest (C06b)
 
 > Ticket técnico del change OpenSpec `add-synthetic-catalog-augmentation`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-006b](../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06b, §0 22 ago), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.5, §8.1.1, §8.2, D1/D4, §8.4, §15), sesión de exploración 2026-08-22 y cierre de preguntas abiertas.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-006b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06b, §0 22 ago), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.5, §8.1.1, §8.2, D1/D4, §8.4, §15), sesión de exploración 2026-08-22 y cierre de preguntas abiertas.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -14,7 +14,7 @@
 
 ## Contexto y Problema
 
-C06a archivó un corpus de **436** productos reales (`data_origin: real`) en [`data/catalog/real/generated/catalog-real-enriched.jsonl`](../../../data/catalog/real/generated/catalog-real-enriched.jsonl), con texto asistido e ingesta `UPDATE` de `Description`. Eso desbloquea C09. C11 y C24 necesitan **volumen en `.NET`**: el índice nace del feed C12, no del JSONL.
+C06a archivó un corpus de **436** productos reales (`data_origin: real`) en [`data/catalog/real/generated/catalog-real-enriched.jsonl`](../../../../data/catalog/real/generated/catalog-real-enriched.jsonl), con texto asistido e ingesta `UPDATE` de `Description`. Eso desbloquea C09. C11 y C24 necesitan **volumen en `.NET`**: el índice nace del feed C12, no del JSONL.
 
 La ficha v3 de C06b pedía un generador determinista que calibrara precio, SKU y ~350 familias S/M/L al real, con 15 % de huérfanos. La exploración del 2026-08-22 lo sustituye: el real ya tiene 354 grupos internos; prellenar `ProductFamily` chivaría C18; el copy y el precio los razona **OpenAI**; las colecciones son altas nuevas **con nombre de diseño**, no de canal de venta.
 
@@ -222,14 +222,14 @@ Ninguna pregunta abierta bloqueante.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-006b](../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md)
+- **HU origen:** [HU-AIENG-006b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md)
 - **Change OpenSpec:** `openspec/changes/add-synthetic-catalog-augmentation/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06b, §0 22 ago) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Precedente:** [HU-AIENG-006a](../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md) · [ticket C06a](../archive/2026-08-22-add-real-catalog-ingestion-and-text-assist/ticket.md)
-- **Spec viva que no se modifica:** [`real-catalog-corpus`](../../specs/real-catalog-corpus/spec.md) — C06b introduce capability nueva en el proposal
-- **Entidades:** [`Product.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/Product.cs) · [`Collection.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/Collection.cs) · [`ProductFamilyMember.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/ProductFamilyMember.cs)
-- **Compose Postgres:** [`backend/docker-compose.yml`](../../../backend/docker-compose.yml)
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06b, §0 22 ago) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Precedente:** [HU-AIENG-006a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md) · [ticket C06a](../../archive/2026-08-22-add-real-catalog-ingestion-and-text-assist/ticket.md)
+- **Spec viva que no se modifica:** [`real-catalog-corpus`](../../../specs/real-catalog-corpus/spec.md) — C06b introduce capability nueva en el proposal
+- **Entidades:** [`Product.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/Product.cs) · [`Collection.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/Collection.cs) · [`ProductFamilyMember.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/ProductFamilyMember.cs)
+- **Compose Postgres:** [`backend/docker-compose.yml`](../../../../backend/docker-compose.yml)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

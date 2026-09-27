@@ -1,11 +1,11 @@
 # T-AIENG-032b: Sales-assistant agent loop — the decision layer, its six budgets and the pass that fixes them (C32b)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-032a](../archive/2026-09-20-add-sales-assistant-tool-registry/ticket.md),
-> [T-AIENG-031](../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) y
-> [T-AIENG-030b](../archive/2026-09-14-add-assist-pitch-generation/ticket.md).
+> siguen [T-AIENG-032a](../../archive/2026-09-20-add-sales-assistant-tool-registry/ticket.md),
+> [T-AIENG-031](../../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) y
+> [T-AIENG-030b](../../archive/2026-09-14-add-assist-pitch-generation/ticket.md).
 
-**HU origen:** [HU-AIENG-032b](../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md)
+**HU origen:** [HU-AIENG-032b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md)
 **Change:** `add-sales-assistant-agent-loop` (C32b) · **Épica:** EP15
 **Rama:** `c32b-add-sales-assistant-agent-loop` · **Anterior:** C32a, el registro · **Siguiente:** C38
 
@@ -283,7 +283,7 @@ Coste estimado de la pasada completa: **~7 USD y ~1,5 h de reloj** para los dos 
 - [x] `ai-service`: `uv run pytest` en verde **sin llamadas reales a LLM, embeddings ni RDS**; comparado **por nombres de test** contra la línea base, nunca por recuento — 1.576 / 0, 0 nombres desaparecidos (QA §1.1 y §12)
 - [x] `ai-service/openapi.json` **regenerado y verificado hoja a hoja**; la forma de `AssistResponse` pinchada como conjunto y **sin cambios** — y desde la verificación independiente, contra el contrato de C32a guardado como fixture
 - [ ] Nomenclatura `test_<unidad>_<escenario>_<esperado>`; fakes inyectados, ningún socket abierto en la suite — **no marcada: cierto de los tests de este change** (0 eventos bajo un guardia de sockets y de `psycopg`), **no de la suite**: 11 tests preexistentes de C30b/C31 salen a `api.openai.com` (`DEFERRED_TASKS.md`, QA §12)
-- [x] Los **catorce escenarios** de [HU-AIENG-032b](../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md) trazados a test nombrado — §6 del informe; la segunda cláusula del escenario 9 pasa a medición
+- [x] Los **catorce escenarios** de [HU-AIENG-032b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md) trazados a test nombrado — §6 del informe; la segunda cláusula del escenario 9 pasa a medición
 - [x] Delta de spec en `openspec/changes/add-sales-assistant-agent-loop/specs/`, **incluido el `## MODIFIED` de `sales-assistant-tools`**, y **`openspec validate --all --strict` en verde** — no la forma de un solo change: 59 / 0
 - [x] **Pasada con proveedor real ejecutada**, con artefacto JSON versionado y su procedencia (`run_id`, `git_sha`, versiones de prompt, modelo, recuento de índice) — sin los modelos del clasificador y del argumentario ni el `sha256` de los prompts, que el arnés registra desde la verificación independiente
 - [x] **Presupuesto de tokens, de contexto y de reloj fijados por medición**, publicados con p50 y p95 y no sólo con la media
@@ -353,17 +353,17 @@ Coste estimado de la pasada completa: **~7 USD y ~1,5 h de reloj** para los dos 
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-032b](../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md)
-- **Ficha del plan:** [§3 · C32b](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y la nota del **§0 del 2026-09-20**
-- **Diseño RAG:** [§6.1, §6.4, §9.1, §9.2, §11.2, §11.4](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Capability que se modifica:** [`sales-assistant-tools`](../../specs/sales-assistant-tools/spec.md)
-- **Capability consumida:** [`assist-generation`](../../specs/assist-generation/spec.md)
-- **Informe de C32a:** [`c32a-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md)
-- **Precedente de pasada con proveedor:** [`c30b-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-implementation-measurements.md)
-- **Tickets precedentes:** [T-AIENG-032a](../archive/2026-09-20-add-sales-assistant-tool-registry/ticket.md) · [T-AIENG-031](../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md)
-- **Aplazado y no hecho:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) — la consulta puntual de disponibilidad en .NET
-- **Procedimientos:** [Tickets de trabajo](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [User Stories](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Épica:** [EP15](../../../Documentos/epicas.md)
+- **HU origen:** [HU-AIENG-032b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032b.md)
+- **Ficha del plan:** [§3 · C32b](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y la nota del **§0 del 2026-09-20**
+- **Diseño RAG:** [§6.1, §6.4, §9.1, §9.2, §11.2, §11.4](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Capability que se modifica:** [`sales-assistant-tools`](../../../specs/sales-assistant-tools/spec.md)
+- **Capability consumida:** [`assist-generation`](../../../specs/assist-generation/spec.md)
+- **Informe de C32a:** [`c32a-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md)
+- **Precedente de pasada con proveedor:** [`c30b-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-implementation-measurements.md)
+- **Tickets precedentes:** [T-AIENG-032a](../../archive/2026-09-20-add-sales-assistant-tool-registry/ticket.md) · [T-AIENG-031](../../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md)
+- **Aplazado y no hecho:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) — la consulta puntual de disponibilidad en .NET
+- **Procedimientos:** [Tickets de trabajo](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [User Stories](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Épica:** [EP15](../../../../Documentos/epicas.md)
 
 ---
 

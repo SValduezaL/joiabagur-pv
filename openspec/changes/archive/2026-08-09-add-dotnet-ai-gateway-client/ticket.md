@@ -1,7 +1,7 @@
 # T-AIENG-003: Typed .NET gateway client for jbg-ai with resilience and service token (C03)
 
 > Ticket técnico del change OpenSpec `add-dotnet-ai-gateway-client`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG y plan de changes), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-003](../../../Documentos/Historias/AI-Eng/HU-AIENG-003.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG y plan de changes), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-003](../../../../Documentos/Historias/AI-Eng/HU-AIENG-003.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -14,7 +14,7 @@
 
 ## Contexto y Problema
 
-Tras C02 ([HU-AIENG-002](../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md), change archivado `add-ai-service-contracts-and-auth`), `jbg-ai` expone ocho rutas `/v1` con contrato congelado, stubs deterministas y autenticación HS256. **Nadie lo llama todavía.**
+Tras C02 ([HU-AIENG-002](../../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md), change archivado `add-ai-service-contracts-and-auth`), `jbg-ai` expone ocho rutas `/v1` con contrato congelado, stubs deterministas y autenticación HS256. **Nadie lo llama todavía.**
 
 Del lado .NET no existe ninguna pieza de integración: verificado en el repositorio, el backend **no tiene ni un solo cliente HTTP saliente**, ni Polly, ni `Microsoft.Extensions.Http`. C03 construye ese primer cliente y, con él, fija los patrones que heredarán C12 (feeds de indexación), C15 (endpoint de búsqueda) y C34 (venta asistida y sustitutos).
 
@@ -114,7 +114,7 @@ Serialización con un único `JsonSerializerOptions` y política de nombres `sna
 | `AssistTimeoutMs` | no | `5000` | Reservado para C34 |
 | `Enabled` | no | `true` | Permite desactivar el registro del cliente |
 
-**Dónde viven los valores.** La cadena de precedencia de ASP.NET es `appsettings.json` → `appsettings.{Environment}.json` → variables de entorno. En desarrollo la sección vive en `appsettings.json`, siguiendo el estilo de la casa (ese fichero ya lleva la cadena de conexión a `localhost:5433` y un secreto JWT de desarrollo). En producción **no se usan ficheros**: [user_data.sh](../../../terraform/templates/user_data.sh) lee SSM e inyecta variables de entorno con `__` como separador de sección (`ConnectionStrings__DefaultConnection`, `Jwt__SecretKey`…). C17 no tiene nada que inventar, los parámetros son:
+**Dónde viven los valores.** La cadena de precedencia de ASP.NET es `appsettings.json` → `appsettings.{Environment}.json` → variables de entorno. En desarrollo la sección vive en `appsettings.json`, siguiendo el estilo de la casa (ese fichero ya lleva la cadena de conexión a `localhost:5433` y un secreto JWT de desarrollo). En producción **no se usan ficheros**: [user_data.sh](../../../../terraform/templates/user_data.sh) lee SSM e inyecta variables de entorno con `__` como separador de sección (`ConnectionStrings__DefaultConnection`, `Jwt__SecretKey`…). C17 no tiene nada que inventar, los parámetros son:
 
 | Parámetro SSM | Tipo | Clave de configuración |
 |---|---|---|
@@ -208,9 +208,9 @@ backend/src/JoiabagurPV.Tests/
 
 **Desarrollo (verificado).** El backend .NET corre en el host, no en Compose. `backend/docker-compose.yml` levanta `postgres` (publicado en 5433), `pgadmin` (8080) y `jbg-ai` (8000 → publicado **8001**) en `jpv-network`. Por eso `appsettings.json` ya apunta la base de datos a `localhost:5433`, y por eso la dirección del servicio de IA es `http://localhost:8001`.
 
-La asimetría —infraestructura en Compose, código que editas en el host— es deliberada y está respaldada por el spec vivo: [backend/spec.md:170](../../specs/backend/spec.md) especifica *«Hot Reload Development: WHEN code changes are made THEN application automatically restarts»*, que es el bucle de `dotnet watch` en el host. Meter la API en Compose rompería ese bucle y obligaría a cambiar la cadena de conexión de todos los desarrolladores. **No se hace.** Si en el futuro alguien quiere levantar la pila completa sin depurador, la vía limpia es un perfil opcional de Compose (`--profile full`), fuera del `up` por defecto y fuera de C03.
+La asimetría —infraestructura en Compose, código que editas en el host— es deliberada y está respaldada por el spec vivo: [backend/spec.md:170](../../../specs/backend/spec.md) especifica *«Hot Reload Development: WHEN code changes are made THEN application automatically restarts»*, que es el bucle de `dotnet watch` en el host. Meter la API en Compose rompería ese bucle y obligaría a cambiar la cadena de conexión de todos los desarrolladores. **No se hace.** Si en el futuro alguien quiere levantar la pila completa sin depurador, la vía limpia es un perfil opcional de Compose (`--profile full`), fuera del `up` por defecto y fuera de C03.
 
-**Producción (verificado).** No hay Docker Compose en producción. `deploy-aws-ec2.yml` construye `Dockerfile.bundled`, lo empuja a ECR y dispara por SSM el script `jpv-deploy.sh` de [user_data.sh](../../../terraform/templates/user_data.sh), que hace `docker run -d --name jpv-api -p 8080:8080` **sin `--network`**, es decir sobre la red *bridge* por defecto. Nginx hace de proxy TLS contra `127.0.0.1:8080`, y la base de datos es RDS, fuera de la instancia.
+**Producción (verificado).** No hay Docker Compose en producción. `deploy-aws-ec2.yml` construye `Dockerfile.bundled`, lo empuja a ECR y dispara por SSM el script `jpv-deploy.sh` de [user_data.sh](../../../../terraform/templates/user_data.sh), que hace `docker run -d --name jpv-api -p 8080:8080` **sin `--network`**, es decir sobre la red *bridge* por defecto. Nginx hace de proxy TLS contra `127.0.0.1:8080`, y la base de datos es RDS, fuera de la instancia.
 
 > ⚠️ **Prerrequisito para C17, no un hecho de hoy.** En la red *bridge* por defecto de Docker **los contenedores no se resuelven por nombre**: el DNS embebido solo funciona en redes definidas por el usuario. Tal como está el despliegue hoy, `http://jbg-ai:8000` **no resolvería**. Para que el valor de producción sea cierto, C17 debe:
 >
@@ -232,7 +232,7 @@ docker · jpv-network                          ├── jpv-api :8080 (publicad
   └── jbg-ai   :8000 → 8001               RDS PostgreSQL (fuera de la EC2)
 ```
 
-**Deuda de documentación detectada (para C17, no para este change).** `backend/docker-compose.prod.yml` **no lo invoca ningún workflow, ni Terraform, ni script alguno**, pero [backend/README.md:435](../../../backend/README.md) sí lo documenta bajo el epígrafe *«Production Deployment › Docker»*. Además construye `src/JoiabagurPV.API/Dockerfile` en lugar del `Dockerfile.bundled` que usa producción, y declara un contenedor Postgres propio cuando producción usa RDS. Su último cambio es de 2026-01-17, el commit que movió producción a la imagen bundlada: sobrevivió al refactor sin borrarse. No es código muerto —está referenciado— sino un **camino de despliegue obsoleto que la documentación sigue presentando como el de producción**, lo que induce a error a quien lea el README buscando cómo funciona. Recomendación: C17 lo borra o lo marca deprecado **y corrige el README en el mismo movimiento**. Contexto colateral: `Dockerfile.prod` solo lo usa `deploy-backend-aws.yml`, que el propio workflow activo declara deprecado.
+**Deuda de documentación detectada (para C17, no para este change).** `backend/docker-compose.prod.yml` **no lo invoca ningún workflow, ni Terraform, ni script alguno**, pero [backend/README.md:435](../../../../backend/README.md) sí lo documenta bajo el epígrafe *«Production Deployment › Docker»*. Además construye `src/JoiabagurPV.API/Dockerfile` en lugar del `Dockerfile.bundled` que usa producción, y declara un contenedor Postgres propio cuando producción usa RDS. Su último cambio es de 2026-01-17, el commit que movió producción a la imagen bundlada: sobrevivió al refactor sin borrarse. No es código muerto —está referenciado— sino un **camino de despliegue obsoleto que la documentación sigue presentando como el de producción**, lo que induce a error a quien lea el README buscando cómo funciona. Recomendación: C17 lo borra o lo marca deprecado **y corrige el README en el mismo movimiento**. Contexto colateral: `Dockerfile.prod` solo lo usa `deploy-backend-aws.yml`, que el propio workflow activo declara deprecado.
 
 ```text
 C15 (futuro) --SearchAsync(request, scope)--> AiGatewayClient
@@ -351,7 +351,7 @@ El **criterio 8** no se cubre con un test unitario: es configuración de Serilog
 
 8. **¿El formato de logs es delta sobre `backend`, capability nueva o detalle de implementación? → Repartido: capability nueva + delta `MODIFIED` sobre `backend`.**
 
-   **El dato que decide.** La capability `backend` **ya tiene** un requisito `Structured Logging` ([backend/spec.md:62](../../specs/backend/spec.md)): *«…using Serilog, capturing relevant context and supporting **multiple output targets**»*, con un escenario *Request Logging* que exige registrar *«request details… **with correlation ID**»*. Dos consecuencias: el formatter JSON no añade un requisito nuevo, **cumple uno ya escrito**; y el escenario del identificador de correlación está especificado y **no implementado** —no hay un solo uso de `Activity` ni de `TraceIdentifier` en `backend/src/`—, así que C03 es el primer change que reduce esa deriva.
+   **El dato que decide.** La capability `backend` **ya tiene** un requisito `Structured Logging` ([backend/spec.md:62](../../../specs/backend/spec.md)): *«…using Serilog, capturing relevant context and supporting **multiple output targets**»*, con un escenario *Request Logging* que exige registrar *«request details… **with correlation ID**»*. Dos consecuencias: el formatter JSON no añade un requisito nuevo, **cumple uno ya escrito**; y el escenario del identificador de correlación está especificado y **no implementado** —no hay un solo uso de `Activity` ni de `TraceIdentifier` en `backend/src/`—, así que C03 es el primer change que reduce esa deriva.
 
    **Por qué no una capability nueva.** `backend-observability` partiría el tema en dos: el requisito de logging estructurado seguiría en `backend` y el nuevo viviría al lado. Empeora la descubribilidad en vez de mejorarla, y ensancha C03 a dos capabilities en un change de ruta crítica.
 
@@ -377,16 +377,16 @@ El **criterio 8** no se cubre con un test unitario: es configuración de Serilog
 
 ## Enlaces o Referencias
 
-- **User Story:** [HU-AIENG-003.md](../../../Documentos/Historias/AI-Eng/HU-AIENG-003.md)
-- **HU prerrequisito:** [HU-AIENG-002.md](../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md) (change archivado `add-ai-service-contracts-and-auth`)
+- **User Story:** [HU-AIENG-003.md](../../../../Documentos/Historias/AI-Eng/HU-AIENG-003.md)
+- **HU prerrequisito:** [HU-AIENG-002.md](../../../../Documentos/Historias/AI-Eng/HU-AIENG-002.md) (change archivado `add-ai-service-contracts-and-auth`)
 - **Change:** `openspec/changes/add-dotnet-ai-gateway-client/`
-- **Plan:** ficha C03 en [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Diseño:** [v3](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.1–6.4 (frontera, seguridad y degradación), §7.6 (sobre-recuperación), §8.5 (privacidad) · [3devs](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur-3devs.md) §6.6 (observabilidad), §6.8 (latencias objetivo)
+- **Plan:** ficha C03 en [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Diseño:** [v3](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.1–6.4 (frontera, seguridad y degradación), §7.6 (sobre-recuperación), §8.5 (privacidad) · [3devs](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.6 (observabilidad), §6.8 (latencias objetivo)
 - **Contrato congelado:** `ai-service/openapi.json` · specs vivas `openspec/specs/ai-service-api-contracts/spec.md` y `openspec/specs/ai-service-auth/spec.md`
-- **Épica:** EP11 en [epicas.md](../../../Documentos/epicas.md)
+- **Épica:** EP11 en [epicas.md](../../../../Documentos/epicas.md)
 - **Material del máster:** `Documentos/Sesiones Master AIEng/S3_Patrones_Diseños_Wrappers_Modelos/` («Observabilidad, logging y trazabilidad», «Abstracción de proveedores y estrategias de fallback») · `S15_Produccion/Partir en servicios.md` (los errores como parte del contrato)
 - **Contexto de proyecto:** `openspec/project.md`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

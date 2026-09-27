@@ -1,12 +1,12 @@
 # T-AIENG-026: Out-of-stock substitutes retrieval over the stored product embedding (C26)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-025](../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md) y el
+> siguen [T-AIENG-025](../../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md) y el
 > resto de los tickets del Proyecto Final.
 
-**HU origen:** [HU-AIENG-026](../../../Documentos/Historias/AI-Eng/HU-AIENG-026.md)
+**HU origen:** [HU-AIENG-026](../../../../Documentos/Historias/AI-Eng/HU-AIENG-026.md)
 **Change:** `add-substitutes-retrieval` (C26) · **Épica:** EP15 (con efecto en EP17)
-**Rama:** `c26-add-substitutes-retrieval` · **Mediciones:** [c26-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md)
+**Rama:** `c26-add-substitutes-retrieval` · **Mediciones:** [c26-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md)
 
 ---
 
@@ -52,18 +52,18 @@ lapislázuli mediano` es su hermano `mediano oro` — **misma talla, otro materi
 
 | Pieza | Estado hoy | Qué hace C26 |
 |---|---|---|
-| [`api/routers/retrieval.py`](../../../ai-service/src/jbg_ai/api/routers/retrieval.py) | `retrieve_substitutes` llama a `require_stub_mode(settings, "C26 (add-substitutes-retrieval)")` y devuelve el stub | Conecta la implementación real; retira esa guarda de **esa** ruta |
-| [`stubs/responses.py`](../../../ai-service/src/jbg_ai/stubs/responses.py) | `retrieval_substitutes_stub` fabrica señales inventadas (`0,9 − i·0,01`) | Se conserva **solo** para el modo stub y los tests de contrato |
-| [`api/schemas/retrieval.py`](../../../ai-service/src/jbg_ai/api/schemas/retrieval.py) | `SubstitutesRequest`, `SubstituteResult`, `SimilaritySignals`, `SubstitutesResponse` ya definidos y congelados | **Sin cambios.** `style_similarity` es requerido y no nulable; `visual_similarity` sí es nulable |
-| [`ai-service/openapi.json`](../../../ai-service/openapi.json) | Contiene `/v1/retrieval/substitutes` | **No se mueve.** `test_openapi_snapshot_is_stable` debe seguir en verde |
-| [`retrieval/search.py`](../../../ai-service/src/jbg_ai/retrieval/search.py) | `_SCOPE_CTE` + `_SCOPE_JOIN` (restringe) / `_SIGNAL_JOIN` (solo lee); el prefiltro filtra por `is_assigned_hint`, **nunca por `qty_bucket`** | Sentencia nueva: k-NN contra el embedding **de una fila**, con filtro por `piece_type` |
-| [`retrieval/ports.py`](../../../ai-service/src/jbg_ai/retrieval/ports.py) | `ProductSearchPort` con `search`, `search_lexical`, `count_scope`, `projection_synced_at`, `scope_buckets` | **Dos métodos nuevos**: leer el documento origen y buscar vecinos por embedding almacenado |
-| [`retrieval/filters.py`](../../../ai-service/src/jbg_ai/retrieval/filters.py) | `demotion_rank` = `(precio, talla, material, −business_score)`. La talla es **bloque entero**; `business_score` **solo resta** | Reutiliza `business_score` y `OUT_OF_STOCK_BUCKET`. **No reutiliza `demotion_rank`**: la talla pasa a término continuo |
-| [`retrieval/projection.py`](../../../ai-service/src/jbg_ai/retrieval/projection.py) | `parse_pos_id`, `resolve_scope`, `default_freshness`, caché de 10 s | Se reutiliza tal cual |
-| [`retrieval/fusion.py`](../../../ai-service/src/jbg_ai/retrieval/fusion.py) | Docstring: *«C26 (substitutes) is the next caller»* | **Predicción falsa**: con una sola lista no hay nada que fusionar. Se corrige el comentario |
-| [`retrieval/orchestrator.py`](../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | ~870 líneas, cinco responsabilidades | **No se toca.** El flujo nuevo vive en `substitutes.py` |
-| [`evals/execute.py`](../../../ai-service/src/jbg_ai/evals/execute.py) | Llama a `retrieve_products(RetrievalRequest(...))` **en proceso**, no por HTTP | Camino análogo para `retrieve_substitutes`, en rebanada propia |
-| [`evals/golden/queries.jsonl`](../../../ai-service/evals/golden/queries.jsonl) | 71 consultas, 63 juzgadas. `q49`–`q52` son `sustituto` con `judged: false` y nota *«La hereda C26»* | Se anclan con `source_product_id` y se etiquetan. **Entra una quinta, sin familia** |
+| [`api/routers/retrieval.py`](../../../../ai-service/src/jbg_ai/api/routers/retrieval.py) | `retrieve_substitutes` llama a `require_stub_mode(settings, "C26 (add-substitutes-retrieval)")` y devuelve el stub | Conecta la implementación real; retira esa guarda de **esa** ruta |
+| [`stubs/responses.py`](../../../../ai-service/src/jbg_ai/stubs/responses.py) | `retrieval_substitutes_stub` fabrica señales inventadas (`0,9 − i·0,01`) | Se conserva **solo** para el modo stub y los tests de contrato |
+| [`api/schemas/retrieval.py`](../../../../ai-service/src/jbg_ai/api/schemas/retrieval.py) | `SubstitutesRequest`, `SubstituteResult`, `SimilaritySignals`, `SubstitutesResponse` ya definidos y congelados | **Sin cambios.** `style_similarity` es requerido y no nulable; `visual_similarity` sí es nulable |
+| [`ai-service/openapi.json`](../../../../ai-service/openapi.json) | Contiene `/v1/retrieval/substitutes` | **No se mueve.** `test_openapi_snapshot_is_stable` debe seguir en verde |
+| [`retrieval/search.py`](../../../../ai-service/src/jbg_ai/retrieval/search.py) | `_SCOPE_CTE` + `_SCOPE_JOIN` (restringe) / `_SIGNAL_JOIN` (solo lee); el prefiltro filtra por `is_assigned_hint`, **nunca por `qty_bucket`** | Sentencia nueva: k-NN contra el embedding **de una fila**, con filtro por `piece_type` |
+| [`retrieval/ports.py`](../../../../ai-service/src/jbg_ai/retrieval/ports.py) | `ProductSearchPort` con `search`, `search_lexical`, `count_scope`, `projection_synced_at`, `scope_buckets` | **Dos métodos nuevos**: leer el documento origen y buscar vecinos por embedding almacenado |
+| [`retrieval/filters.py`](../../../../ai-service/src/jbg_ai/retrieval/filters.py) | `demotion_rank` = `(precio, talla, material, −business_score)`. La talla es **bloque entero**; `business_score` **solo resta** | Reutiliza `business_score` y `OUT_OF_STOCK_BUCKET`. **No reutiliza `demotion_rank`**: la talla pasa a término continuo |
+| [`retrieval/projection.py`](../../../../ai-service/src/jbg_ai/retrieval/projection.py) | `parse_pos_id`, `resolve_scope`, `default_freshness`, caché de 10 s | Se reutiliza tal cual |
+| [`retrieval/fusion.py`](../../../../ai-service/src/jbg_ai/retrieval/fusion.py) | Docstring: *«C26 (substitutes) is the next caller»* | **Predicción falsa**: con una sola lista no hay nada que fusionar. Se corrige el comentario |
+| [`retrieval/orchestrator.py`](../../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | ~870 líneas, cinco responsabilidades | **No se toca.** El flujo nuevo vive en `substitutes.py` |
+| [`evals/execute.py`](../../../../ai-service/src/jbg_ai/evals/execute.py) | Llama a `retrieve_products(RetrievalRequest(...))` **en proceso**, no por HTTP | Camino análogo para `retrieve_substitutes`, en rebanada propia |
+| [`evals/golden/queries.jsonl`](../../../../ai-service/evals/golden/queries.jsonl) | 71 consultas, 63 juzgadas. `q49`–`q52` son `sustituto` con `judged: false` y nota *«La hereda C26»* | Se anclan con `source_product_id` y se etiquetan. **Entra una quinta, sin familia** |
 | `ai.product_document` | 1.168 vivos · **1.168 con embedding** · índice HNSW · 491 con familia (156 familias de 2-8) · 1.046 con materiales · 1.168 con banda de precio | **Sin migración** |
 | `ai.pos_projection` | 6.720 filas, con `qty_bucket`, `sales_30d` y `computed_as_of` | Se lee como señal, nunca como restricción |
 
@@ -270,13 +270,13 @@ valor sale del barrido y no de esta tabla.
 
 ## Enlaces o Referencias
 
-- HU origen: [HU-AIENG-026](../../../Documentos/Historias/AI-Eng/HU-AIENG-026.md)
+- HU origen: [HU-AIENG-026](../../../../Documentos/Historias/AI-Eng/HU-AIENG-026.md)
 - Change: [`add-substitutes-retrieval`](./)
-- Mediciones: [c26-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md)
-- Plan de changes: [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C26
-- Diseño RAG: [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §4 fila 6, §6.2, §7.6, §15.10
-- Ticket previo: [T-AIENG-025](../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md)
-- Procedimientos: [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- Mediciones: [c26-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md)
+- Plan de changes: [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C26
+- Diseño RAG: [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §4 fila 6, §6.2, §7.6, §15.10
+- Ticket previo: [T-AIENG-025](../../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md)
+- Procedimientos: [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

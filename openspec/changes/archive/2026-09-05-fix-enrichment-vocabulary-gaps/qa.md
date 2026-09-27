@@ -5,7 +5,7 @@
 > **Idioma:** cuerpo en español, identificadores técnicos en inglés, por coherencia con [ticket.md](ticket.md) y con la HU.
 > **Alcance:** **53/53 tareas**. Las de §9 y §10 (corrida real y verificación de extremo a extremo) se ejecutaron contra proveedor real con `STUB_MODE=false`; ver §8.
 > **Desviación de artefactos:** ninguna en alcance. Dos hallazgos no previstos por `tasks.md` obligaron a tocar dos ficheros de más —un quinto test fijado y una corrección del encargo de `v2`—; ambos en §9.
-> **Acta de la corrida:** [`fix1-vocabulary-gaps-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md)
+> **Acta de la corrida:** [`fix1-vocabulary-gaps-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md)
 
 ---
 
@@ -79,7 +79,7 @@ diff baseline.txt after.txt   # → sin salida
 | Tras la implementación | 113 nombres fallando de 569 |
 | **Diferencia por nombres** | **cero: conjunto idéntico** |
 
-Los 14 ficheros rojos son los preexistentes que documenta [testing-frontend.md](../../../Documentos/testing-frontend.md)
+Los 14 ficheros rojos son los preexistentes que documenta [testing-frontend.md](../../../../Documentos/testing-frontend.md)
 —`payment-methods`, los dos `products/edit`, `product-photo-upload`, los cuatro de `sales/`, y cinco de
 `services/`—. **`materials-vocabulary.test.ts` no está entre ellos**, ni antes ni después: el fichero que
 este change toca estaba verde y sigue verde.
@@ -224,7 +224,7 @@ El cuarto es el peligroso y se comprobó a mano que sigue guardando: se ejecutó
 ## 8. La corrida real
 
 Condiciones completas y tabla de las 22 filas en el
-[acta](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md).
+[acta](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md).
 
 ### 8.1. Comprobación previa (tareas 1.3 y 1.4)
 
@@ -322,7 +322,7 @@ Segunda corrida: 22/22, los tres llaveros tipados, y el grupo de control **sigue
 
 ### 9.2. Un quinto test fijado que ningún artefacto contaba
 
-`test_prompt_version_is_enrichment_v1` ([test_llm.py](../../../ai-service/tests/enrichment/test_llm.py))
+`test_prompt_version_is_enrichment_v1` ([test_llm.py](../../../../ai-service/tests/enrichment/test_llm.py))
 afirmaba `PROMPT_VERSION == "enrichment/v1"` y abría `prompts/enrichment/v1.md` por ruta literal. Ni la
 HU, ni el ticket, ni `design.md` lo inventarían: los tres cuentan cuatro alambres.
 
@@ -396,7 +396,7 @@ Las ediciones precisas de ficheros con acentos se hicieron con `uv run --system-
 |---|---|
 | `ai-service/README.md` | Sección nueva **«Enrichment prompt versions»**: la ruta deriva de la constante, los ficheros superados se conservan, el corpus queda mezclado en 22/1.178, y **toda métrica agregada sobre atributos extraídos debe reportarse por `PromptVersion`** —la misma disciplina que C24 aplica a `data_origin`—, con la distinción frente a mezclar `embedding_version` |
 | `Documentos/epicas.md` | FIX1 pasa de «en curso» a **hecho** en las cuatro apariciones (bloque de EP12, resumen, índice de historias y tabla de épicas), y se enlaza el acta con el resumen del defecto del encargo |
-| Informe nuevo | [`fix1-vocabulary-gaps-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md): condiciones, la corrida fallida y su causa, el diff completo de las 22 filas, el veredicto del control, los recuentos, la sincronización y las suites |
+| Informe nuevo | [`fix1-vocabulary-gaps-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/fix1-vocabulary-gaps-measurements.md): condiciones, la corrida fallida y su causa, el diff completo de las 22 filas, el veredicto del control, los recuentos, la sincronización y las suites |
 
 ---
 

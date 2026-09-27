@@ -1,24 +1,24 @@
 # T-AIENG-042: Give the sales agent an operator surface — own route, per-turn answer blocks, visible trace, and the pitch that today is withheld by construction (C42)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya siguen
-> [T-AIENG-041](../archive/2026-09-26-add-pos-projection-scheduled-drain/ticket.md) y
-> [T-AIENG-040](../archive/2026-09-25-add-frontend-free-query-panel/ticket.md).
+> [T-AIENG-041](../../archive/2026-09-26-add-pos-projection-scheduled-drain/ticket.md) y
+> [T-AIENG-040](../../archive/2026-09-25-add-frontend-free-query-panel/ticket.md).
 >
 > **Fuentes de verdad:** `openspec/project.md`, las specs vivas
-> [`sales-assistant-agent`](../../specs/sales-assistant-agent/spec.md),
-> [`sales-assistant-tools`](../../specs/sales-assistant-tools/spec.md),
-> [`assist-generation`](../../specs/assist-generation/spec.md),
-> [`ai-gateway-client`](../../specs/ai-gateway-client/spec.md),
-> [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md) y
-> [`ai-search-telemetry`](../../specs/ai-search-telemetry/spec.md), y **el código real**, de donde sale
+> [`sales-assistant-agent`](../../../specs/sales-assistant-agent/spec.md),
+> [`sales-assistant-tools`](../../../specs/sales-assistant-tools/spec.md),
+> [`assist-generation`](../../../specs/assist-generation/spec.md),
+> [`ai-gateway-client`](../../../specs/ai-gateway-client/spec.md),
+> [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md) y
+> [`ai-search-telemetry`](../../../specs/ai-search-telemetry/spec.md), y **el código real**, de donde sale
 > todo lo que este ticket afirma con fichero y línea.
 
 **Change:** `add-frontend-agent-panel` (C42) · **Épica:** **EP15 — Venta Asistida, Sustitutos y Agentes**
-**Abierto:** 2026-09-26 · **Historia:** [HU-AIENG-042](../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md)
+**Abierto:** 2026-09-26 · **Historia:** [HU-AIENG-042](../../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md)
 **Exploración:** dos pasadas el mismo día —
-[v1](../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md) (contra el
+[v1](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md) (contra el
 código) y
-[v2](../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md) (contra los
+[v2](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md) (contra los
 artefactos ya escritos, **sin llamar al proveedor**). **El v2 es el que gobierna este ticket.**
 **Origen:** sesión abierta para decidir entre implementar C38 entero o dar superficie al agente.
 
@@ -517,7 +517,7 @@ conversation, so every turn arrives from the client»*.
 
 ## 10 · Criterios de Aceptación
 
-Los dieciséis escenarios de [HU-AIENG-042](../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md), que
+Los dieciséis escenarios de [HU-AIENG-042](../../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md), que
 son la fuente. En resumen: la puerta con sus **tres** estados; una conversación de catálogo con filas
 rotuladas; el pivote separado y rotulado; **una respuesta con prosa y cero piezas**; la repregunta; la
 respuesta cortada distinguible de la completa; **los topes dichos antes del 422**; el argumentario
@@ -617,36 +617,36 @@ herramientas, **no** abra migración, **no** modifique `assisted-search-result-r
 
 ## 15 · Enlaces o Referencias
 
-- **Historia origen:** [HU-AIENG-042](../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md)
+- **Historia origen:** [HU-AIENG-042](../../../../Documentos/Historias/AI-Eng/HU-AIENG-042.md)
 - **Change:** `openspec/changes/add-frontend-agent-panel/` (C42)
 - **Exploración v2 (gobierna):**
-  [c42-exploration-decisions-v2.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md)
+  [c42-exploration-decisions-v2.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md)
 - **Exploración v1 (base):**
-  [c42-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md)
-- **Ficha del plan:** [§3 · C42](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Diseño RAG:** [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Specs vivas modificadas:** [`sales-assistant-agent`](../../specs/sales-assistant-agent/spec.md) ·
-  [`assist-generation`](../../specs/assist-generation/spec.md) ·
-  [`ai-gateway-client`](../../specs/ai-gateway-client/spec.md) ·
-  [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md) ·
-  [`ai-search-telemetry`](../../specs/ai-search-telemetry/spec.md)
+  [c42-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md)
+- **Ficha del plan:** [§3 · C42](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Diseño RAG:** [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Specs vivas modificadas:** [`sales-assistant-agent`](../../../specs/sales-assistant-agent/spec.md) ·
+  [`assist-generation`](../../../specs/assist-generation/spec.md) ·
+  [`ai-gateway-client`](../../../specs/ai-gateway-client/spec.md) ·
+  [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md) ·
+  [`ai-search-telemetry`](../../../specs/ai-search-telemetry/spec.md)
 - **Specs que NO se tocan, y es alcance:**
-  [`sales-assistant-tools`](../../specs/sales-assistant-tools/spec.md) ·
-  [`ai-sales-assist`](../../specs/ai-sales-assist/spec.md) ·
-  [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md) ·
-  [`pos-projection`](../../specs/pos-projection/spec.md)
-- **Deuda que cierra por refutación:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md), entrada de C32b
+  [`sales-assistant-tools`](../../../specs/sales-assistant-tools/spec.md) ·
+  [`ai-sales-assist`](../../../specs/ai-sales-assist/spec.md) ·
+  [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md) ·
+  [`pos-projection`](../../../specs/pos-projection/spec.md)
+- **Deuda que cierra por refutación:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md), entrada de C32b
   sobre *timeout* y circuito
 - **Informe a anotar:**
-  [c32b-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c32b-implementation-measurements.md)
-- **Tickets anteriores:** [T-AIENG-041](../archive/2026-09-26-add-pos-projection-scheduled-drain/ticket.md) ·
-  [T-AIENG-040](../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) ·
-  [T-AIENG-040-FIX](../archive/2026-09-26-c40-fix-all-shops-scope-unreachable/ticket.md)
+  [c32b-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c32b-implementation-measurements.md)
+- **Tickets anteriores:** [T-AIENG-041](../../archive/2026-09-26-add-pos-projection-scheduled-drain/ticket.md) ·
+  [T-AIENG-040](../../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) ·
+  [T-AIENG-040-FIX](../../archive/2026-09-26-c40-fix-all-shops-scope-unreachable/ticket.md)
 - **Procedimientos:**
-  [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) ·
-  [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md) ·
-  [testing-frontend.md](../../../Documentos/testing-frontend.md)
+  [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) ·
+  [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md) ·
+  [testing-frontend.md](../../../../Documentos/testing-frontend.md)
 
 ---
 

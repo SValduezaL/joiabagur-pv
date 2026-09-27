@@ -13,7 +13,7 @@ léxicos ganando al mejor candidato vectorial en toda consulta, y el grado 2 cay
 
 **El inventario de lo que hay que retirar se comprobó sobre el árbol antes de escribir esto, y
 refutó tres afirmaciones de la ficha del plan.** Las decisiones y sus evidencias están en
-[`c25bis-exploration-decisions.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md):
+[`c25bis-exploration-decisions.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md):
 
 - Los pesos por lista **no** los consume sólo el modo plano: `weight_typed` y `weight_expanded`
   alimentan también la etapa 1 de la fusión viva. Se retiran igualmente, pero por ser **trampas**

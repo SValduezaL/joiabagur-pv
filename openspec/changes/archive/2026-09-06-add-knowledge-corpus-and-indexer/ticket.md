@@ -1,7 +1,7 @@
 # T-AIENG-023: Commercial knowledge corpus, section chunker, idempotent indexer and citation-carrying search (C23)
 
 > Ticket técnico del change OpenSpec `add-knowledge-corpus-and-indexer`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-023](../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md) y las mediciones y decisiones de [c23-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-exploration-measurements.md).
+> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-023](../../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md) y las mediciones y decisiones de [c23-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-exploration-measurements.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -177,7 +177,7 @@ Generación con citas, `pitch` y avisos por reglas (**C30**) · golden set y tab
 
 ## Criterios de Aceptación
 
-Los doce escenarios normativos están en [HU-AIENG-023](../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md#criterios-de-aceptación). En resumen ejecutable:
+Los doce escenarios normativos están en [HU-AIENG-023](../../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md#criterios-de-aceptación). En resumen ejecutable:
 
 **Pruebas de validación** (`uv run pytest` desde `ai-service/`, todas *offline*):
 
@@ -235,7 +235,7 @@ Los doce escenarios normativos están en [HU-AIENG-023](../../../Documentos/Hist
 
 ## Preguntas Abiertas → Decisiones
 
-Las **quince** decisiones de diseño están en la tabla de [HU-AIENG-023](../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md#decisiones-de-diseño-ya-acordadas) y desarrolladas en [`design.md`](./design.md). Las cuatro preguntas que quedaban abiertas se **resolvieron con su opción por defecto el 2026-09-06**, al generar los artefactos:
+Las **quince** decisiones de diseño están en la tabla de [HU-AIENG-023](../../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md#decisiones-de-diseño-ya-acordadas) y desarrolladas en [`design.md`](./design.md). Las cuatro preguntas que quedaban abiertas se **resolvieron con su opción por defecto el 2026-09-06**, al generar los artefactos:
 
 | # | Pregunta | Resolución |
 |---|---|---|
@@ -260,14 +260,14 @@ Y la que era la única genuinamente abierta —**la convención de talla de anil
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-023](../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md)
+- **HU origen:** [HU-AIENG-023](../../../../Documentos/Historias/AI-Eng/HU-AIENG-023.md)
 - **Change:** [`openspec/changes/add-knowledge-corpus-and-indexer/`](./)
-- **Mediciones y decisiones:** [c23-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-exploration-measurements.md)
-- **Diseño RAG:** [§5, §7.2, §7.7, §8.2, §8.3 y §11.3](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** [ficha C23 y corte pre-autorizado del §13.4](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Mediciones y decisiones:** [c23-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-exploration-measurements.md)
+- **Diseño RAG:** [§5, §7.2, §7.7, §8.2, §8.3 y §11.3](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** [ficha C23 y corte pre-autorizado del §13.4](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Specs vivas:** `openspec/specs/ai-vector-schema/`, `openspec/specs/hybrid-fusion/`, `openspec/specs/query-expansion/`, `openspec/specs/ai-service-api-contracts/`
-- **Procedimientos:** [User Stories](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
-- **Apuntes:** [S11 · Citación y atribución verificable](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md) · [S10 · Multi-índice y routing](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Multi-indice%20y%20routing.md) · [S11 · Reindexación y versionado de embeddings](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md)
+- **Procedimientos:** [User Stories](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Apuntes:** [S11 · Citación y atribución verificable](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md) · [S10 · Multi-índice y routing](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Multi-indice%20y%20routing.md) · [S11 · Reindexación y versionado de embeddings](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md)
 
 ---
 

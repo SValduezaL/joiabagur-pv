@@ -12,7 +12,7 @@ El lado Python del card de venta está entero y medido; el lado .NET está vací
 
 Al diseñar contra el árbol y no contra la ficha aparecen cuatro hechos que mueven el diseño. Todos
 están medidos, con su SQL o su script, en el
-[informe de exploración](../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md).
+[informe de exploración](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md).
 
 **Primero: los marcadores no dicen de qué pieza son.** Son dos tokens sin referencia. En M2 y M3 la
 referencia es la pieza anclada por construcción. En la consulta libre y en el agente, el argumentario

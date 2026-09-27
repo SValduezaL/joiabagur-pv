@@ -243,7 +243,7 @@ Un solo campo opcional en `RetrievalResponse`. **Compatible hacia atrás**, y no
 
 ## 8. Medición contra el feed real
 
-API .NET local en `127.0.0.1:5056`, base local con 1.168 documentos y 6.720 filas de inventario. Informe completo en [`c22-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md).
+API .NET local en `127.0.0.1:5056`, base local con 1.168 documentos y 6.720 filas de inventario. Informe completo en [`c22-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md).
 
 ### 8.1. El drenaje (tarea 9.1)
 

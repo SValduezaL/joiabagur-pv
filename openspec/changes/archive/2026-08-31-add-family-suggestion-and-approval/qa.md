@@ -226,7 +226,7 @@ Por el camino completo `.NET → jbg-ai`, no por un script suelto.
 | Sincronización incremental | `upserted 486 · deleted 32 · skipped 0 · failed 0` |
 | Índice final | 1.168 documentos · 486 con `family_id` · 467 con `variant_label` · **0** sin embedding · **0** en `ai.sync_failure` |
 
-Detalle y hallazgos de catálogo: [`informes/c18a-family-suggestion-report.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md).
+Detalle y hallazgos de catálogo: [`informes/c18a-family-suggestion-report.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md).
 
 ---
 
