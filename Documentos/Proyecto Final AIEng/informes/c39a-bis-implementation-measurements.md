@@ -592,10 +592,45 @@ diff y **no dispara el despliegue** — pero **sí es una mutación de un entorn
 internet**. Se registra aquí porque un cambio que no aparece en un diff es precisamente el que hay que
 escribir.
 
-Las cinco cuentas activas quedan declaradas en el nuevo **§5.8 del *runbook***, con su punto de venta y
-**qué conducta es alcanzable desde cada una**, más `admin` con su estado y el motivo por el que debe
-seguir desactivada. El §5.3 se corrigió: decía «exactly two accounts» y había dejado de describir el
-entorno.
+### 5.3 Y después se reduce a cuatro: un administrador y un operario por tienda
+
+**Segunda pasada, el mismo día y a petición del responsable.** Con los tres operarios aprovisionados
+había **cinco** cuentas activas, y una sobraba: `demo.operador` estaba ligada a `MAO-AIR`, que
+`op-aeroport` ya cubre, de modo que era **una segunda credencial para un mostrador que ya tenía la
+suya** — justo lo que hace dudar a un evaluador sobre cuál debe usar.
+
+```text
+UPDATE 1   -- demo.operador -> IsActive = false
+```
+
+**Desactivada, nunca borrada: la referencian 3.380 ventas.** Es el mismo tratamiento que el §5.3 dio a
+las dos operarias del volcado, y por el mismo motivo. Comprobado después:
+
+```text
+op-ciutadella  http=200      op-fornells  http=200      op-aeroport  http=200
+demo.operador  http=401
+```
+
+**El entorno queda con cuatro cuentas que entran:**
+
+| Username | Rol | Punto de venta |
+|---|---|---|
+| `demo.admin` | Administrator | — |
+| `op-ciutadella` | Operator | `CIU-CENTRE` |
+| `op-fornells` | Operator | `FORNELLS` |
+| `op-aeroport` | Operator | `MAO-AIR` |
+
+y cuatro filas desactivadas que se conservan por integridad referencial: `admin`, `demo.operador`,
+`retirado-18f39e69` y `retirado-95675ead`.
+
+Las cuatro cuentas activas quedan declaradas en el nuevo **§5.8 del *runbook***, con su punto de venta y
+**qué conducta es alcanzable desde cada una**, más las desactivadas con su estado y el motivo. El §5.3
+se corrigió dos veces: decía «exactly two accounts», y ahora enumera las cuatro.
+
+**Lo que sigue sin resolver, y hay que decirlo:** `demo.admin` es **el único administrador que puede
+entrar**, y su contraseña **no está en el repositorio** —correctamente—. Mientras no se recupere o se
+restablezca, **la tarjeta de salud de la IA sigue sin ser alcanzable**, que es el único punto del
+escenario 11 que queda abierto.
 
 ---
 

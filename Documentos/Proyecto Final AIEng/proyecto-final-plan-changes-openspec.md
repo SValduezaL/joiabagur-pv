@@ -53,8 +53,16 @@ sustitutos y el pivote no se podían demostrar en absoluto**.
 
 Decidido con el responsable durante el apply: se **aprovisionan los tres operarios** por SQL contra la
 base desplegada —rol `Operator`, hash BCrypt `2a`/12 generado fuera del anfitrión, contraseña que ya era
-constante pública—, y las cinco cuentas activas quedan declaradas en el nuevo **§5.8 del *runbook***. Es
-una mutación de un entorno público que **no aparece en ningún diff**, y por eso se escribe.
+constante pública—. Acto seguido, y a petición del responsable, se **desactiva `demo.operador`**:
+estaba ligada a `MAO-AIR`, que `op-aeroport` ya cubre, así que era una segunda credencial para un
+mostrador que ya tenía la suya. Desactivada y **no borrada, porque la referencian 3.380 ventas**. El
+entorno queda con **cuatro cuentas que entran** —un administrador y un operario por tienda—,
+declaradas en el nuevo **§5.8 del *runbook***. Son mutaciones de un entorno público que **no aparecen
+en ningún diff**, y por eso se escriben.
+
+**Y queda un cabo suelto que hay que nombrar:** `demo.admin` es **el único administrador que puede
+entrar** y su contraseña **no está en el repositorio**. Mientras no se restablezca, la tarjeta de salud
+de la IA sigue sin ser alcanzable.
 
 #### Lo que se confirmó, y lo que se refutó
 

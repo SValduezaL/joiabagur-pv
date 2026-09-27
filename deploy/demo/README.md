@@ -411,12 +411,12 @@ After restoring, on the demo database:
 -- Keep nothing of the real staff.
 DELETE FROM "Users";
 -- Then create the demonstration accounts, with BCrypt hashes at work factor 12 — the factor
--- the application itself uses — so the password check matches what it expects:
---   username demo.admin     e-mail demo.admin@joiabagur.example      role Administrator
---   username demo.operador  e-mail demo.operador@joiabagur.example   role Operator, assigned to one POS
--- PLUS the three synthetic operators of the C10 world, added by C39a-bis — see 5.8 for why
--- two accounts are not enough to show what this environment exists to show:
---   op-ciutadella  -> CIU-CENTRE    op-fornells -> FORNELLS    op-aeroport -> MAO-AIR
+-- the application itself uses — so the password check matches what it expects.
+-- FOUR accounts: one administrator, and one operator per shop worth showing (see 5.8).
+--   username demo.admin      e-mail demo.admin@joiabagur.example       role Administrator
+--   username op-ciutadella   e-mail op-ciutadella@joiabagur.example    role Operator -> CIU-CENTRE
+--   username op-fornells     e-mail op-fornells@joiabagur.example      role Operator -> FORNELLS
+--   username op-aeroport     e-mail op-aeroport@joiabagur.example      role Operator -> MAO-AIR
 ```
 
 > **It used to say «exactly two accounts», and two turned out not to be enough.** C39a-bis found
@@ -430,11 +430,16 @@ DELETE FROM "Users";
 > operator accounts are synthetic, carry `@joiabagur.example` addresses, and hold the `Operator` role
 > only.
 >
+> **`demo.operador` was then deactivated too**, on the same day and for a different reason: it was
+> bound to `MAO-AIR`, which `op-aeroport` already covers, so it was a second credential for a counter
+> that already had one. **Deactivated, never deleted — 3.380 sales reference it.** What is left is
+> four accounts that sign in: one administrator, one operator per shop.
+>
 > **Sign-in is by `Username`, not by e-mail** (`AuthenticationService.LoginAsync` reads
-> `GetByUsernameAsync`), so these accounts sign in as `demo.admin`, `demo.operador`, `op-ciutadella`,
-> `op-fornells` and `op-aeroport`. Note that the first two
-> carry a dot, which the API's own `CreateUserRequestValidator` rejects (`^[a-zA-Z0-9_]+$`) — as do the
-> hyphens of the other three: all five were
+> `GetByUsernameAsync`), so the usable accounts sign in as `demo.admin`, `op-ciutadella`,
+> `op-fornells` and `op-aeroport`. Note that `demo.admin`
+> carries a dot, which the API's own `CreateUserRequestValidator` rejects (`^[a-zA-Z0-9_]+$`) — as do the
+> hyphens of the other three: all of them were
 > created by SQL, and an earlier version of this section claimed otherwise. To reset one of these
 > passwords later, generate the hash **off the host** and send only the hash — never the plaintext —
 > then `update "Users" set "PasswordHash" = '<hash>', "UpdatedAt" = now() where "Username" = '…'`.
@@ -670,14 +675,19 @@ are bound to points of sale with deliberately different assortments, and **which
 reachable at all depends on which account is used**. An evaluator handed a URL and one credential can
 correctly conclude that abstention does not exist when it is merely out of reach.
 
+**The environment holds exactly four accounts that can sign in: one administrator and one operator per
+shop.** Everything else in the table below is a deactivated row kept for referential integrity, and
+each says why. Four is the number on purpose — one credential per thing there is to see, and no
+second credential pointing at a counter another one already covers.
+
 Every password below is already a public constant of the synthetic world
 (`ai-service/src/jbg_ai/data/README.md`); none of them is held in the parameter store, and none is a
 real employee's.
 
 | Username | Password | Role | Point of sale | What it is the account able to reach |
 |---|---|---|---|---|
-| `demo.admin` | *not in this repository* | Administrator | — | **The AI health card**, which is `[Authorize(Roles = "Administrator")]` and therefore reachable from no operator account. Its password was generated off the host and only the hash was sent, so it is deliberately absent here; reset it as the note in 5.3 describes |
-| `demo.operador` | *not in this repository* | Operator | `MAO-AIR` | The operator surfaces, same as `op-aeroport`. Predates C39a-bis; kept so nothing that references it breaks |
+| `demo.admin` | *not in this repository* | Administrator | — | **The AI health card**, which is `[Authorize(Roles = "Administrator")]` and therefore reachable from no operator account. Its password was generated off the host and only the hash was sent, so it is deliberately absent here; reset it as the note in 5.3 describes. **This is the only administrator that can sign in** |
+| `demo.operador` | **unusable by design** | Operator | `MAO-AIR` | **Deactivated on 2026-09-27**, and the row is kept rather than deleted because **3.380 sales reference it**. It duplicated `op-aeroport` — same shop, same reachable behaviour — and a second credential for the same counter only makes an evaluator wonder which one to use |
 | `op-ciutadella` | `Operator123!` | Operator | `CIU-CENTRE` | **The happy path.** The largest assortment — 871 assigned rows — so assisted search returns stock everywhere and the sale card's argument is *generated* rather than withheld. Start here |
 | `op-fornells` | `Operator123!` | Operator | `FORNELLS` | **Abstention, substitutes and the out-of-stock notice.** The smallest assortment — 241 assigned rows, of which **29 sit in the `0` bucket** — which is what makes a withheld argument and a substitute list reachable at all |
 | `op-aeroport` | `Operator123!` | Operator | `MAO-AIR` | **The agent's pivot to substitutes.** The shop with the most stock-outs, so the loop can find a piece unavailable and go looking for an alternative. This is where the fourth card of the hub is worth opening |
