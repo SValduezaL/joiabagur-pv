@@ -325,6 +325,59 @@ una suite roja no es una puerta; es un bloqueo permanente que alguien terminará
 - **Y** ningún ajuste de comportamiento —umbrales, pesos, presupuestos— se ha movido
 
 ---
+---
+
+## Cierre de los catorce escenarios
+
+**Repartido entre dos changes, y por una razón estructural:** el despliegue de la demo se dispara al
+mergear a la rama `demo`, o sea **después** de archivar el change que lo prepara. C39a dejó el árbol
+correcto y no podía verificar el resultado; **C39a-bis** recorre el entorno ya desplegado. La evidencia
+está en [`c39a-implementation-measurements.md`](../../Proyecto%20Final%20AIEng/informes/c39a-implementation-measurements.md)
+y [`c39a-bis-implementation-measurements.md`](../../Proyecto%20Final%20AIEng/informes/c39a-bis-implementation-measurements.md).
+
+| # | Escenario | Cerrado por | Veredicto |
+|---|---|---|---|
+| 1 | El estado del entorno se establece antes de tocarlo | **C39a** | ✅ cumplido |
+| 2 | La rama `demo` alcanza a `ai-eng` y el despliegue se dispara de verdad | **C39a-bis** | ✅ **cumplido** — PR #47, ejecución `36322635852`, `IMAGE_TAG` de `sha-d6a740fa…` (v8) a `sha-2b357a1e…` (v9), idéntico a `git rev-parse origin/demo` |
+| 3 | El panel del agente se sirve en la demo | **C39a-bis** | ⚠️ **parcial** — `AiAgentAssist__EnabledByDefault=true` en el contenedor y la ruta responde con el bucle completo, pero **la tarjeta no se ha visto**: sin navegador en la sesión de verificación |
+| 4 | El agente usa su propia credencial y no un repliegue | **C39a-bis** | ✅ **cumplido** — `stage=agent_client … credential=agent`, y lo mismo `router` y `assist`. **Ningún `assist_fallback`** |
+| 5 | Sin la credencial del agente, la ruta degrada y el despliegue no falla | **C39a** | ✅ cumplido por construcción; **no se ejercitó** contra el entorno vivo, porque exigiría borrar el parámetro y redesplegar |
+| 6 | El enrutador deja de tomar prestada la clave del argumentario | **C39a-bis** | ✅ **cumplido** — `stage=router_client … credential=router`, parámetro propio creado el 2026-09-27 |
+| 7 | El corpus viaja en la imagen y la pregunta sobre una pieza responde con citas | **C39a-bis** | ✅ **cumplido** — 161 fragmentos, y la ficha de `SKU983` llegó citando `material-laton#cuidados-y-limpieza-en-casa` |
+| 8 | La verificación falla cuando el corpus está vacío | **C39a** | ✅ cumplido — la condición existe y pasa con 161. Su rama de fallo **no** se provocó: vaciar el corpus del entorno vivo no es aceptable |
+| 9 | La verificación falla cuando la ruta del agente no responde | **C39a** | ✅ cumplido — la condición existe y pasa. Igual que la anterior, su rama de fallo no se provocó |
+| 10 | La demo es alcanzable desde internet y sólo por donde debe | **C39a-bis** | ✅ **cumplido** — `200` con certificado real de **Let's Encrypt `YE1`** (leído desde el anfitrión, porque en local el MITM de Norton falsea la cadena), `308` de `http` a `https`, y el grupo de seguridad abre **sólo** 80 y 443 |
+| 11 | El evaluador entra con cuatro credenciales y ve tres mostradores distintos | **C39a-bis** | ⚠️ **cumplido tras corregir una premisa falsa.** Las tres cuentas `op-*` **no existían** en la demo y `admin` estaba desactivada a propósito; se aprovisionaron los tres operarios y las cinco cuentas activas quedan declaradas en el §5.8 del *runbook*. Los tres mostradores se recorrieron y **rinden lo que el escenario pedía**. Lo que **no** se cumple es la primera línea: `admin` **no** alcanza la tarjeta de salud, y no debe — ver abajo |
+| 12 | Producción queda intacta — no regresión | **C39a-bis** | ✅ **cumplido** — ninguna ruta de producción tocada, ningún ajuste de comportamiento movido, y el diff entero cae en el `paths-ignore` del despliegue |
+| 13 | La CI se ejecuta por primera vez y no bloquea a nadie | **C39a-bis** | ⚠️ **cumplido con una corrección.** Se ejecutaron **cuatro** veces, no dos; **las de frontend no publicaron resultado**, porque morían en un lint que no podía funcionar. Con `eslint.config.js` creado y el paso en `continue-on-error`, la suite corrió por fin: **113 de 959 en 14 de 63**. Y **no bloquea**: ninguna rama tiene protección configurada |
+| 14 | Fuera de alcance explícito — ni README, ni vídeo, ni suites en verde | **C39a-bis** | ✅ **cumplido** — nada de eso se entregó, queda nombrado como C39b, y las suites siguen rojas en su nivel preexistente con sus cifras declaradas |
+
+### Lo que el escenario 11 pedía y NO se cumple, dicho explícitamente
+
+El escenario abre con «**Dado que** `admin` lo siembra `DatabaseSeeder`… **Entonces** `admin` alcanza la
+tarjeta de salud de la IA». **Eso no ocurre, y no debe ocurrir.** El §5.3 del *runbook* deja `admin`
+**desactivada a propósito**, porque el sembrador la recrea en cada arranque con una contraseña que es
+una constante de un repositorio público y el entorno es accesible desde internet. La premisa del
+escenario era incorrecta al escribirse.
+
+La cuenta administradora utilizable es `demo.admin`, cuya contraseña **no está en el repositorio** —se
+generó fuera del anfitrión y sólo viajó el hash—, así que **la tarjeta de salud de la IA quedó sin
+ejercitar**. Verificado sí está que la ruta es `[Authorize(Roles = "Administrator")]` y que devuelve
+`403` a un operario, y que los cuatro interruptores `*__EnabledByDefault` están en `true`.
+
+### Y dos cosas que el recorrido destapó y que no se arreglan aquí
+
+- **La quinta condición de `verify.sh` marca en rojo un despliegue sano**, porque cuenta puntos de venta
+  sin surtido **sin preguntar si la tienda está activa**, y `HT-ARTRUTX` está cerrada desde C10 a
+  propósito. El experimento da `1` sin el filtro y `0` con él. Es la razón por la que el despliegue del
+  2026-09-27 figura como fallido.
+- **El pivote del agente sigue siendo inalcanzable por nombre**, y ahora está medido sobre el entorno
+  desplegado: por referencia, 4 iteraciones y `buscar_sustitutos`; por nombre, 3 iteraciones, 2
+  herramientas y **ningún** pivote.
+
+Las dos, con su experimento y su vía de cierre, en
+[`openspec/DEFERRED_TASKS.md`](../../../openspec/DEFERRED_TASKS.md).
+
 
 ## Notas adicionales
 

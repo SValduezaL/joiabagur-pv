@@ -8,7 +8,7 @@ This exists because the environment's purpose is to be evaluated by somebody who
 
 The documentation MUST also state the known restriction that governs one of those behaviours: the agent's pivot to substitutes is unreachable when a piece is named by its product name instead of its reference, because the catalogue tool's observation does not carry the name. Omitting that turns a declared limitation into an apparent defect.
 
-Credentials seeded by the application MUST be documented as they are, and MUST NOT be rotated for presentation: rotating them would move a seeded entity for a cosmetic reason and add a secret to an inventory the parameter store keeps deliberately short.
+Credentials seeded by the application MUST be documented as they are, and MUST NOT be rotated for presentation: rotating them would move a seeded entity for a cosmetic reason and add a secret to an inventory the parameter store keeps deliberately short. A seeded account whose password is a constant of a public repository MUST be documented as deactivated rather than quietly omitted, because an evaluator who finds it refused needs to know that the refusal is deliberate; and the documentation MUST NOT present a password that no longer signs in as though it did, which is how the administrator credentials of this environment were described until 2026-09-27.
 
 #### Scenario: Every demonstration account is documented with its scope and its purpose
 
@@ -17,12 +17,21 @@ Credentials seeded by the application MUST be documented as they are, and MUST N
 - **AND** each one states the point of sale it is bound to
 - **AND** each one states the behaviour it is the account able to reach
 
-#### Scenario: The administrator account is documented as seeded
+#### Scenario: The seeded administrator account is documented as deliberately unusable
+
+- **GIVEN** an account the application's seeder recreates on every start with a password that is a constant of a public repository
+- **WHEN** the deployment documentation is read
+- **THEN** that account is documented as present and deactivated rather than omitted
+- **AND** the documentation states that a refused sign-in is the environment working and not a fault
+- **AND** it states that the account must stay deactivated, and why
+
+#### Scenario: The usable administrator account is documented without its password
 
 - **WHEN** the deployment documentation is read
-- **THEN** the administrator credentials are stated as the application seeds them
-- **AND** they are not held in the parameter store
-- **AND** the documentation says which administrator-only surface they reach
+- **THEN** the administrator account an evaluator would actually use is named
+- **AND** its password is stated to be deliberately absent from the repository, with how to reset it
+- **AND** it is not held in the parameter store
+- **AND** the documentation says which administrator-only surface it reaches
 
 #### Scenario: A behaviour reachable from only one account says so
 

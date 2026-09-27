@@ -410,15 +410,31 @@ After restoring, on the demo database:
 ```sql
 -- Keep nothing of the real staff.
 DELETE FROM "Users";
--- Then create exactly two accounts, with BCrypt hashes at work factor 12 — the factor the
--- application itself uses — so the password check matches what it expects:
+-- Then create the demonstration accounts, with BCrypt hashes at work factor 12 — the factor
+-- the application itself uses — so the password check matches what it expects:
 --   username demo.admin     e-mail demo.admin@joiabagur.example      role Administrator
 --   username demo.operador  e-mail demo.operador@joiabagur.example   role Operator, assigned to one POS
+-- PLUS the three synthetic operators of the C10 world, added by C39a-bis — see 5.8 for why
+-- two accounts are not enough to show what this environment exists to show:
+--   op-ciutadella  -> CIU-CENTRE    op-fornells -> FORNELLS    op-aeroport -> MAO-AIR
 ```
 
+> **It used to say «exactly two accounts», and two turned out not to be enough.** C39a-bis found
+> the demo holding only `demo.admin` and `demo.operador`, the latter bound to `MAO-AIR` — and with a
+> single shop reachable, **abstention, substitutes and the agent's pivot cannot be demonstrated at
+> all**, because each of them depends on the assortment of a *different* point of sale (5.8). The two
+> synthetic operators that arrived in the dump had been renamed `retirado-<id-prefix>` and
+> deactivated, which preserves the sales history their rows are referenced by; that is fine, and
+> leaving it there is what made the environment undemonstrable. **The privacy rule is unchanged and
+> absolute: no real employee, and no real e-mail address, may survive the restore.** The three
+> operator accounts are synthetic, carry `@joiabagur.example` addresses, and hold the `Operator` role
+> only.
+>
 > **Sign-in is by `Username`, not by e-mail** (`AuthenticationService.LoginAsync` reads
-> `GetByUsernameAsync`), so these accounts sign in as `demo.admin` and `demo.operador`. Note that both
-> carry a dot, which the API's own `CreateUserRequestValidator` rejects (`^[a-zA-Z0-9_]+$`): they were
+> `GetByUsernameAsync`), so these accounts sign in as `demo.admin`, `demo.operador`, `op-ciutadella`,
+> `op-fornells` and `op-aeroport`. Note that the first two
+> carry a dot, which the API's own `CreateUserRequestValidator` rejects (`^[a-zA-Z0-9_]+$`) — as do the
+> hyphens of the other three: all five were
 > created by SQL, and an earlier version of this section claimed otherwise. To reset one of these
 > passwords later, generate the hash **off the host** and send only the hash — never the plaintext —
 > then `update "Users" set "PasswordHash" = '<hash>', "UpdatedAt" = now() where "Username" = '…'`.
@@ -646,6 +662,49 @@ first time after a restart**, which is the worst possible moment.
 
 > After restarting the AI container by hand, run one throwaway search before showing anything —
 > or redeploy through `deploy.sh`, which warms it for you.
+
+## 5.8 The demonstration accounts, and what each one reaches
+
+**Added by C39a-bis, because an account list on its own is not enough.** The three operator accounts
+are bound to points of sale with deliberately different assortments, and **which AI behaviours are
+reachable at all depends on which account is used**. An evaluator handed a URL and one credential can
+correctly conclude that abstention does not exist when it is merely out of reach.
+
+Every password below is already a public constant of the synthetic world
+(`ai-service/src/jbg_ai/data/README.md`); none of them is held in the parameter store, and none is a
+real employee's.
+
+| Username | Password | Role | Point of sale | What it is the account able to reach |
+|---|---|---|---|---|
+| `demo.admin` | *not in this repository* | Administrator | — | **The AI health card**, which is `[Authorize(Roles = "Administrator")]` and therefore reachable from no operator account. Its password was generated off the host and only the hash was sent, so it is deliberately absent here; reset it as the note in 5.3 describes |
+| `demo.operador` | *not in this repository* | Operator | `MAO-AIR` | The operator surfaces, same as `op-aeroport`. Predates C39a-bis; kept so nothing that references it breaks |
+| `op-ciutadella` | `Operator123!` | Operator | `CIU-CENTRE` | **The happy path.** The largest assortment — 871 assigned rows — so assisted search returns stock everywhere and the sale card's argument is *generated* rather than withheld. Start here |
+| `op-fornells` | `Operator123!` | Operator | `FORNELLS` | **Abstention, substitutes and the out-of-stock notice.** The smallest assortment — 241 assigned rows, of which **29 sit in the `0` bucket** — which is what makes a withheld argument and a substitute list reachable at all |
+| `op-aeroport` | `Operator123!` | Operator | `MAO-AIR` | **The agent's pivot to substitutes.** The shop with the most stock-outs, so the loop can find a piece unavailable and go looking for an alternative. This is where the fourth card of the hub is worth opening |
+| `admin` | **unusable by design** | Administrator | — | **Deactivated on purpose (`IsActive = false`), and it must stay that way.** The application's seeder recreates it on every start with a password that is a constant in a public repository; `LoginAsync` refuses a deactivated user even with the right password, and that is the only thing keeping a default credential out of an Internet-facing host. A `401` here is the system working |
+
+### The one restriction that governs the agent, and it is declared rather than broken
+
+**Name the piece by its reference, not by its product name.** `buscar_catalogo` returns position, SKU,
+materials, variant and match reasons — **never the product's name** — so a loop asked about
+«los Pendientes Luz de Faro» receives candidates identified only by SKU, cannot tell which of them was
+the piece the customer meant, and **correctly declines to pivot**. Measured on the deployed
+environment on 2026-09-27, the same question two ways:
+
+| Asked as | Iterations | Tool calls | `buscar_sustitutos` | Outcome |
+|---|---|---|---|---|
+| `SKU1127` — **by reference** | 4 | 4 | **yes** | Availability checked, out of stock, **pivots**, then checks two alternatives |
+| «Pendientes Luz de Faro» — by name | 3 | 2 | **no** | Searches the catalogue, checks one candidate, answers without pivoting |
+
+This is a **declared limitation with its fix costed** in `openspec/DEFERRED_TASKS.md`, not a fault of
+the environment — and it is realistic at a counter, where the piece has its label in front of the
+operator.
+
+### A `503` from a scoped search is one specific thing
+
+If assisted search answers `503` for a shop, its row in `ai.pos_projection` is missing, not its
+catalogue. Check `shops_without_scope` in the health card — and read 5.5c before concluding anything,
+because **`HT-ARTRUTX` is deliberately closed and always counts as one**.
 
 ## 6. Moving to a purchased domain
 

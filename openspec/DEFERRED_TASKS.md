@@ -1534,3 +1534,130 @@ mismas opciones, **ejecuta la ruta** y compara veredictos;
 la cambie tiene que pasar por ahí y leer esta nota.
 
 ---
+
+## C39a-bis · La quinta condición de `verify.sh` marca en rojo un despliegue sano, porque no distingue una tienda cerrada
+
+**Descubierta el 2026-09-27, verificando el redespliegue de la demo.** El despliegue
+`36322635852` construyó, publicó las dos imágenes, actualizó el `IMAGE_TAG` y **falló** en
+«Verify the deployment from inside the host» con una sola causa:
+
+```text
+[verify] FAILED:
+  - 1 point(s) of sale hold no assigned row in the projection; assisted search answers 503 for each of them
+```
+
+**El entorno estaba sano y sigue estándolo.** Las otras seis condiciones pasan; el punto de venta
+señalado es `cd9bfd1f-f1b2-4795-9d14-867a75c18f90` = `HT-ARTRUTX` / «Hotel Cap d'Artrutx», que está
+**declarado inactivo a propósito** desde el mundo sintético de C10 —`data/world/pos-profiles.yaml`,
+`is_active: false`, `closed_after: 2025-09-30`, `operator: null`— y es **el único de los doce**. En la
+base desplegada su `IsActive` es `f`. Conserva **144 filas** en `ai.pos_projection`, **todas con la
+asignación retirada** (`is_assigned_hint = false`), que es exactamente lo que debe pasarle al surtido de
+una tienda que cerró. Los once activos van de **241 a 1.082** filas asignadas.
+
+**El mecanismo.** `build_projection_section` en `ai-service/src/jbg_ai/api/health_report.py` publica
+
+```sql
+SELECT count(DISTINCT pos_id) AS points_of_sale,
+       count(DISTINCT pos_id) FILTER (WHERE is_assigned_hint) AS scoped
+FROM ai.pos_projection
+```
+
+y `shops_without_scope` es su diferencia. **No hay ninguna noción de si la tienda está activa**, así que
+una tienda legítimamente cerrada es indistinguible de una tienda rota. `deploy/demo/verify.sh` falla si
+ese número es mayor que cero.
+
+**El experimento, corrido contra la base desplegada el 2026-09-27:**
+
+```text
+sin filtro de actividad   points_of_sale=12  scoped=11  shops_without_scope=1   -> FALLA
+con filtro de actividad   points_of_sale=11  scoped=11  shops_without_scope=0   -> PASA
+```
+
+**Y el arreglo no puede vivir donde uno lo pondría.** Comprobado, no supuesto: el rol con el que corre el
+servicio de IA responde
+
+```text
+current_user = jbg_ai
+NOT READABLE | public.PointOfSales | InsufficientPrivilege: permission denied for table PointOfSales
+```
+
+de modo que **ni `health_report.py` ni el bloque de `verify.sh` que se ejecuta dentro de `jbg-demo-ai`
+pueden leer la actividad de la tienda**. La decisión D9 / Q-5 de C41 —contar contra lo que aparece en la
+proyección porque Python no lee `public`— **está impuesta por los permisos**, y no era sólo una
+preferencia de diseño.
+
+**Las tres vías, con su coste.**
+
+1. **Llevar la actividad en la propia proyección**, emitida por el *feed* de .NET que ya la conoce (una
+   columna `is_shop_active`, o dejar de emitir las tiendas cerradas). Es la correcta de fondo: pone el
+   dato donde se consume. Coste: migración de `alembic`, cambio del *feed* en .NET, cambio del
+   orquestador de drenaje y reconstrucción de las dos imágenes.
+2. **Conceder `SELECT` sobre `public."PointOfSales"` al rol `jbg_ai`.** Barato de escribir y **cruza la
+   frontera de esquemas que C17 dibujó adrede**; convierte una decisión de aislamiento en una excepción.
+3. **Hacer la comprobación desde el anfitrión**, contra el contenedor de base de datos como
+   superusuario, que es donde `verify.sh` **ya corre**. Es la barata: **no reconstruye ninguna imagen**,
+   no toca ningún esquema y no afloja ningún permiso. A cambio, deja la condición en el guión de
+   despliegue en lugar de en el informe de salud, así que la **tarjeta de administración seguiría
+   contando mal** — que es un defecto menor del mismo hallazgo y conviene arreglar a la vez.
+
+**Mientras no se arregle:** un despliegue de la demo **queda marcado como fallido** aunque el entorno esté
+listo para mostrarse, y quien lea el registro concluirá lo contrario. Es la razón por la que el
+despliegue del 2026-09-27 figura en rojo.
+
+---
+
+## C39a-bis · El despliegue registra una rancidez de la proyección que ya era falsa al imprimirse
+
+**Medido el 2026-09-27.** El paso de verificación del despliegue imprimió
+
+```text
+"age_seconds": 414629.42,  "stale": true,  "status": "stale",
+"synced_at": "2026-09-22T18:22:29+00:00"
+```
+
+a las **13:33:11 UTC**, cuando el drenaje de arranque había escrito el *checkpoint* a las **13:33:05.85**
+—seis segundos antes— y la misma llamada, minutos después, daba `status: ok` con `stale: false`.
+
+**El mecanismo son dos cosas que se suman.** `cached_health_report` reutiliza el informe durante
+`HEALTH_CACHE_TTL_SECONDS = 10`, así que `verify.sh` recibió una instantánea construida **antes** de que
+el drenaje comprometiera. Y el drenaje necesitó **dos intentos**, porque el primero salió mientras el lado
+.NET todavía no servía el *feed*:
+
+```text
+13:32:55,164  stage=pos_sync_scheduler started interval_seconds=600 ceiling_seconds=3600
+13:32:55,164  boot_drain attempt=1
+13:32:55,867  WARNING feed_not_configured error=POS feed is unavailable
+13:33:04,709  boot_drain attempt=2
+13:33:05,850  stage=pos_sync done pages=1 upserted=1 soft_deleted=0 failed_pages=0
+```
+
+**No hizo fallar el despliegue**, y merece decirse: la rancidez **no es ninguna de las siete condiciones**
+de `verify.sh`, que sólo falla por `never_drained`, por cero puntos de venta o por
+`shops_without_scope > 0`. Pero deja en el registro permanente del despliegue una cifra de **115 veces el
+techo** que era falsa al escribirse, y ése es el log que alguien leerá dentro de un mes para decidir si el
+entorno está sano.
+
+**Vías de cierre.** Que el paso de verificación **pida un informe sin caché** —un parámetro de consulta, o
+una espera explícita a que el `boot_drain` reporte `drained` antes de sondear—, o que el reintento del
+drenaje de arranque ocurra **antes** de que el guión de verificación empiece. La segunda es la que además
+quita el `feed_not_configured` del arranque, que hoy aparece en todos los despliegues y no significa nada.
+
+---
+
+## C39a-bis · El `catalog` de `ai.sync_failure` acumula 66 filas que nada mira
+
+**Observado el 2026-09-27**, de paso y sin buscarlo. `ai.sync_failure` tiene **66 filas, todas del *feed*
+`catalog`**, ninguna de `pos-availability`. El informe de salud publica `failed_pages` contando **sólo** el
+*feed* de la proyección, así que dice `0` y dice la verdad — pero **nadie cuenta las del catálogo**, y su
+*checkpoint* llevaba parado desde el 2026-08-30.
+
+**No es un fallo vivo:** el índice tiene sus **1.200** documentos y el modelo configurado coincide con el
+indexado, así que la primera y la segunda condición de `verify.sh` pasan. Son residuos de la carga inicial.
+**Lo que no existe es quien los mire**, y una acumulación silenciosa en una tabla llamada `sync_failure` es
+justo la forma de los tres hallazgos que C34, C41 y C39a han costado ya.
+
+**Vía de cierre:** o el informe de salud cuenta los fallos **por *feed*** y los publica todos, o el drenaje
+los purga cuando la página se reintenta con éxito. Decidir cuál exige saber si alguna de las 66 describe
+una página que hoy seguiría fallando, y eso no se ha medido.
+
+---
