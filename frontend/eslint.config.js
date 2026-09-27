@@ -32,6 +32,16 @@ export default tseslint.config(
       'node_modules/**',
       'playwright-report/**',
       'test-results/**',
+      // La caché de pre-empaquetado de dependencias de Vite. **Faltaba en la primera versión de
+      // este fichero**, y el efecto fue engañoso: ESLint recorría `.vite/deps/react-router-dom.js`
+      // y reportaba tres errores que no eran violaciones de nada, sino
+      // `Definition for rule 'react-hooks/rules-of-hooks' was not found` — comentarios
+      // `eslint-disable` de la propia librería, sobre plugins que este fichero no carga para un
+      // `.js`. Leídos por encima parecían los tres únicos hallazgos serios del árbol; no existen.
+      //
+      // Está además **rastreada por git** desde el 2026-02-04, lo cual es otro asunto: 16 ficheros
+      // y 3,9 MB de caché regenerable dentro del repositorio. No se arregla desde aquí.
+      '.vite/**',
       // Declaraciones generadas por Vite.
       'src/vite-env.d.ts',
     ],
