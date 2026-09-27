@@ -254,7 +254,71 @@ regresión ajena:
 
 ---
 
-## 9 · Referencias
+## 9 · El despliegue, y el defecto que encontró — **añadido el 2026-09-27 tras mergear a `demo`**
+
+El §8 decía que la confirmación de extremo a extremo no era de este change. Ocurrió el mismo día, y
+**encontró un defecto de C43**. Se recoge aquí porque el hallazgo es de esta implementación.
+
+**Despliegue `36343020047`** sobre `cd8d6c3`. Construyó las dos imágenes, las publicó, actualizó
+`IMAGE_TAG`, desplegó — y **falló en la verificación**:
+
+```text
+[verify] waited 180s for the start-up drains to report
+"active_points_of_sale": 0,
+"shops_without_scope": null,
+"synced_at": "2026-09-27T19:07:08.851185+00:00"     <- la proyección SÍ se drenó
+[verify] FAILED:
+  - the AI service knows of no active point of sale; ai.pos_shop is empty, so the count of
+    shops without assortment is vacuous and proves nothing about this environment
+```
+
+**La condición (a) hizo exactamente su trabajo.** Es la que C43 añadió para que una tabla vacía no
+pasara en vacío, y lo primero que cazó fue un fallo del propio C43.
+
+**La causa, del registro del contenedor:**
+
+```text
+19:07:07,442  boot_drain attempt=1
+19:07:07,644  WARNING pos_shop_scheduler feed_not_configured error=POS shops feed is unavailable
+19:07:08,857  pos_sync_scheduler drained pages=1 upserted=1 soft_deleted=0 failed_pages=0
+```
+
+El drenaje de tiendas falló **por 1,2 segundos** —el lado .NET aún no servía el *feed*—, el de
+disponibilidad salió bien un segundo después, y `_boot_drain` reintentaba mientras `drain_pass(...)`
+devolviera `None` — **devolviendo el resultado del de disponibilidad**. Uno de los dos bastó para
+terminar el bucle de los dos. No hubo intento 2.
+
+**Es la misma familia de defectos que C43 cierra, un nivel más arriba:** *parte del trabajo salió
+bien* leído como *el trabajo salió bien*.
+
+**Por qué los tests no lo cazaron:** `test_the_boot_drain_runs_a_whole_pass` da por buenos los dos
+drenajes, así que nunca ejercitó el caso mixto. Y la spec no lo pedía: decía que los dos drenajes
+corren al arrancar y en orden, pero no que el **reintento** cubriera a los dos.
+
+**El entorno se curó solo**, lo que confirma que el mecanismo está bien y que sólo falla el arranque:
+
+```text
+19:17:08,912  pos_shop_scheduler drained written=12 removed=0 active=11
+```
+
+y el informe pasó a `active_points_of_sale: 11`, `shops_without_scope: 0`, `points_of_sale: 12`,
+`failed_pages_by_feed: {"catalog": 66}`. **El falso positivo original está resuelto**; lo que quedó
+pendiente es que el arranque no deje la tabla a medias.
+
+Arreglado en `fix-boot-drain-retries-both-drains`: el reintento pasa a ser **por drenaje**, con tres
+tests nuevos —uno reproduce literalmente esta secuencia— y el escenario que le faltaba a la spec.
+
+**Dos cosas que este episodio deja dichas:**
+
+1. **La condición (a) se pagó sola el día que entró.** Sin ella el despliegue habría concluido
+   `success` con `ai.pos_shop` vacía, `shops_without_scope: null` en la tarjeta y nadie mirando.
+2. **La verificación de extremo a extremo no era una formalidad.** Tres suites verdes, trece casos de
+   la quinta condición y el bloque real ejecutado contra informes reales no encontraron esto, porque
+   ninguno reproducía la carrera de arranque entre dos contenedores.
+
+---
+
+## 10 · Referencias
 
 - Hallazgo de partida: `Documentos/Proyecto Final AIEng/informes/c39a-bis-implementation-measurements.md`
 - Fichas diferidas cerradas: las dos primeras de C39a-bis en `openspec/DEFERRED_TASKS.md`
