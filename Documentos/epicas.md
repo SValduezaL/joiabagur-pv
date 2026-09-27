@@ -596,8 +596,22 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 > `IMAGE_TAG` desplegado igual al HEAD de esa rama — así que la demo no tenía C36, C40, C40_FIX, C41 ni
 > C42, o sea cuatro de las cinco superficies más visibles del entregable.
 >
-> Recuento: **42 archivadas** —entran C42 y C39a—, **1 retirada** (C38) y **2 pendientes**: **C39a-bis**
-> y **C39b**, en ese orden.
+> **C39a-bis se archiva el mismo día**, con su
+> [informe](Proyecto%20Final%20AIEng/informes/c39a-bis-implementation-measurements.md). Confirma que el
+> despliegue ocurrió de verdad —`IMAGE_TAG` de `sha-d6a740fa…` a `sha-2b357a1e…`, idéntico al HEAD de
+> `demo`— y que el entorno está sano, y **su hallazgo es que la ejecución figura en rojo por un falso
+> positivo**: la quinta condición de `verify.sh` cuenta puntos de venta sin surtido **sin preguntar si la
+> tienda está activa**, y `HT-ARTRUTX` está cerrada a propósito desde C10. El arreglo no cabe donde
+> parecía —el rol del servicio de IA no puede leer la tabla de puntos de venta de .NET—, así que queda
+> diferido con sus tres vías.
+>
+> Y de paso destapa que **las cuentas del recorrido no existían**: el entorno tenía dos, no cuatro, y los
+> tres operarios sintéticos sólo vivían en el mundo local, de modo que la abstención, los sustitutos y el
+> pivote **no se podían demostrar**. Quedan en cuatro cuentas —un administrador y un operario por tienda—
+> declaradas en el §5.8 del *runbook*, que es el requisito que la delta añade a `demo-deployment`.
+>
+> Recuento: **43 archivadas** —entran C42, C39a y C39a-bis—, **1 retirada** (C38) y **1 pendiente**:
+> **C39b**.
 >
 > **Ocho hallazgos y dieciséis decisiones, y la segunda pasada refuta a la primera con cifras del propio repositorio.** El v1 encontró una **regresión latente que C40 introdujo sin tocar el agente** —la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`— y concluyó que sin arreglarlo C42 entregaría *«un panel de agente sin prosa»*. **El v2 lo desmiente**: la frase que ordena marcadores es **idéntica palabra por palabra** en `v3.md:47` y `v4.md:59`, así que **C40 ya midió este caso** sobre 90 consultas libres con payload sin anclar — **3 de 90 generaciones con marcador y 0 retiradas tras la reparación única**, que además *«no es una por comprobación»* sino una sola con la lista entera de violaciones. La referencia que el v1 usó —C30b, `{{price}}` en 147 de 213— es de los modos **anclados**, y la cabecera de `assist/v5.md` ya había escrito por qué no se traslada: *«anclado hay una pieza y se la vende; en libre hay hasta quince agrupadas y lo que se pide es comparar»*. **El arreglo entra igual pero no gobierna la línea de corte: la gobierna el consumidor .NET, que no existe** —`IAiGatewayClient` tiene siete métodos y ninguno es el del agente, que es el 100 % y no el 3 %—. Y **la causa que de verdad retira el argumentario del agente ya estaba medida y no es el marcador**: `dangling_citation`, 85 en el primer intento y 72 supervivientes, con el **92,2 % de las respuestas trayendo cero citas**.
 >

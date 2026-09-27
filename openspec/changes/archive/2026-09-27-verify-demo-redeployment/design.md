@@ -17,14 +17,15 @@ C39b                    README de entrega, vídeo, tag, evidencias
 
 ### Lo que C39a midió y este change contrasta
 
-| Medido antes del despliegue | Qué se espera después |
-|---|---|
-| `IMAGE_TAG` = `sha-d6a740fa5e0b…`, que es el HEAD de `origin/demo` | otro, y correspondiente al HEAD nuevo |
-| `ai.knowledge_chunk` = **161** | igual o mayor; la tabla vive en el volumen y el despliegue no lo toca |
-| proyección a **~120 ×** el techo de rancidez | curada, porque el drenaje de C41 corre al arrancar |
-| las siete condiciones de `verify.sh`, probadas canalizando el script | ejecutadas por el propio workflow, sobre el script desplegado |
-| ruta del agente respondiendo con credencial **de repliegue** | `stage=agent_client` con credencial propia |
-| `AiAgentAssist__EnabledByDefault` ausente → cuarta tarjeta invisible | la tarjeta presente |
+| Medido antes del despliegue | Qué se esperaba después | **Qué salió** *(2026-09-27)* |
+|---|---|---|
+| `IMAGE_TAG` = `sha-d6a740fa5e0b…`, que es el HEAD de `origin/demo` | otro, y correspondiente al HEAD nuevo | ✅ `sha-2b357a1e…`, versión **9** del parámetro, idéntico a `git rev-parse origin/demo` |
+| `ai.knowledge_chunk` = **161** | igual o mayor; la tabla vive en el volumen y el despliegue no lo toca | ✅ **161**, exactamente. El volumen sobrevivió: `jbg-demo-postgres` llevaba **4 semanas** en pie frente a los 19 minutos de los otros dos |
+| proyección a **~120 ×** el techo de rancidez | curada, porque el drenaje de C41 corre al arrancar | ✅ curada — **pero la lectura del propio workflow no lo vio**, porque el informe se cachea 10 s y el drenaje de arranque necesitó **dos intentos**. Ver Q1 |
+| las siete condiciones de `verify.sh`, probadas canalizando el script | ejecutadas por el propio workflow, sobre el script desplegado | ⚠️ ejecutadas, y **la quinta falla**: no por el entorno, sino por contar una tienda cerrada a propósito. **Seis de siete en verde** |
+| ruta del agente respondiendo con credencial **de repliegue** | `stage=agent_client` con credencial propia | ✅ las tres propias: `credential=agent`, `credential=router`, `credential=assist`, **ningún `assist_fallback`** |
+| `AiAgentAssist__EnabledByDefault` ausente → cuarta tarjeta invisible | la tarjeta presente | ✅ `AiAgentAssist__EnabledByDefault=true` en el contenedor, y la ruta del agente responde con el bucle completo. **La tarjeta no se pudo ver**: sin navegador. La de **salud de la IA** sí quedó ejercitada por su ruta, con la credencial del responsable |
+| *(no previsto)* las cuentas del recorrido | — | ❌ **`op-*` no existían y `admin` estaba desactivada.** El §5.3 había dejado **dos** cuentas. Ver la nota del grupo 3 de `tasks.md` |
 
 ### La restricción que gobierna el diseño
 
@@ -98,7 +99,7 @@ Se anota en `DEFERRED_TASKS.md` con su experimento y su mecanismo, o se abre un 
 
 | # | Pregunta | Por defecto si no hay respuesta |
 |---|---|---|
-| **Q1** | ¿La proyección se cura sola al arrancar, como C39a predijo? | Se mide. **Si no**, se declara como refutación de la predicción y se anota contra C41 |
+| **Q1** | ~~¿La proyección se cura sola al arrancar, como C39a predijo?~~ **CERRADA Y CONFIRMADA** *(2026-09-27)* | **La predicción se cumple.** De ~414.629 s —unas **115 veces** el techo de 3.600 s, con el último drenaje incremental el 22 de septiembre— a `status: ok`, `stale: false`, **cero páginas fallidas**, y el planificador drenando cada **600 s** desde el arranque. Con dos matices que la confirmación no debe tapar: la cura la hace el drenaje **incremental**, y `last_full_sync_at` **sigue** en el 22 de septiembre; y el **primer intento** de drenaje al arrancar falló con `feed_not_configured` porque el lado .NET aún no servía el *feed* — el segundo, nueve segundos después, es el que la curó |
 | **Q2** | ¿El argumentario del agente llega generado, ahora que la ruta tiene credencial propia? | Se observa. C42 midió **1,2 %** de retirada con `v6`, así que lo esperable es que llegue |
 | **Q3** | ¿Se alcanzan los tres estados de `op-fornells` —abstención, sustitutos, avisos de agotado— con el surtido que tenga hoy? | Se intenta y, si alguno no se reproduce, **se declara cuál y por qué** en vez de darlo por visto |
 | **Q4** | ¿Conviene un dominio comprado antes de entregar? | **No.** El §6 del *runbook* lo cubre y la imagen es agnóstica del nombre, así que puede hacerse después sin reconstruir. Decisión de C39b |
