@@ -211,7 +211,8 @@ def test_health_reports_projection_freshness_from_the_checkpoint() -> None:
         projection_synced_at=synced,
         projection_full_synced_at=synced,
         projection_points_of_sale=11,
-        projection_scoped_points_of_sale=11,
+        projection_active_points_of_sale=11,
+        projection_active_without_scope=0,
     )
     app = _app(probe)
 
@@ -238,7 +239,8 @@ def test_health_reports_a_stale_projection_without_degrading_the_service() -> No
         models=(DEFAULT_EMBEDDING_MODEL,),
         projection_synced_at=datetime.now(tz=UTC) - timedelta(days=20),
         projection_points_of_sale=11,
-        projection_scoped_points_of_sale=11,
+        projection_active_points_of_sale=11,
+        projection_active_without_scope=0,
     )
     app = _app(probe)
 
@@ -260,7 +262,8 @@ def test_health_reports_a_point_of_sale_left_without_any_assortment() -> None:
         models=(DEFAULT_EMBEDDING_MODEL,),
         projection_synced_at=datetime.now(tz=UTC),
         projection_points_of_sale=12,
-        projection_scoped_points_of_sale=11,
+        projection_active_points_of_sale=12,
+        projection_active_without_scope=1,
     )
     app = _app(probe)
 
@@ -268,7 +271,89 @@ def test_health_reports_a_point_of_sale_left_without_any_assortment() -> None:
         body = client.get("/health").json()
 
     assert body["projection"]["points_of_sale"] == 12
+    assert body["projection"]["active_points_of_sale"] == 12
     assert body["projection"]["shops_without_scope"] == 1
+
+
+def test_health_does_not_count_a_shop_closed_on_purpose(caplog) -> None:
+    """C43, and the measurement that opened it.
+
+    The deployed environment holds twelve points of sale in the projection, of which
+    `HT-ARTRUTX` has been closed deliberately since 2025-09-30 and keeps its 144 rows with
+    every assignment correctly retired. Counted over the projection alone that is one shop
+    "without scope" and a **failed deployment of a healthy environment**, which is what
+    happened on 2026-09-27. Counted over the active shops it is zero, and the eleven that
+    trade are all served.
+    """
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC),
+        # Twelve shops appear in the projection...
+        projection_points_of_sale=12,
+        # ...but only eleven are trading, and all eleven hold an assortment.
+        projection_active_points_of_sale=11,
+        projection_active_without_scope=0,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    assert body["projection"]["points_of_sale"] == 12
+    assert body["projection"]["active_points_of_sale"] == 11
+    assert body["projection"]["shops_without_scope"] == 0
+    assert body["status"] == "OK"
+
+
+def test_health_reports_the_count_as_unknown_before_any_shop_reading() -> None:
+    """Unknown is not zero, and the difference is what stops a fourth empty-table pass.
+
+    `ai.pos_shop` is created partway through a deployment and filled by a drain moments
+    later, so the empty table is a state every redeployment passes through. Zero there would
+    assert that every active shop is served — a claim the service cannot make before it knows
+    of any shop — and would let post-deployment verification pass over an environment it has
+    learnt nothing about.
+    """
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC),
+        projection_points_of_sale=12,
+        projection_active_points_of_sale=0,
+        projection_active_without_scope=None,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["projection"]["active_points_of_sale"] == 0
+    assert body["projection"]["shops_without_scope"] is None
+
+
+def test_health_reports_failed_pages_for_every_feed_not_just_the_projection() -> None:
+    """The 66 rows of `catalog` in `ai.sync_failure` that no reader could reach. C43.
+
+    The scalar counted only `pos-availability` and told the truth; nothing counted the rest.
+    Both travel now — the scalar unchanged so the deployment check and the dashboard keep
+    reading what they read, the breakdown beside it so the other feeds stop being invisible.
+    """
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC),
+        projection_failures_by_feed={"catalog": 66},
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    assert body["projection"]["failed_pages"] == 0, "the POS feed really has none"
+    assert body["projection"]["failed_pages_by_feed"] == {"catalog": 66}
 
 
 def test_health_distinguishes_a_projection_never_drained_from_a_stale_one() -> None:

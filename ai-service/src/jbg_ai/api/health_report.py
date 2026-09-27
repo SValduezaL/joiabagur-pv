@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -93,15 +93,49 @@ _PROJECTION_CHECKPOINT_SQL = text(
     "FROM ai.sync_checkpoint WHERE feed = :feed"
 )
 
-#: Both counts in one statement, because the number that matters is their difference.
+#: How many points of sale the projection knows of at all. Reported unchanged, because it is
+#: what the deployment check uses to tell "the projection is empty" from "a shop is missing an
+#: assortment", and those stay different questions.
 _PROJECTION_SHOPS_SQL = text(
-    "SELECT count(DISTINCT pos_id) AS points_of_sale, "
-    "count(DISTINCT pos_id) FILTER (WHERE is_assigned_hint) AS scoped "
-    "FROM ai.pos_projection"
+    "SELECT count(DISTINCT pos_id) AS points_of_sale FROM ai.pos_projection"
 )
 
-_PROJECTION_FAILURES_SQL = text(
-    "SELECT count(*) FROM ai.sync_failure WHERE feed = :feed"
+#: **The shops go on the LEFT, and that is the decision.** C43.
+#:
+#: Until this change the count was `count(DISTINCT pos_id) FILTER (WHERE is_assigned_hint)`
+#: subtracted from the total, taken over `ai.pos_projection` alone — which has no notion of
+#: whether a shop is still trading, so a shop closed on purpose was indistinguishable from a
+#: shop whose assortment never arrived. It failed a healthy deployment on 2026-09-27 and put a
+#: red line on the administrator's dashboard, over one shop deliberately closed since
+#: 2025-09-30 whose whole assortment was correctly retired.
+#:
+#: Reading from `ai.pos_shop` outwards also closes a case the old shape could not see at all: a
+#: filter over the projection can only speak of shops that already appear in it, so an **active
+#: shop absent from the projection entirely** — the worse of the two, refusing every scoped
+#: retrieval — was never counted. With the shops on the left, absence and de-assignment land in
+#: the same number.
+#:
+#: This reads only schema `ai`. The activity arrives over the feed, because the `jbg_ai` role
+#: is refused `SELECT` on `public."PointOfSales"` and the schema boundary is deliberate.
+_PROJECTION_ACTIVE_SHOPS_SQL = text(
+    """
+    SELECT count(*) FILTER (WHERE s.is_active) AS active_points_of_sale,
+           count(*) FILTER (WHERE s.is_active AND NOT EXISTS (
+               SELECT 1 FROM ai.pos_projection j
+               WHERE j.pos_id = s.pos_id AND j.is_assigned_hint
+           )) AS active_without_scope
+    FROM ai.pos_shop s
+    """
+)
+
+#: Per feed, not for the projection feed alone. C43.
+#:
+#: The scalar this used to be counted only `pos-availability` and told the truth — but nothing
+#: counted the rest, and `ai.sync_failure` held 66 rows from the `catalog` feed that no reader
+#: could reach. A table named `sync_failure` accumulating in silence is the shape of the three
+#: findings C34, C41 and C39a each cost a session to discover.
+_PROJECTION_FAILURES_BY_FEED_SQL = text(
+    "SELECT feed, count(*) AS failures FROM ai.sync_failure GROUP BY feed"
 )
 
 
@@ -158,14 +192,24 @@ def build_projection_section(
         "ceiling_seconds": ceiling,
         "stale": status != PROJECTION_OK,
         "failed_pages": snapshot.projection_failed_pages,
+        # Every feed's failures, beside the scalar rather than instead of it. C43 added this
+        # after 66 rows from the `catalog` feed turned out to be unreachable to any reader.
+        "failed_pages_by_feed": dict(snapshot.projection_failures_by_feed),
         "points_of_sale": snapshot.projection_points_of_sale,
+        # **How many shops the service knows to be trading.** Zero means the shop reading has
+        # not arrived, and it is what lets a consumer tell that apart from "nothing is wrong":
+        # the count below is `null` in exactly that state, and `null` is not zero.
+        "active_points_of_sale": snapshot.projection_active_points_of_sale,
         # The count that C34 needed and nobody reported: a point of sale with no assigned row
         # answers 503 to every scoped retrieval while the deployment looks healthy from
         # outside, because the .NET side degrades correctly to its lexical path with a 200.
-        "shops_without_scope": max(
-            snapshot.projection_points_of_sale - snapshot.projection_scoped_points_of_sale,
-            0,
-        ),
+        #
+        # **Counted over ACTIVE shops since C43.** Counted over whatever the projection held,
+        # it could not tell a shop closed on purpose from a broken one, and failed a healthy
+        # deployment on 2026-09-27. The name is kept: the consumers read this key, the .NET
+        # DTO already declares it nullable and the dashboard already treats `null` as nothing
+        # to draw, so the correction reaches all three screens without moving any of them.
+        "shops_without_scope": snapshot.projection_active_without_scope,
     }
 
 
@@ -199,13 +243,28 @@ class IndexSnapshot:
     projection_full_synced_at: datetime | None = None
     #: Points of sale that appear in the projection at all.
     projection_points_of_sale: int = 0
-    #: Of those, the ones holding at least one assigned row. The difference is the count
-    #: that matters: a point of sale with none answers 503 to every scoped retrieval.
-    projection_scoped_points_of_sale: int = 0
-    #: Rows in `ai.sync_failure` for the POS feed. Cumulative and persisted, not
-    #: "the last run's": nothing else reads that table, so a page that failed months ago
-    #: is otherwise invisible for ever.
-    projection_failed_pages: int = 0
+
+    # --- shop activity (C43) ------------------------------------------------------------
+    #
+    # Read from `ai.pos_shop`, in the same session as everything above.
+
+    #: Points of sale recorded as ACTIVE in `ai.pos_shop`. Zero means the shop reading has
+    #: not arrived yet — not that the business has no shops — which is why the count below
+    #: is reported as unknown rather than zero in that state.
+    projection_active_points_of_sale: int = 0
+    #: Of the ACTIVE ones, how many hold no assigned row in the projection. `None` when
+    #: `ai.pos_shop` is empty, because zero would assert that every active shop is served,
+    #: and that is a claim the service cannot make before it knows of any shop at all.
+    projection_active_without_scope: int | None = None
+    #: Rows in `ai.sync_failure` per feed. Cumulative and persisted, not "the last run's":
+    #: nothing else reads that table, so a page that failed months ago is otherwise
+    #: invisible for ever.
+    projection_failures_by_feed: dict[str, int] = field(default_factory=dict)
+
+    @property
+    def projection_failed_pages(self) -> int:
+        """Failures recorded against the POS feed, which is what the deployment check reads."""
+        return self.projection_failures_by_feed.get(POS_FEED, 0)
 
 
 class HealthProbe(Protocol):
@@ -246,15 +305,23 @@ class SqlAlchemyHealthProbe:
                 shops = (
                     await session.execute(_PROJECTION_SHOPS_SQL)
                 ).mappings().first()
-                failed_pages = (
-                    await session.execute(_PROJECTION_FAILURES_SQL, {"feed": POS_FEED})
-                ).scalar()
+                active_shops = (
+                    await session.execute(_PROJECTION_ACTIVE_SHOPS_SQL)
+                ).mappings().first()
+                failures_by_feed = {
+                    str(row["feed"]): int(row["failures"] or 0)
+                    for row in (
+                        await session.execute(_PROJECTION_FAILURES_BY_FEED_SQL)
+                    ).mappings()
+                }
         except Exception:  # noqa: BLE001 - any failure to reach the database is one answer
             # Deliberately broad, and deliberately not re-raised. This endpoint
             # exists to REPORT that the database is unreachable; raising would
             # turn the report into the outage.
             logger.warning("health_probe_database_unreachable", exc_info=True)
             return IndexSnapshot(database_reachable=False)
+
+        active = int((active_shops or {}).get("active_points_of_sale") or 0)
 
         return IndexSnapshot(
             database_reachable=True,
@@ -267,8 +334,16 @@ class SqlAlchemyHealthProbe:
                 checkpoint["last_full_sync_at"] if checkpoint else None
             ),
             projection_points_of_sale=int((shops or {}).get("points_of_sale") or 0),
-            projection_scoped_points_of_sale=int((shops or {}).get("scoped") or 0),
-            projection_failed_pages=int(failed_pages or 0),
+            projection_active_points_of_sale=active,
+            # `None` and not 0 when no shop is known: see the field's own note. Deriving it
+            # here rather than in the section builder keeps the builder a pure function of
+            # the snapshot, which is what lets every case be tested without a database.
+            projection_active_without_scope=(
+                int((active_shops or {}).get("active_without_scope") or 0)
+                if active
+                else None
+            ),
+            projection_failures_by_feed=failures_by_feed,
         )
 
 
@@ -314,7 +389,9 @@ async def build_health_report(settings: Settings, probe: HealthProbe) -> dict[st
                 "ceiling_seconds": settings.jpv_pos_projection_max_age_seconds,
                 "stale": None,
                 "failed_pages": None,
+                "failed_pages_by_feed": None,
                 "points_of_sale": None,
+                "active_points_of_sale": None,
                 "shops_without_scope": None,
             },
         }

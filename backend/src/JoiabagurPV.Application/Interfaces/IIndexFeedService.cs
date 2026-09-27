@@ -18,4 +18,13 @@ public interface IIndexFeedService
         DateTime? since,
         Guid? sinceId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The whole set of points of sale with their activity, in one reading (C43).
+    /// </summary>
+    /// <remarks>
+    /// Takes no cursor because it has none: the reading is always complete, which is what
+    /// lets the consumer retire a point of sale that has left the business.
+    /// </remarks>
+    Task<PosShopsReadingDto> GetPosShopsReadingAsync(CancellationToken cancellationToken);
 }

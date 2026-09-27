@@ -596,8 +596,48 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 > `IMAGE_TAG` desplegado igual al HEAD de esa rama — así que la demo no tenía C36, C40, C40_FIX, C41 ni
 > C42, o sea cuatro de las cinco superficies más visibles del entregable.
 >
-> Recuento: **42 archivadas** —entran C42 y C39a—, **1 retirada** (C38) y **2 pendientes**: **C39a-bis**
-> y **C39b**, en ese orden.
+> **C39a-bis se archiva el mismo día**, con su
+> [informe](Proyecto%20Final%20AIEng/informes/c39a-bis-implementation-measurements.md). Confirma que el
+> despliegue ocurrió de verdad —`IMAGE_TAG` de `sha-d6a740fa…` a `sha-2b357a1e…`, idéntico al HEAD de
+> `demo`— y que el entorno está sano, y **su hallazgo es que la ejecución figura en rojo por un falso
+> positivo**: la quinta condición de `verify.sh` cuenta puntos de venta sin surtido **sin preguntar si la
+> tienda está activa**, y `HT-ARTRUTX` está cerrada a propósito desde C10. El arreglo no cabe donde
+> parecía —el rol del servicio de IA no puede leer la tabla de puntos de venta de .NET—, así que queda
+> diferido con sus tres vías.
+>
+> Y de paso destapa que **las cuentas del recorrido no existían**: el entorno tenía dos, no cuatro, y los
+> tres operarios sintéticos sólo vivían en el mundo local, de modo que la abstención, los sustitutos y el
+> pivote **no se podían demostrar**. Quedan en cuatro cuentas —un administrador y un operario por tienda—
+> declaradas en el §5.8 del *runbook*, que es el requisito que la delta añade a `demo-deployment`.
+>
+> Recuento: **43 archivadas** —entran C42, C39a y C39a-bis—, **1 retirada** (C38) y **1 pendiente**:
+> **C39b**.
+>
+> **Actualizado el 2026-09-27 — entra C43, y nace de lo que C39a-bis encontró al mirar.** **C43**
+> (`add-shop-activity-projection`) no estaba en el plan: sale del hallazgo principal de C39a-bis,
+> que el despliegue `36322635852` **falló con el entorno sano** y por una sola causa. La quinta
+> condición de `verify.sh` contaba puntos de venta sin surtido **sin preguntar si la tienda está
+> activa**, así que `HT-ARTRUTX` —cerrada a propósito desde el mundo sintético de C10, y la única
+> de las doce— se leía como una tienda rota. El falso positivo no se quedaba en el registro:
+> llegaba en rojo a la tarjeta del administrador.
+>
+> **Y el arreglo no cabía donde parecía**, que es lo que lo convierte en un change y no en un
+> parche: el rol `jbg_ai` recibe `permission denied for table PointOfSales`, de modo que la
+> decisión D9 / Q-5 de C41 —contar contra lo que aparece en la proyección— **estaba impuesta por
+> los permisos**. C43 lleva la actividad al esquema `ai` por un *feed* propio,
+> `GET /api/ai/index-feed/pos-shops`, retrato completo sin cursor drenado a `ai.pos_shop`; una
+> columna en `ai.pos_projection` habría nacido rancia para siempre, porque el *feed* de
+> disponibilidad es incremental por *keyset* sobre el *watermark* de inventario y un cambio de
+> estado de tienda no mueve ninguna fila. Entra en **EP14** por lo mismo que C41: modifica
+> `pos-projection`.
+>
+> Cierra **dos** de las cuatro fichas diferidas de C39a-bis —el falso positivo y la rancidez que el
+> despliegue registraba ya curada— y deja abiertas las otras dos a propósito: la purga de
+> `ai.sync_failure`, cuya mitad barata sí hace (el informe ya publica los fallos **por *feed***, y
+> las 66 filas de `catalog` dejan de ser inalcanzables), y la alerta `CRITICAL` de reconocimiento
+> de imagen, que es del MVP y se declara en el guion de la demo en C39b.
+>
+> Recuento: **44 archivadas** —entra C43—, **1 retirada** (C38) y **1 pendiente**: **C39b**.
 >
 > **Ocho hallazgos y dieciséis decisiones, y la segunda pasada refuta a la primera con cifras del propio repositorio.** El v1 encontró una **regresión latente que C40 introdujo sin tocar el agente** —la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`— y concluyó que sin arreglarlo C42 entregaría *«un panel de agente sin prosa»*. **El v2 lo desmiente**: la frase que ordena marcadores es **idéntica palabra por palabra** en `v3.md:47` y `v4.md:59`, así que **C40 ya midió este caso** sobre 90 consultas libres con payload sin anclar — **3 de 90 generaciones con marcador y 0 retiradas tras la reparación única**, que además *«no es una por comprobación»* sino una sola con la lista entera de violaciones. La referencia que el v1 usó —C30b, `{{price}}` en 147 de 213— es de los modos **anclados**, y la cabecera de `assist/v5.md` ya había escrito por qué no se traslada: *«anclado hay una pieza y se la vende; en libre hay hasta quince agrupadas y lo que se pide es comparar»*. **El arreglo entra igual pero no gobierna la línea de corte: la gobierna el consumidor .NET, que no existe** —`IAiGatewayClient` tiene siete métodos y ninguno es el del agente, que es el 100 % y no el 3 %—. Y **la causa que de verdad retira el argumentario del agente ya estaba medida y no es el marcador**: `dangling_citation`, 85 en el primer intento y 72 supervivientes, con el **92,2 % de las respuestas trayendo cero citas**.
 >
@@ -899,7 +939,7 @@ Se miden por *changes* de OpenSpec, no por número de historias: la serie `HU-AI
 | **EP11** | Plataforma del Servicio de IA | C01, C02, C03, C05, C17 | 🔴 completa |
 | **EP12** | Corpus y Enriquecimiento del Catálogo | C06a (hecho), C06b (hecho), C08 (hecho), C09 (hecho), C10 (hecho), C11 (hecho), **C23 (hecho)**, **FIX1 (hecho)** | 🔴 parcial |
 | **EP13** | Familias de Producto y Desambiguación | C07 (hecho), C18a (hecho), C18b (hecho), **C28 (hecho)** | 🟢 completa |
-| **EP14** | Búsqueda Semántica Híbrida | C12, C13, C14, C15, C16, C20, C21, **C22**, **C25** (hechos), **C41 (archivado 26 sep)** *(no previsto)* | 🟠 **parcial — reabierta** |
+| **EP14** | Búsqueda Semántica Híbrida | C12, C13, C14, C15, C16, C20, C21, **C22**, **C25** (hechos), **C41 (archivado 26 sep)** *(no previsto)*, **C43 (27 sep)** *(no previsto: corrige el recuento de C41, que marcaba en rojo un despliegue sano)* | 🟠 **parcial — reabierta** |
 | **EP15** | Venta Asistida, Sustitutos y Agentes | **C26 (archivado)**, ~~C27~~ *(cortado 12 sep)*, **C30a (archivado 13 sep)**, **C30b (archivado 14 sep)** *(partidos el 13 sep)*, **C31 (archivado 16 sep)**, **C32a (archivado 20 sep)**, **C32b (archivado 21 sep)** *(partidos el 20 sep)*, **C34 (archivado 22 sep)**, **C36 (archivado 24 sep)**, **C40 (archivado 25 sep)** *(no previsto)*, **C40_FIX (archivado 26 sep)** *(fuera de la numeración C: corrige a C40)*, **C42** *(archivado el 27 sep, 75/75 — no previsto; da superficie al único pilar del PF que no la tenía)* | 🟠 **parcial — reabierta** |
 | **EP16** | ~~Inventario Asistido y Señales de Demanda~~ | ~~C19, C29, C33, C35, C37~~ | ⛔ **anulada 31 ago** |
 | **EP17** | Evaluación y Observabilidad de IA | C04 (hecho), **C24 (hecho)**, C38, C39 · *(C25 amplía el arnés y el golden set desde EP14)* | 🔴 parcial |

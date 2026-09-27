@@ -21,11 +21,35 @@
 #      spaces, producing noise with no error anywhere.
 #   3. The database is unreachable.
 #   4. The embedding provider credential is not configured.
-#   5. The point-of-sale availability projection holds no assigned row for some
-#      point of sale (C41). Same shape as the first, one table along: every
-#      scoped retrieval answers 503, the API degrades correctly to its lexical
-#      path with a 200, and the environment looks healthy from outside. It had
-#      already reached this environment once, in C34.
+#   5. The AI service knows of no ACTIVE point of sale, or some active point of
+#      sale holds no assigned row in the projection (C41, corrected by C43).
+#      Same shape as the first, one table along: every scoped retrieval answers
+#      503, the API degrades correctly to its lexical path with a 200, and the
+#      environment looks healthy from outside. It had already reached this
+#      environment once, in C34.
+#
+#      **C43 made it say ACTIVE, and that word is the whole fix.** Worded as
+#      *any* point of sale, this condition obliged a false alarm: a shop closed
+#      on purpose keeps its rows with every assignment correctly retired — which
+#      is exactly what should happen to the assortment of a shop that stopped
+#      trading — and the check read that correctness as a fault. It failed the
+#      deployment of 2026-09-27 over `HT-ARTRUTX`, closed since 2025-09-30, with
+#      the other six conditions passing and the environment ready to be shown.
+#      The activity now reaches the AI side through `ai.pos_shop`, filled by its
+#      own feed, because the `jbg_ai` role is refused SELECT on
+#      `public."PointOfSales"` and this script's probe runs inside that container.
+#
+#      **And it fails when the service knows of NO shop, which is the half that
+#      is easy to leave out.** `alembic upgrade head` runs partway through
+#      `deploy.sh` — after the containers are up, before this script — so
+#      `ai.pos_shop` is empty for a window every redeployment passes through, and
+#      a count of shops-lacking-assortment returns zero over an empty table.
+#      Passing on emptiness is THE defect of this whole series: an empty index
+#      (C34), an empty projection (C41) and an empty corpus (C39a) each looked
+#      like success until they were made to fail, and a fourth instance
+#      introduced by the fix for the third would be worse than the fault it
+#      replaced. That is what the wait below and the `active_points_of_sale`
+#      check exist for.
 #   6. The knowledge corpus holds no fragment (C39a). The THIRD table of that
 #      same series. With `ai.knowledge_chunk` empty the piece-anchored argument
 #      is withheld for want of material to anchor it to, and the piece-anchored
@@ -70,10 +94,64 @@ docker exec -i "${AI_CONTAINER}" python - <<'PYTHON'
 import json
 import os
 import sys
+import time
 import urllib.request
 
-with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=10) as response:
-    body = json.load(response)
+# How long to wait for the start-up drains before judging the projection (C43).
+#
+# **This is not patience for its own sake; it is what stops the check judging the instant it
+# happened to probe rather than the environment.** Two things conspire. The health report is
+# cached for ten seconds, and the start-up drain may need more than one attempt because the
+# .NET side is not always serving its feed when `jbg-ai` comes up:
+#
+#     13:32:55  boot_drain attempt=1
+#     13:32:55  WARNING feed_not_configured error=POS feed is unavailable
+#     13:33:04  boot_drain attempt=2
+#     13:33:05  stage=pos_sync done pages=1 upserted=1
+#
+# On 2026-09-27 this script probed at 13:33:11 and printed an age of 414.629 s — a hundred and
+# fifteen times the ceiling — SIX SECONDS AFTER the checkpoint said otherwise. It failed
+# nothing, and it is the number somebody reads a month later to decide whether the environment
+# is sound. The ceiling below comfortably covers the boot retry schedule (0 s, 5 s, 15 s, 45 s)
+# plus a drain and the cache window.
+DRAIN_WAIT_SECONDS = 180
+DRAIN_POLL_SECONDS = 5
+
+
+def read_health():
+    with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=10) as response:
+        return json.load(response)
+
+
+def drains_have_run(payload):
+    """Whether the report reflects an environment whose start-up drains have completed.
+
+    Tolerant of an AI image older than C43 in exactly one direction: if the projection section
+    is absent, or does not carry `active_points_of_sale` at all, there is nothing to wait for
+    and we stop waiting. A figure that is PRESENT and zero is a different thing — that is a
+    service that has answered and told us it knows of no shop — and it is handled as a failure
+    below rather than waited out for ever.
+    """
+    projection = payload.get("projection")
+    if not isinstance(projection, dict):
+        return True
+    if "active_points_of_sale" not in projection:
+        return True  # version skew, not an empty environment
+    if projection.get("status") == "never_drained":
+        return False
+    return bool(projection.get("active_points_of_sale"))
+
+
+deadline = time.monotonic() + DRAIN_WAIT_SECONDS
+waited = 0.0
+body = read_health()
+while not drains_have_run(body) and time.monotonic() < deadline:
+    time.sleep(DRAIN_POLL_SECONDS)
+    waited += DRAIN_POLL_SECONDS
+    body = read_health()
+
+if waited:
+    print(f"[verify] waited {waited:.0f}s for the start-up drains to report")
 
 print(json.dumps(body, indent=2, sort_keys=True))
 
@@ -108,10 +186,15 @@ if body.get("provider") != "configured":
 #
 # Tolerant of an older AI image that does not report the section: absent is not a failure, it is
 # a version skew, and failing a deployment for it would be a false alarm about the wrong thing.
+#
+# C43 changed the SUBJECT of the last check from "any point of sale" to "any ACTIVE point of
+# sale", and added the `active_points_of_sale` check above it. See the header for both reasons.
 projection = body.get("projection")
 if isinstance(projection, dict):
     points_of_sale = projection.get("points_of_sale")
+    active_points_of_sale = projection.get("active_points_of_sale")
     without_scope = projection.get("shops_without_scope")
+    reports_activity = "active_points_of_sale" in projection
 
     if projection.get("status") == "never_drained":
         failures.append(
@@ -123,10 +206,28 @@ if isinstance(projection, dict):
             "the point-of-sale projection holds no rows at all; assisted search cannot be "
             "scoped to any shop"
         )
+    elif reports_activity and not isinstance(active_points_of_sale, int):
+        # Present but not a number: the section says it could not read the database. The
+        # database condition above has already failed, so this adds the reason rather than a
+        # second alarm about the same thing.
+        failures.append(
+            "the AI service could not read how many points of sale are active; the "
+            "projection section reports itself unavailable"
+        )
+    elif reports_activity and active_points_of_sale == 0:
+        # The empty-table case, and the reason this branch exists at all. `ai.pos_shop` is
+        # created partway through the deployment and filled by a drain moments later; zero
+        # here after the wait above means the drain never succeeded, and counting shops
+        # without assortment over an empty table would return zero and PASS.
+        failures.append(
+            "the AI service knows of no active point of sale; ai.pos_shop is empty, so the "
+            "count of shops without assortment is vacuous and proves nothing about this "
+            "environment"
+        )
     elif isinstance(without_scope, int) and without_scope > 0:
         failures.append(
-            f"{without_scope} point(s) of sale hold no assigned row in the projection; "
-            "assisted search answers 503 for each of them"
+            f"{without_scope} ACTIVE point(s) of sale hold no assigned row in the "
+            "projection; assisted search answers 503 for each of them"
         )
 
 # Sixth condition (C39a). Read from the DATABASE and not from `/health`, because the health
@@ -230,8 +331,18 @@ print(f"[verify] OK — {documents} documents indexed with {index.get('model')}"
 if isinstance(projection, dict):
     print(
         f"[verify] OK — projection drained {projection.get('age_seconds')}s ago, "
-        f"{projection.get('points_of_sale')} point(s) of sale scoped"
+        f"{projection.get('active_points_of_sale')} active point(s) of sale, all with "
+        f"an assortment ({projection.get('points_of_sale')} present in the projection, "
+        "closed shops included)"
     )
+    # Printed rather than failed. Failures recorded against another feed are not this
+    # deployment's problem, but they were unreachable to every reader until C43 published
+    # them, and 66 of them had been sitting in `ai.sync_failure` unnoticed since August.
+    by_feed = projection.get("failed_pages_by_feed")
+    if isinstance(by_feed, dict):
+        others = {feed: n for feed, n in by_feed.items() if feed != "pos-availability" and n}
+        if others:
+            print(f"[verify] NOTE: other feeds carry recorded failures: {others}")
 if isinstance(knowledge_chunks, int):
     print(f"[verify] OK — knowledge corpus holds {knowledge_chunks} fragment(s)")
 if agent_stop_reason in DEGRADED_STOP_REASONS:

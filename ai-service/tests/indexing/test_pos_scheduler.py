@@ -23,7 +23,9 @@ from jbg_ai.indexing.drain_lock import (
 )
 from jbg_ai.indexing.feed import PosFeedPage, parse_pos_item
 from jbg_ai.indexing.pos_orchestrator import PosSyncRequest, describe, sync_pos_availability
+from jbg_ai.indexing.pos_orchestrator import PosSyncResult
 from jbg_ai.indexing.pos_projection import POS_FEED
+from jbg_ai.indexing.pos_shop_drain import PosShopSyncResult
 from jbg_ai.indexing.sync_errors import IndexFeedConfigError
 from support.fake_pos_projection import FakePosProjectionRepo
 
@@ -374,3 +376,101 @@ def test_a_blank_export_of_either_setting_is_the_default() -> None:
     )
     assert resolved.jpv_pos_sync_scheduler_enabled is True
     assert resolved.jpv_pos_sync_interval_seconds == 600
+
+
+# ------------------------------------------------------------ the shop drain (C43)
+
+
+def test_a_pass_drains_the_shops_before_the_availability(monkeypatch) -> None:
+    """The order is a correctness rule, not a preference.
+
+    The health report's count of shops lacking an assortment crosses both tables. In this
+    order the only transient state is *shops known, assortment not yet written*, which the
+    count reports as shops lacking an assortment — true while it lasts and self-clearing.
+    Reversed, the transient state is *assortment written, no shop known*, in which the count
+    has nothing to count against and reports an incomplete environment as complete.
+    """
+    order: list[str] = []
+
+    async def _shops(**kwargs):
+        order.append("shops")
+        return PosShopSyncResult(written=12, active=11)
+
+    async def _availability(**kwargs):
+        order.append("availability")
+        return PosSyncResult(pages=1, upserted=1)
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _shops)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _availability)
+
+    run(scheduler.drain_pass(settings(), trace_id="t-order"))
+
+    assert order == ["shops", "availability"]
+
+
+def test_a_failing_shop_drain_does_not_stop_the_availability_drain(monkeypatch) -> None:
+    """They answer different questions, and neither is a precondition of the other.
+
+    The count is specified to report *unknown* rather than *zero* with no shop reading, so a
+    missing one degrades the count honestly instead of falsifying it — which is what makes it
+    safe to carry on rather than abandoning the pass.
+    """
+    reached = {"availability": False}
+
+    async def _boom(**kwargs):
+        raise RuntimeError("shop feed went away")
+
+    async def _availability(**kwargs):
+        reached["availability"] = True
+        return PosSyncResult(pages=1, upserted=1)
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _boom)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _availability)
+
+    result = run(scheduler.drain_pass(settings(), trace_id="t-shop-down"))
+
+    assert reached["availability"] is True
+    assert result is not None
+
+
+def test_a_shop_drain_that_raises_never_escapes_the_scheduler(monkeypatch) -> None:
+    """Same requirement as the availability drain: it runs in a task nobody awaits."""
+
+    async def _boom(**kwargs):
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _boom)
+    assert run(scheduler.drain_shops_once(settings(), trace_id="t-boom")) is None
+
+
+def test_an_unconfigured_shop_feed_is_reported_and_not_raised(monkeypatch) -> None:
+    async def _unconfigured(**kwargs):
+        raise IndexFeedConfigError("JPV_INDEX_FEED_BASE_URL")
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _unconfigured)
+    assert run(scheduler.drain_shops_once(settings(), trace_id="t-unconfigured")) is None
+
+
+def test_the_boot_drain_runs_a_whole_pass(monkeypatch) -> None:
+    """The start-up drain is the one that matters, so it must fill BOTH tables.
+
+    `ai.pos_shop` is created partway through a deployment and the verification probes minutes
+    later; if the boot drain filled only the projection, the shop table would stay empty and
+    the fifth condition would fail an environment that is merely young.
+    """
+    seen: list[str] = []
+
+    async def _shops(**kwargs):
+        seen.append("shops")
+        return PosShopSyncResult(written=12, active=11)
+
+    async def _availability(**kwargs):
+        seen.append("availability")
+        return PosSyncResult(pages=1, upserted=1)
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _shops)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _availability)
+
+    run(scheduler._boot_drain(settings()))
+
+    assert seen == ["shops", "availability"]

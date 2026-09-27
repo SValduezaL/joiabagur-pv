@@ -34,6 +34,7 @@ import logging
 from jbg_ai.config.settings import Settings
 from jbg_ai.indexing.pos_drain import run_pos_drain
 from jbg_ai.indexing.pos_orchestrator import PosSyncResult, new_trace_id
+from jbg_ai.indexing.pos_shop_drain import PosShopSyncResult, run_pos_shop_drain
 from jbg_ai.indexing.sync_errors import IndexFeedConfigError
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,67 @@ async def drain_once(settings: Settings, *, trace_id: str) -> PosSyncResult | No
     return result
 
 
+async def drain_shops_once(
+    settings: Settings, *, trace_id: str
+) -> PosShopSyncResult | None:
+    """One shop drain. Returns `None` when it could not run; never raises.
+
+    Never raising is the same requirement `drain_once` carries and for the same reason: this
+    runs inside a task nobody awaits, so an escaping exception would surface as an unretrieved
+    task exception at an arbitrary later moment, with the loop having silently stopped.
+    """
+    try:
+        result = await run_pos_shop_drain(settings=settings)
+    except IndexFeedConfigError as exc:
+        logger.warning(
+            "stage=pos_shop_scheduler trace_id=%s feed_not_configured error=%s",
+            trace_id,
+            exc,
+            extra={"trace_id": trace_id},
+        )
+        return None
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - see the docstring
+        logger.warning(
+            "stage=pos_shop_scheduler trace_id=%s drain_failed error=%s",
+            trace_id,
+            exc,
+            extra={"trace_id": trace_id},
+        )
+        return None
+
+    logger.info(
+        "stage=pos_shop_scheduler trace_id=%s drained written=%s removed=%s active=%s",
+        trace_id,
+        result.written,
+        result.removed,
+        result.active,
+        extra={"trace_id": trace_id},
+    )
+    return result
+
+
+async def drain_pass(settings: Settings, *, trace_id: str) -> PosSyncResult | None:
+    """One pass of both drains: **shops first, then availability**.
+
+    **The order is a correctness rule and not a preference.** The health report's count of
+    points of sale lacking an assortment crosses both tables. Drained in this order, the only
+    transient state is *shops known, assortment not yet written*, which the count reports as
+    shops lacking an assortment — a true statement for as long as it lasts, and one that
+    clears itself on the next statement. Reversed, the transient state is *assortment written,
+    no shop known*, in which the count has nothing to count against and reports an environment
+    as complete while it is not. One order produces a truthful alarm; the other a silent pass.
+
+    A failure of the shop drain does not skip the availability drain. They answer different
+    questions and neither is a precondition of the other's usefulness — and the count is
+    specified to report *unknown* rather than *zero* when the shop table is empty, so a missing
+    shop reading degrades the count honestly instead of falsifying it.
+    """
+    await drain_shops_once(settings, trace_id=trace_id)
+    return await drain_once(settings, trace_id=trace_id)
+
+
 async def _boot_drain(settings: Settings) -> None:
     """Drain once at start-up, retrying a bounded number of times."""
     for attempt, delay in enumerate((0.0,) + BOOT_RETRY_DELAYS_SECONDS):
@@ -130,7 +192,7 @@ async def _boot_drain(settings: Settings) -> None:
             attempt + 1,
             extra={"trace_id": trace},
         )
-        if await drain_once(settings, trace_id=trace) is not None:
+        if await drain_pass(settings, trace_id=trace) is not None:
             return
 
     logger.warning(
@@ -158,4 +220,4 @@ async def run_scheduler(settings: Settings) -> None:
 
     while True:
         await asyncio.sleep(interval)
-        await drain_once(settings, trace_id=new_trace_id())
+        await drain_pass(settings, trace_id=new_trace_id())

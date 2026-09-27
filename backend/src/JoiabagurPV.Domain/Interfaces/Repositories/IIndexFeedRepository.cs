@@ -33,6 +33,16 @@ public interface IIndexFeedRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Every point of sale with its activity, in one reading. No keyset and no page (C43).
+    /// </summary>
+    /// <remarks>
+    /// Reads <c>PointOfSales</c>, which the POS availability query never touches — it
+    /// projects from <c>Inventories</c> — and that absence is precisely why the AI side had
+    /// no way to know whether a shop was still trading.
+    /// </remarks>
+    Task<IReadOnlyList<PosShopRow>> GetPosShopsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Sales aggregates for the pairs on the current page. Sums <c>Sale.Quantity</c> only —
     /// no join to <c>Return</c>.
     /// </summary>
@@ -102,6 +112,9 @@ public sealed class PosFeedRow
 
 /// <summary>An assigned active <c>(pointOfSaleId, productId)</c> pair.</summary>
 public readonly record struct PosAssignmentPair(Guid PointOfSaleId, Guid ProductId);
+
+/// <summary>One point of sale as the shop reading projects it: identity and activity only.</summary>
+public readonly record struct PosShopRow(Guid PointOfSaleId, bool IsActive);
 
 /// <summary>Windowed sale sums and last-sale timestamp for one assignment.</summary>
 public sealed class PosSalesAggregate

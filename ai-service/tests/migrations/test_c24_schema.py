@@ -320,8 +320,15 @@ def test_most_recent_first_is_the_order_the_route_serves(migrated: sa.Engine) ->
 def test_upgrade_downgrade_is_reversible_and_leaves_no_trace(
     alembic_config: Config, database_url: str
 ) -> None:
-    """The revision is additive, so reverting it must return the schema exactly as it was."""
-    command.upgrade(alembic_config, "head")
+    """The revision is additive, so reverting it must return the schema exactly as it was.
+
+    **Pinned to C24 rather than to `head`, and that is the point of the test.** Reading `head`
+    made this assert something it never meant: that no revision after C24 adds a table, so the
+    first one that did — C43's `ai.pos_shop` — failed here with a diff about a table this file
+    has no opinion about. What C24 has to guarantee is that *its own* three tables come and go
+    without trace, which is exactly what upgrading to C24 and reverting to C22 measures.
+    """
+    command.upgrade(alembic_config, C24)
     engine = sa.create_engine(database_url)
     try:
 
