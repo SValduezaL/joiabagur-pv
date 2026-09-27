@@ -181,24 +181,66 @@ async def drain_pass(settings: Settings, *, trace_id: str) -> PosSyncResult | No
 
 
 async def _boot_drain(settings: Settings) -> None:
-    """Drain once at start-up, retrying a bounded number of times."""
+    """Drain at start-up, retrying **each drain** until it has run or the attempts run out.
+
+    **The retry is per drain, and that is the whole point of this function's shape.** C43 first
+    shipped it keyed on the pass as a whole — `if await drain_pass(...) is not None: return` —
+    where `drain_pass` returns the *availability* result. One drain succeeding therefore ended
+    the retry loop for both, and the deployment of 2026-09-27 hit exactly that:
+
+    ```text
+    19:07:07,442  boot_drain attempt=1
+    19:07:07,644  WARNING pos_shop_scheduler feed_not_configured  (the API was not serving yet)
+    19:07:08,857  pos_sync_scheduler drained pages=1 upserted=1   (1.2 s later it was)
+    ```
+
+    The shop drain missed by **1.2 seconds**, the availability drain succeeded, the loop
+    returned, and `ai.pos_shop` stayed empty until the 600 s tick — long past the window
+    post-deployment verification waits for. The verification failed the deployment, correctly.
+
+    It is the same defect family this whole capability exists to close, one level up: *part of
+    the work succeeded* was read as *the work succeeded*. Tracking the two separately is what
+    makes "the environment is up" imply "both tables are current", which is the invariant the
+    start-up drain is for.
+
+    Only the outstanding drain is retried, so a drain that already ran is not repeated.
+    """
+    shops_drained = False
+    availability_drained = False
+
     for attempt, delay in enumerate((0.0,) + BOOT_RETRY_DELAYS_SECONDS):
         if delay:
             await asyncio.sleep(delay)
         trace = new_trace_id()
         logger.info(
-            "stage=pos_sync_scheduler trace_id=%s boot_drain attempt=%s",
+            "stage=pos_sync_scheduler trace_id=%s boot_drain attempt=%s "
+            "shops_pending=%s availability_pending=%s",
             trace,
             attempt + 1,
+            not shops_drained,
+            not availability_drained,
             extra={"trace_id": trace},
         )
-        if await drain_pass(settings, trace_id=trace) is not None:
+
+        # Shops first, for the ordering reason `drain_pass` records.
+        if not shops_drained:
+            shops_drained = (
+                await drain_shops_once(settings, trace_id=trace) is not None
+            )
+        if not availability_drained:
+            availability_drained = (
+                await drain_once(settings, trace_id=trace) is not None
+            )
+
+        if shops_drained and availability_drained:
             return
 
     logger.warning(
         "stage=pos_sync_scheduler boot_drain_exhausted attempts=%s "
-        "handing over to the interval",
+        "shops_drained=%s availability_drained=%s handing over to the interval",
         len(BOOT_RETRY_DELAYS_SECONDS) + 1,
+        shops_drained,
+        availability_drained,
     )
 
 
