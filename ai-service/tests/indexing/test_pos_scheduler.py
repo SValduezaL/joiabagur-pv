@@ -295,7 +295,13 @@ def test_an_unconfigured_feed_is_reported_and_not_raised(monkeypatch) -> None:
 
 
 def test_the_boot_drain_retries_until_the_feed_answers(monkeypatch) -> None:
-    """The local-development case: jbg-ai is up and the .NET API is not, yet."""
+    """The local-development case: jbg-ai is up and the .NET API is not, yet.
+
+    The shop drain is stubbed as succeeding so this isolates the availability retry, which is
+    what the test is about. Left unpatched it would reach the real drain, fail for want of a
+    feed, and keep the loop going for its own reasons — making this assert something other
+    than its name.
+    """
     attempts = {"n": 0}
 
     async def _flaky(**kwargs):
@@ -306,12 +312,16 @@ def test_the_boot_drain_retries_until_the_feed_answers(monkeypatch) -> None:
 
         return PosSyncResult(pages=1, upserted=7)
 
+    async def _shops(**kwargs):
+        return PosShopSyncResult(written=12, active=11)
+
     slept: list[float] = []
 
     async def _sleep(delay: float) -> None:
         slept.append(delay)
 
     monkeypatch.setattr(scheduler, "run_pos_drain", _flaky)
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _shops)
     monkeypatch.setattr(scheduler.asyncio, "sleep", _sleep)
 
     run(scheduler._boot_drain(settings()))
@@ -474,3 +484,93 @@ def test_the_boot_drain_runs_a_whole_pass(monkeypatch) -> None:
     run(scheduler._boot_drain(settings()))
 
     assert seen == ["shops", "availability"]
+
+
+def test_the_boot_drain_retries_the_shop_drain_when_only_it_failed(monkeypatch) -> None:
+    """The defect that failed the deployment of 2026-09-27, reproduced.
+
+    The shop drain missed by 1.2 s because the .NET API was not serving its feed yet; the
+    availability drain, a second later, succeeded. Keyed on the pass as a whole, the loop
+    returned after attempt 1 and `ai.pos_shop` stayed empty until the 600 s tick — long past
+    the window post-deployment verification waits for.
+
+    One drain succeeding must not end the retry for the other.
+    """
+    shop_attempts = {"n": 0}
+    availability_attempts = {"n": 0}
+
+    async def _flaky_shops(**kwargs):
+        shop_attempts["n"] += 1
+        if shop_attempts["n"] == 1:
+            raise IndexFeedConfigError("POS shops feed is unavailable")
+        return PosShopSyncResult(written=12, active=11)
+
+    async def _availability(**kwargs):
+        availability_attempts["n"] += 1
+        return PosSyncResult(pages=1, upserted=1)
+
+    async def _sleep(_seconds):
+        return None
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _flaky_shops)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _availability)
+    monkeypatch.setattr(scheduler.asyncio, "sleep", _sleep)
+
+    run(scheduler._boot_drain(settings()))
+
+    assert shop_attempts["n"] == 2, "the shop drain must be retried until it runs"
+    assert availability_attempts["n"] == 1, (
+        "and the drain that already succeeded must not be repeated"
+    )
+
+
+def test_the_boot_drain_retries_the_availability_drain_when_only_it_failed(
+    monkeypatch,
+) -> None:
+    """The mirror case, so the fix is not accidentally one-sided."""
+    shop_attempts = {"n": 0}
+    availability_attempts = {"n": 0}
+
+    async def _shops(**kwargs):
+        shop_attempts["n"] += 1
+        return PosShopSyncResult(written=12, active=11)
+
+    async def _flaky_availability(**kwargs):
+        availability_attempts["n"] += 1
+        if availability_attempts["n"] == 1:
+            raise IndexFeedConfigError("POS feed is unavailable")
+        return PosSyncResult(pages=1, upserted=1)
+
+    async def _sleep(_seconds):
+        return None
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _shops)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _flaky_availability)
+    monkeypatch.setattr(scheduler.asyncio, "sleep", _sleep)
+
+    run(scheduler._boot_drain(settings()))
+
+    assert availability_attempts["n"] == 2
+    assert shop_attempts["n"] == 1
+
+
+def test_the_boot_drain_gives_up_with_both_outcomes_recorded(monkeypatch, caplog) -> None:
+    """When the feed never answers, the log must say WHICH drains never ran."""
+
+    async def _down(**kwargs):
+        raise IndexFeedConfigError("feed is unavailable")
+
+    async def _sleep(_seconds):
+        return None
+
+    monkeypatch.setattr(scheduler, "run_pos_shop_drain", _down)
+    monkeypatch.setattr(scheduler, "run_pos_drain", _down)
+    monkeypatch.setattr(scheduler.asyncio, "sleep", _sleep)
+
+    with caplog.at_level("WARNING"):
+        run(scheduler._boot_drain(settings()))
+
+    exhausted = [r for r in caplog.records if "boot_drain_exhausted" in r.getMessage()]
+    assert exhausted, "giving up must be logged"
+    assert "shops_drained=False" in exhausted[-1].getMessage()
+    assert "availability_drained=False" in exhausted[-1].getMessage()
