@@ -639,6 +639,35 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 >
 > Recuento: **44 archivadas** —entra C43—, **1 retirada** (C38) y **1 pendiente**: **C39b**.
 >
+> **Actualizado el 2026-09-27 — entra C39b y la cola queda vacía; el Proyecto Final está cerrado.** **C39b**
+> (`finalize-pf-readme-and-evidence`) es el último change, y **no toca una línea de código de producto**:
+> entrega el README del máster en sus secciones editables, el **informe de cierre**
+> ([c39b-implementation-measurements.md](Proyecto%20Final%20AIEng/informes/c39b-implementation-measurements.md))
+> y el **guion del vídeo** ([c39b-video-script.md](Proyecto%20Final%20AIEng/informes/c39b-video-script.md)).
+> Entra en **EP17**, que con él pasa a **completa**.
+>
+> **Lo primero que arregla es una cifra que nadie podía comprobar**, y es la razón por la que la nota de
+> recuento de esta misma página tenía que decir «sumándole `C40_FIX`» para cuadrar: **ese change no tenía
+> fila en la tabla maestra del plan** y aparecía sólo en prosa. C39b **le añade la fila** y publica el
+> criterio de recuento con sus **dos unidades declaradas** —directorios de archivo y fichas del plan—,
+> medido contra el disco. La distancia entre las dos queda con **un solo nombre**:
+> `fix-boot-drain-retries-both-drains`, el seguimiento de C43, un directorio sin ficha.
+>
+> **Y cuenta seis changes nacidos de comprobaciones manuales y de ninguna ola**, no cuatro: entran **C43** y
+> el **seguimiento del drenaje de arranque**. El episodio de C43 es el mejor ejemplo del proyecto de una
+> condición de verificación ganándose el sueldo — arregló un falso positivo, **introdujo un fallo verdadero**
+> y lo cazó el despliegue siguiente **porque se había obligado a fallar con la tabla vacía** en vez de pasar
+> en vacío.
+>
+> **Cierra las tres tareas que sobrevivían a C38** sin gastar cuota del proveedor: el éxito de tarea del
+> agente **definido antes de mirar cifras** y publicado con `--rescore` como **17 de 20 con los tres fallos
+> nombrados** —y nunca como tasa porcentual, porque el ruido entre pasadas se reprodujo en **2 de 20**—, y
+> el **validador .NET** como limitación declarada con **cifra esperada cero**. **Declara y no arregla** la
+> alerta `CRITICAL` de reconocimiento de imagen —funcionalidad del MVP, 0 fotos de 1.200 productos—, el
+> pivote del agente inalcanzable por nombre, y la **deriva de rama**, que estrena entrada diferida y hoy
+> mide cero. **Ninguna sección congelada del README se edita**: lo desfasado va al anexo A del informe con
+> su texto propuesto, incluido un salto de nDCG del `### 1.2` que **mezcla dos conjuntos dorados**.
+>
 > **Ocho hallazgos y dieciséis decisiones, y la segunda pasada refuta a la primera con cifras del propio repositorio.** El v1 encontró una **regresión latente que C40 introdujo sin tocar el agente** —la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`— y concluyó que sin arreglarlo C42 entregaría *«un panel de agente sin prosa»*. **El v2 lo desmiente**: la frase que ordena marcadores es **idéntica palabra por palabra** en `v3.md:47` y `v4.md:59`, así que **C40 ya midió este caso** sobre 90 consultas libres con payload sin anclar — **3 de 90 generaciones con marcador y 0 retiradas tras la reparación única**, que además *«no es una por comprobación»* sino una sola con la lista entera de violaciones. La referencia que el v1 usó —C30b, `{{price}}` en 147 de 213— es de los modos **anclados**, y la cabecera de `assist/v5.md` ya había escrito por qué no se traslada: *«anclado hay una pieza y se la vende; en libre hay hasta quince agrupadas y lo que se pide es comparar»*. **El arreglo entra igual pero no gobierna la línea de corte: la gobierna el consumidor .NET, que no existe** —`IAiGatewayClient` tiene siete métodos y ninguno es el del agente, que es el 100 % y no el 3 %—. Y **la causa que de verdad retira el argumentario del agente ya estaba medida y no es el marcador**: `dangling_citation`, 85 en el primer intento y 72 supervivientes, con el **92,2 % de las respuestas trayendo cero citas**.
 >
 > **Cuatro decisiones nuevas, cerradas antes de los artefactos.** **`assist/v6` sólo para el agente, conservando `v5` intacto** —`v5` no contiene la tarea del agente y su cabecera declara que cada versión tiene cifras medidas contra ella, así que editarlo haría mentir su fila justo cuando C38 va a medirlo; el riesgo de la opción, la deriva entre los dos *Sistema*, se cierra con un test de identidad—. **`fallo_proveedor` como métrica y no como entrada del circuito**, cerrando **por refutación** la entrada que `DEFERRED_TASKS.md` arrastraba desde C32b: con ~13.000 tokens por petición contra un techo de 25.000 TPM el sistema admite **una petición por minuto**, y un cortafuegos con `MinimumThroughput` no se abre nunca a ese ritmo porque la ventana de muestreo expira antes de acumular la muestra — quien avisa a la pantalla es la sonda, y el *pipeline* de `ai-assist` ya declaraba que un 200 degradado *«is not a failure»*. **El turno del asistente lleva el argumentario íntegro**, con línea sintética cuando se retiró, y eso fija la profundidad real de la conversación en **6 intercambios y no 12**, porque `_within_the_total_cap` suma **todos** los turnos y el argumentario mide p50 386 caracteres: un contador que sólo contase lo que el operario escribió llegaría a «turno 9/12» con el 422 ya disparado. **Y una sola pasada de medición**, con la línea base prestada de C40 y declarada.
@@ -942,9 +971,37 @@ Se miden por *changes* de OpenSpec, no por número de historias: la serie `HU-AI
 | **EP14** | Búsqueda Semántica Híbrida | C12, C13, C14, C15, C16, C20, C21, **C22**, **C25** (hechos), **C41 (archivado 26 sep)** *(no previsto)*, **C43 (27 sep)** *(no previsto: corrige el recuento de C41, que marcaba en rojo un despliegue sano)* | 🟠 **parcial — reabierta** |
 | **EP15** | Venta Asistida, Sustitutos y Agentes | **C26 (archivado)**, ~~C27~~ *(cortado 12 sep)*, **C30a (archivado 13 sep)**, **C30b (archivado 14 sep)** *(partidos el 13 sep)*, **C31 (archivado 16 sep)**, **C32a (archivado 20 sep)**, **C32b (archivado 21 sep)** *(partidos el 20 sep)*, **C34 (archivado 22 sep)**, **C36 (archivado 24 sep)**, **C40 (archivado 25 sep)** *(no previsto)*, **C40_FIX (archivado 26 sep)** *(fuera de la numeración C: corrige a C40)*, **C42** *(archivado el 27 sep, 75/75 — no previsto; da superficie al único pilar del PF que no la tenía)* | 🟠 **parcial — reabierta** |
 | **EP16** | ~~Inventario Asistido y Señales de Demanda~~ | ~~C19, C29, C33, C35, C37~~ | ⛔ **anulada 31 ago** |
-| **EP17** | Evaluación y Observabilidad de IA | C04 (hecho), **C24 (hecho)**, C38, C39 · *(C25 amplía el arnés y el golden set desde EP14)* | 🔴 parcial |
-| **TOTAL PF** | | **48 fichas · 42 vivas** (5 anuladas, 1 cortada) — **40 archivadas, 3 pendientes** | |
+| **EP17** | Evaluación y Observabilidad de IA | C04 (hecho), **C24 (hecho)**, ~~C38~~ *(retirado 27 sep)*, **C39a**, **C39a-bis** y **C39b** *(partidos el 27 sep; los tres archivados)* · *(C25 amplía el arnés y el golden set desde EP14)* | 🟢 **completa** |
+| **TOTAL PF** | | **52 fichas · 45 vivas** (5 anuladas, 1 cortada, 1 retirada) — **45 archivadas, 0 pendientes** | |
 
+> **Cerrado el 2026-09-27, al archivar C39b — y desde aquí cada cifra dice su unidad, que es lo que
+> faltaba.** **La cola del Proyecto Final queda vacía.** Las notas de abajo se conservan como registro
+> fechado y **no se reescriben**; lo que esta entrada añade es el **criterio**, porque las cifras que
+> circulaban —«40», «43» y «44 archivadas» en este documento, «74 · 32 · 41» en la ficha del plan— no se
+> contradecían por descuido: **contaban unidades distintas sin decir cuál**.
+>
+> | Unidad | Cifra | Cómo se comprueba |
+> |---|---:|---|
+> | **Fichas** del plan del Proyecto Final | **52 · 45 vivas** (5 anuladas, 1 cortada, 1 retirada) — **45 archivadas, 0 pendientes** | las 45 filas de la tabla maestra del §2 del plan, más las 7 conservadas como registro |
+> | **Directorios** en `openspec/changes/archive/`, total | **79** | `ls openspec/changes/archive/ \| wc -l` |
+> | …del MVP | **33** | los 32 con fecha `< 2026-08-03` **más** `barcode-qr-scanning`, del MVP **por contenido** |
+> | …del **Proyecto Final** | **46** | los 47 con fecha `>= 2026-08-03` **menos** ese |
+>
+> **Las dos unidades no coinciden ni deben coincidir**, y la distancia tiene **un solo nombre**:
+> `fix-boot-drain-retries-both-drains`, el seguimiento de C43, que es un directorio de archivo **sin ficha
+> propia**. Éste es el documento que cuenta **fichas**; el plan publica las dos.
+>
+> **De dónde salen las 52 y por qué no son las 48 de la fila anterior**, dicho para que la aritmética no
+> haya que reconstruirla: **48 + 2** por partirse C39 en C39a, C39a-bis y C39b, **+1** por C43, y **+1**
+> por `C40_FIX`, que **no tenía fila en la tabla maestra** y aparecía sólo en prosa — el defecto que
+> obligaba a que todo recuento hecho contra esa tabla se quedara corto en uno y se corrigiera después
+> «sumándole `C40_FIX`», exactamente como hace la nota de más abajo. **C39b le añadió su fila.** Y las
+> vivas: **42 + 2 + 1 = 45**, que es el número exacto de filas de la tabla — C38 sale de las vivas al
+> retirarse y pasa a contarse con las anuladas y la cortada.
+>
+> Criterio completo y su derivación en el
+> [informe de cierre](Proyecto%20Final%20AIEng/informes/c39b-implementation-measurements.md), §2.
+>
 > **Actualizado el 2026-09-27, al archivar C42 — y el recuento sigue cuadrando por dentro.**
 > **41 archivadas y 2 pendientes** —C38 y C39, en ese orden—, y **48 fichas · 42 vivas**: **C42 pasa de
 > pendiente a archivada** (`add-frontend-agent-panel`, EP15, no previsto en ninguna ola, **75/75 tareas**).
