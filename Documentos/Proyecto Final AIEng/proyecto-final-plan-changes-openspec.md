@@ -14,6 +14,87 @@
 
 Este documento se escribió antes de implementar. Cuando una sesión de diseño de un change concreto altera lo que su ficha decía, el cambio se registra aquí con fecha y motivo, y la ficha afectada se corrige en el sitio.
 
+### 2026-09-27 — C39b cierra el Proyecto Final, y lo primero que arregla es una cifra que nadie podía comprobar
+
+**El último change de la cola, y no toca una línea de código de producto.** Informe en
+[c39b-implementation-measurements.md](informes/c39b-implementation-measurements.md) y guion del vídeo en
+[c39b-video-script.md](informes/c39b-video-script.md).
+
+#### La frontera contable tenía cuatro cifras en circulación porque nadie había escrito el criterio
+
+«40 archivadas», «43 archivadas», «44 archivadas» y, en la propia ficha de C39b, «74 archivados · 32 del
+MVP · 41 del PF». **Ninguna era la de hoy, y no se contradecían por descuido: contaban unidades distintas
+sin decir cuál.** Medido contra el disco: **78 directorios**, **32** anteriores al 2026-08-03 y **46**
+posteriores, con **75 slugs distintos**. El **32 coincide exactamente** con el que la ficha atribuía al
+MVP meses antes, así que la frontera por fecha estaba bien; lo que faltaba era el criterio.
+
+| | |
+|---|---|
+| Unidad canónica | **un directorio de `openspec/changes/archive/`** — lo único reproducible en un comando y sin leer este plan |
+| La frontera | la fecha `2026-08-03`, **con una excepción nombrada**: `barcode-qr-scanning`, del MVP por contenido |
+| Segunda unidad | **la ficha de este plan**, la que usa `epicas.md`. No coincide **ni debe coincidir** |
+| Reparto | **33 del MVP · 45 del Proyecto Final**; al archivar C39b, **46** |
+
+**Una excepción nombrada es auditable y una regla de fecha a secas no lo es**: un lector que aplicase la
+fecha sin más obtendría 46 y concluiría que el documento se equivoca.
+
+#### Y el cruce destapó un defecto de la tabla maestra de este plan, que es la mitad del enredo
+
+Cruzados los 46 directorios posteriores contra las filas con slug del §2, aparecieron **tres sin fila**.
+Uno es la excepción del MVP y otro es `fix-boot-drain-retries-both-drains`, el seguimiento de C43, que no
+tiene ficha propia. **El tercero era `C40_FIX`, que simplemente no estaba en la tabla**: aparecía una sola
+vez en el plan, en prosa. Eso obligaba a que cualquier recuento hecho contra la tabla se quedara corto en
+uno y se corrigiera después «sumándole `C40_FIX`» — que es literalmente lo que la nota de recuento de
+`epicas.md` tuvo que escribir para cuadrar. **Su fila se añade aquí**, y con ella la distancia entre las
+dos unidades pasa a tener **un solo nombre** en vez de dos, uno de los cuales era un error.
+
+#### Los changes nacidos de una comprobación manual son seis, y ninguno lo vio ningún test
+
+Eran cuatro cuando se escribió la ficha. Entran **C43** y el **seguimiento del drenaje de arranque**, y con
+ellos el mejor ejemplo del proyecto de una condición de verificación ganándose el sueldo: **C43 arregló un
+falso positivo e introdujo un fallo verdadero**, que el despliegue `36343020047` cazó **porque C43 se había
+obligado a fallar con la tabla vacía en vez de pasar en vacío**. Cuatro horas entre introducir el defecto y
+que la comprobación escrita para otra cosa lo encontrara.
+
+#### La taxonomía se publica bajo una sola procedencia, y eso destapa un error en una sección congelada
+
+Once filas, las de recuperación todas bajo el golden set `1:198c4af44506` de C25, **porque la regla de
+`retrieval-evaluation` es que dos corridas con procedencia distinta se reportan como no comparables en vez
+de compararse**. Al aplicarla aparece que el `### 1.2` del README dice que el acierto *«sube de 0,603 a
+0,740»* **mezclando dos conjuntos dorados**: el 0,603 es de C24 y bajo el conjunto de C25 esa misma
+configuración mide **0,673**. **Es una sección congelada, así que se reporta con su texto propuesto y no se
+edita** — anexo A del informe, junto con el «(en desarrollo)» del mismo párrafo y la autoría de la ficha
+`## 0`, que no es la del historial de git.
+
+#### Las tres tareas supervivientes de C38, cerradas sin gastar cuota
+
+**El éxito de tarea se define antes de mirar cifras** —expectativa de herramientas cumplida y sin
+discrepancia declarada— y se publica con `agent_sweep --rescore`, que no llama al proveedor: **17 de 20,
+con `C14` y `C17` nombrados y `C19` contado aparte**. **No se publica una tasa porcentual**, y el motivo es
+medido: puntuando las pasadas de C32b y C42 contra el fichero de escenarios de hoy, el veredicto coincide
+en 17 de 20 y **los vuelcos reales son 2 de 20**, así que un «85 %» sería una precisión fingida. El
+**validador .NET** pasa a limitación declarada con **cifra esperada cero**, porque es un espejo de la
+puerta numérica que Python ya aplica al mismo texto.
+
+#### Tres cosas que este change declara y no arregla, y una que no verifica
+
+Quedan declaradas con su vía de cierre la alerta `CRITICAL` de reconocimiento de imagen —**vía 1**: el
+guion la explica antes del tramo que la muestra—, el **pivote inalcanzable por nombre**, y la **deriva de
+rama**, que estrena entrada en `DEFERRED_TASKS.md` con los dos datos que la cerrarían y que **hoy mide
+cero**: `IMAGE_TAG` y `git rev-parse origin/demo` coinciden.
+
+**Y lo que no se verifica se dice, no se firma.** El **dato** de la tarjeta de administración sí:
+`shops_without_scope: 0` leído en vivo desde dentro del anfitrión, sin credencial de usuario. **El
+renderizado, no**: una sesión no tiene navegador, y son dos afirmaciones distintas. Tampoco el vídeo, ni
+el `docker compose up` en máquina limpia. Anexo B del informe, nombre a nombre.
+
+#### Y un efecto de ruta que conviene saber antes de mergear
+
+El artefacto de `--rescore` vive bajo `ai-service/evals/results/`, que **no** está en la lista negra del
+flujo de despliegue de la demo —sí lo están `openspec/**`, `Documentos/**` y `**/README.md`—, así que
+**mergear este change a `demo` dispara un despliegue**. Tres minutos, ninguna imagen con contenido nuevo,
+y es el fallo hacia el lado seguro que ese filtro declara buscar.
+
 ### 2026-09-27 — C39a-bis: el entorno está sano, el despliegue figura en rojo, y las cuentas del recorrido no existían
 
 Aplicado el mismo día que C39a, sobre el entorno que su merge a `demo` desplegó. **Ninguna línea de
@@ -1227,8 +1308,9 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 | ~~**C38**~~ | ~~`add-generation-and-agent-evals`~~ | ~~Python + .NET~~ | C24, **C30b**, **C32b**, C34, **C42** | ⛔ | **RETIRADO ENTERO el 2026-09-27** (§0 · *C38 se retira entero*), un día después de perder RAGAS. Lo deciden dos mediciones sobre artefactos committed: **17 de 20** escenarios cumplen su expectativa en la pasada de C42 con `v6`, y el **ruido entre pasadas es 2 de 20** —el tercer desacuerdo es una corrección documentada del escenario C05—. Los datos de la tabla del agente **ya existen y están corridos dos veces contra el proveedor**; el validador .NET resultó ser **un espejo** de la regla que Python ya aplica al mismo texto, con cifra esperada cero; y los adversarios eran la única pieza que arrancaba de verdad en cero. Sobreviven **tres tareas dentro de C39**. Se pasa por encima del §6, que protegía «el validador de C38», y queda escrito. Lo que sigue es el registro previo · ~~**Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero**~~ (§0 · *C38 se reduce y RAGAS se retira*). Lo que queda: **validador determinista consolidado + su equivalente .NET, escenarios de venta puntuados y casos adversarios**. Se dispara el corte que el propio change llevaba **pre-escrito** —*«orden obligatorio si hay que partirlo: validador → escenarios de venta → adversarios → RAGAS; RAGAS es lo primero que se cae»*—, y se dispara por valor marginal y no por plazo: *«evals reales»* ya está demostrado por C24, C25, C28, C30b, C31, C32b y C40, mientras que RAGAS arrastra dependencia pesada, juez LLM, cuota y el MITM de esta máquina. La *alucinación con coartada* **pasa a limitación declarada con su vía de cierre**, que es lo que el §16 premia · **gana a C42 de prerrequisito**: sube la tarea del agente a `assist/v5`, así que unas cifras de generación del agente tomadas antes describirían un prompt sustituido · *sin escenarios de inventario* · **la excepción de persistencia del arnés la declara C30b** · **de C31 hereda el conjunto de enrutado ya cableado** (119 casos, seis clases, carga que falla si los recuentos no cuadran) y **una cifra que contradice lo esperado**: la puerta numérica de la consulta libre rechaza **0 por cifras** con una lista blanca de ~13 numerales, así que el riesgo que quedaba abierto ahí **no era el numérico** sino `dangling_citation`. Los casos adversarios y de inyección sistemáticos siguen siendo suyos · **y de C32b hereda cinco cosas escritas**: (1) el **golden set está intacto y comprobado** — dos tests cruzan sus 72 consultas contra los dos conjuntos del agente en las dos direcciones, así que puede arbitrar la ablación sin reservas; (2) `evals/agent/calibration.yaml` está declarado **`calibration-only`** y contra él se iteraron DOS prompts, así que C38 escribe los suyos aparte y comprueba el no solape, que es la razón de que la etiqueta exista; (3) la ablación ya tiene una de sus dos filas medida — **×3,0 el agente contra el pipeline, 0,0274 frente a ~0,0092 USD/petición, cada etapa tarifada con su propio modelo** *(corregido el 21 sep: la primera cifra, ×7,6, tarifaba el clasificador con un coste sin fuente)* — y la fila del brazo barato **descartada por comportamiento y no por precio**; (4) el hallazgo abierto que C38 tiene que medir sobre el golden set: **se retira el 13,1 % de los argumentarios del agente en `gpt-4o` —9,5 puntos por `dangling_citation`— contra el 2,2 % de la ruta determinista**, seis veces más, con `assist/v4` ya mejorado una vez y sin cerrar; y (5) **dos cosas que la verificación independiente le deja por medir**: si el argumento menciona disponibilidad —nada lo impide, y el arnés ya lo cuenta por fila (`pitch_availability_terms`)— y la calidad del argumento tras un pivote, cuyo *payload* cambió (la pieza abandonada ya no llega como coincidencia) sin que la pasada lo midiera; `agent_sweep --rescore` recalcula cualquier artefacto sin proveedor. Y un aviso operativo: la cuota de **tokens por minuto de la organización** fija el reloj de cualquier pasada — 204 peticiones costaron 3,4 h a 25.000 TPM |
 | **C39a** | `redeploy-and-audit-demo-environment` | Deploy + Python + .NET | todos los vivos | ✅ **archivado 2026-09-27** | **nace el 2026-09-27 al partir C39** (§0). Redespliegue de la demo en AWS **verificado y accesible desde internet**, con la **auditoría completa de `compose.demo.yaml` contra los ajustes que declaran los tres servicios**. Cuatro huecos ya medidos en la exploración: `AiAgentAssist__EnabledByDefault` **ausente** y `bool` sin inicializador, o sea el panel del agente de C42 **no se sirve**; `JPV_AGENT_LLM_API_KEY` y `JPV_ROUTER_LLM_API_KEY` ausentes; y el **corpus de conocimiento sigue sin viajar en la imagen** —tarea diferida de C34, sorteada a mano—, con lo que M2 retira el argumentario y M3 responde `knowledge_not_covered`. **Va antes de C39b** y el motivo no es de tamaño: no se documenta un recorrido que no se ha recorrido |
 | **C39a-bis** | `verify-demo-redeployment` | Docs | **C39a desplegado** | ✅ **archivado 2026-09-27** | **nace el 2026-09-27, durante el apply de C39a**, y por una razón de orden: la verificación exigía un entorno que sólo existe **al mergear C39a a `demo`**. Recorre el entorno resultante —siete condiciones, tres credenciales propias, la predicción de la proyección, y el recorrido del evaluador con los cuatro usuarios sobre las cuatro superficies de IA— y **toca sólo ficheros del `paths-ignore` de `deploy-demo.yml`**, así que mergearlo no dispara despliegue. Lleva **una adición a `demo-deployment`**: el entorno debe declarar sus cuentas de demostración y **qué ejercita cada una**, porque las tres tiendas tienen surtidos deliberadamente distintos y hay comportamientos alcanzables desde una sola. **No toca código por diseño**: si el recorrido destapa un defecto, se anota o se abre otro change |
-| **C39b** | `finalize-pf-readme-and-evidence` | Docs | **C39a-bis** | 🔴 | **queda con el alcance original de C39** menos el despliegue, más tres cosas que la sesión del 27 sep añade: la **frontera contable** entre lo que ya existía y lo que es del PF (32 changes del MVP antes del 2026-08-03 · 41 del PF después, verificable contra `openspec/changes/archive/`), el **resumen de fases** incluidos los cuatro changes que nacieron de comprobaciones manuales y no de ninguna ola, y la **taxonomía explícita de métodos de búsqueda** —léxico, CAG, vectorial, fusión RRF por rama, señales, M1/M2/M3 y agéntico—, cada fila con su cifra ya medida. Hereda de C38 sus **tres tareas supervivientes** |
+| **C39b** | `finalize-pf-readme-and-evidence` | Docs | **C39a-bis** | ✅ **archivado 2026-09-27** | **Queda con el alcance original de C39** menos el despliegue, más tres cosas que la sesión del 27 sep añadió y lo que hereda de C38. **La frontera contable queda fijada con su criterio y medida contra el disco, y la cifra de esta ficha estaba desfasada**: decía «74 archivados · 32 del MVP · 41 del PF» y hoy son **78 directorios · 33 del MVP · 45 del Proyecto Final**. El criterio publicado: **la unidad canónica es el directorio de `openspec/changes/archive/`**, la frontera es la fecha `2026-08-03` **con una excepción nombrada** —`barcode-qr-scanning`, del MVP por contenido—, y la **segunda unidad es la ficha del plan**, que no coincide ni debe coincidir: la distancia es exactamente `fix-boot-drain-retries-both-drains`, el seguimiento de C43, un directorio sin ficha. **El cruce destapó un defecto de esta misma tabla**: `C40_FIX` no tenía fila y aparecía sólo en prosa, lo que obligaba a que todo recuento hecho contra ella se quedara corto en uno — **su fila se añade aquí**. El **resumen de fases** cuenta ya **seis** changes nacidos de comprobaciones manuales y de ninguna ola —C40, `C40_FIX`, C41, C42, **C43** y el seguimiento del drenaje de arranque—, con el episodio de C43 como el mejor ejemplo del proyecto de una condición de verificación ganándose el sueldo. La **taxonomía de métodos** publica **once filas bajo una sola procedencia** —la tabla final de C25, golden set `1:198c4af44506`—, con dos advertencias que no se pueden quitar: CAG es una fila **fechada y no reproducible bit a bit** y `v2-hibrido` es **histórica y no re-ejecutable**. De las **tres tareas supervivientes de C38**: el éxito de tarea del agente queda **definido antes de mirar cifras** y publicado con `--rescore` como **17 de 20 con los tres fallos nombrados** (`C14`, `C17` y la discrepancia declarada `C19`) y **nunca como tasa porcentual**, porque el ruido entre pasadas se reprodujo en **2 de 20**; y el **validador .NET** pasa a limitación declarada con **cifra esperada cero** y su vía de cierre. Recoge la **confirmación de extremo a extremo de C43** —despliegue `36344846739` en verde, y `shops_without_scope: 0` **leído en vivo** desde dentro del anfitrión—, declarando aparte que **el renderizado de la tarjeta no se ha visto**. Deja **tres limitaciones declaradas y no arregladas**: la alerta `CRITICAL` de reconocimiento de imagen (vía 1, en el guion), el pivote inalcanzable por nombre, y la **deriva de rama**, que estrena entrada y hoy mide **cero**. **Ninguna sección congelada del README se edita**: lo que debería cambiar en ellas va al anexo A del informe con su texto propuesto. El *tag* `v1.0-final-SVL` se **propone y no se crea**. Informe [`c39b-implementation-measurements.md`](informes/c39b-implementation-measurements.md) y guion del vídeo [`c39b-video-script.md`](informes/c39b-video-script.md) |
 | **C40** | `add-frontend-free-query-panel` | Python + .NET + Frontend | C16, C31, C34, **C36** | 🔴 | **nace el 24 sep**, durante la comprobación en demo de C36 (tarea 8.5) y **no estaba en el plan**: la sesión destapó que el panel de búsqueda asistida llevaba todo el proyecto sirviendo por su ruta degradada, con los filtros **descartándose en silencio**. Explorado en dos pasadas ([informe](informes/c40-exploration-decisions.md) · [tabla de estados](informes/c40-m1-panel-states.md)): **once hallazgos, diecisiete decisiones y una regla transversal de completitud**. Saca a pantalla **M1**, la pregunta libre sin pieza, convirtiendo el panel de C16 en su superficie, y **cierra tres limitaciones del §15** —la 12, la 13 y la 3 de C34—. **Mueve `openapi.json`** (`filters` en `AssistRequest`, adición pura) y **toca `retrieval-abstention`, spec viva con tres consumidores**. **Va antes de C38**: sube el prompt a `assist/v5` y mueve la fase de la abstención, así que unas cifras tomadas antes describirían un prompt sustituido. **El hallazgo que gobierna su línea de corte:** `AiGatewayClient` **rechaza M1 hoy por construcción** —`PitchPlaceholderResolver` retira el argumentario siempre que no hay ancla, y `v3` ordena escribir los marcadores de precio y stock también en las tareas de consulta libre, medido en **147 de 213**—, así que sin el tramo 2 completo entregaría **un panel asistido sin prosa** |
+| **C40_FIX** | `c40-fix-all-shops-scope-unreachable` | Python + .NET + Frontend | **C40** | ✅ **archivado 2026-09-26**, 38/38 | **Fila añadida el 2026-09-27 por C39b**, que es la primera vez que este change aparece en la tabla maestra: estaba sólo en prosa, y su ausencia obligaba a que todo recuento hecho contra esta tabla se quedara corto en uno y se corrigiera después «sumándole `C40_FIX`». **Va fuera de la numeración C** por el mismo motivo que `FIX1` y `C25bis`: no sale de la descomposición original sino de una consecuencia de otro change. **Nace el 2026-09-26 de una comprobación manual** —el cuarto de los seis del proyecto— y lo que corrige no es un defecto de implementación sino **una spec viva que mentía**: el ámbito «todas las tiendas» era inalcanzable por la ruta rápida. La delta creció respecto al `proposal.md`, que enumeraba dos requisitos modificados y acabaron siendo **dos nuevos y tres corregidos** |
 | **C41** | `add-pos-projection-scheduled-drain` | **ai-service** (+ despliegue y un retoque .NET/Frontend) *(corregido el 26 sep: decía «.NET + Frontend»)* | **C22**, **C17** *(corregido el 26 sep: decía C40, y la lectura previa de C40 deja de usarse)* | 🔴 | **nace el 25 sep**, durante las pruebas manuales posteriores al cierre de C40, y **no estaba en el plan**. Al levantar el entorno **ninguna de las once tiendas activas tenía la proyección fresca**: el *checkpoint* de `pos-availability` venía del 5 de septiembre —veinte días contra un umbral de 3 600 s— y hubo que drenarla a mano para que las pruebas midieran el sistema y no su desconfiguración. **Es la tercera vez** *(corregido el 26 sep: esta fila decía «la segunda»)*: el §8 del informe de C40 declara la misma causa con 19,7 días —y su arreglo **se aplicó a la columna equivocada**, ver la ficha—, y antes **C34 encontró la proyección vacía en la demo**, que es otro modo de fallo (`count_scope = 0` → **503 en toda recuperación**) y sigue abierto en `DEFERRED_TASKS.md`. Eso es lo que lo convierte en ficha: **el planificador existe y vive en prosa** —`ai-service/README.md` lleva desde C22 una receta de cron que empieza por `cd /srv/jbg-ai`, una ruta de host, y `jbg-ai` es un contenedor—, así que `sync-pos` es sólo CLI y alguien tiene que acordarse. **No es una fuga** —la frontera es `Carried()` en .NET y ningún operario ve una pieza que su tienda no lleva—: lo que causa es que **la página llegue corta**, que es exactamente la avería que C22 midió (ocho de once tiendas por debajo de una página en seis de cada veinte búsquedas, peor caso **un solo producto**). Núcleo *(reescrito el 26 sep)*: una tarea de `lifespan` en **`jbg-ai`** —no un `BackgroundService` de .NET, que sería **una segunda implementación del protocolo del keyset** sobre la misma fila de checkpoint— que drena **al arrancar y cada 600 s**, con `pg_try_advisory_lock` **dentro del drenaje** para que cubra al CLI, porque `ai.sync_checkpoint` es **una fila por feed** y dos drenajes entrelazados **se saltan filas en silencio**. Tramo aditivo: la **edad en `GET /health`** —no en `GET /api/ai/search/availability`, que tiene un `MUST` de spec viva prohibiéndole llamar a la IA— más el **quinto fallo de `verify.sh`** que caza la proyección vacía. **Cortado en el diseño:** el drenaje manual, **también el del administrador** — el argumento que mata el botón del operario mata el suyo |
 | **C42** | `add-frontend-agent-panel` | Python + .NET + Frontend | C32b, C34, C36, **C40** | ✅ **archivado 2026-09-27** | **Nace el 2026-09-26**, al valorar la cola pendiente del PF, y **no estaba en el plan**. Explorado contra el código en [informe](informes/c42-exploration-decisions.md): **ocho hallazgos y doce decisiones**. Da superficie al **único de los cinco pilares del PF que no la tiene** —CAG, RAG, **agentes**, evaluación, despliegue—: `POST /v1/assist/agent` está entregado y medido desde C32b y **nadie lo llama**, así que no puede aparecer ni en la URL pública ni en el vídeo. **El hallazgo que gobierna su línea de corte es una regresión latente que C40 introdujo sin tocar el agente**: la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`. Los tres eslabones son correctos por separado y juntos **retiran el argumentario del agente por construcción**. Ejecuta además la política de *timeout* y circuito que `DEFERRED_TASKS.md` dejó **diseñada y no hecha** desde C32b, y **el agente no se sirve por defecto**: ruta propia y demostración de ablación, porque su única cifra comparativa hoy dice ×3,0 de coste y 13,1 % de retirada contra 2,2 % · **Archivado el 2026-09-27 con 75/75 tareas y trece refutaciones medidas**, de las que cuatro gobiernan. **El orden de ejecución no fue el del ticket**: el v1 pedía medir antes de la primera tarea y eso **no era ejecutable**, porque el arnés no contaba marcadores ni registraba la antigüedad de la proyección — de ahí un tramo 0 de instrumentos antes de cualquier tarea funcional, que es lo que impide que una pasada más larga que el techo de 3.600 s se lea como fresca, la contaminación que ya estropeó sin arreglo parte de las cifras de recuperación de C32b. **La caída del argumentario retirado del 13,1 % al 1,2 % NO es atribuible a `assist/v6`** y el informe nombra los confundidores: era lo esperado, porque la frase que ordena escribir marcadores es idéntica palabra por palabra en `v3` y `v4` y C40 ya había medido ahí 3 de 90 — el arreglo del prompt es real y **su urgencia era pequeña**, tal como el propio ticket anticipaba. **Las piezas por respuesta siguen saturando en `MAX_AGENT_PIECES`**, así que el tope sigue mordiendo. **La tabla de herramientas del informe de exploración mezcla los dos arms**: 115 de las 125 invocaciones de `buscar_sustitutos` pertenecen al arm descartado, así que la cifra que justificaba rotular la procedencia era correcta en la conclusión y no en la magnitud. Y **nada ejercitaba la ruta del agente sobre HTTP**: el contenedor servía código anterior al change, lo que sólo apareció al montar la comprobación manual. El contrato congelado se movió **por adición pura** (`origin` en subclase, sin ensanchar `AssistGroup`) y el fixture pasó a `openapi-c42-baseline.json`; `SearchOrigin` gana un quinto valor **sin migración**; la entrada de C32b en `DEFERRED_TASKS.md` se cierra **por refutación y no por ejecución**, con la aritmética escrita —~13.000 tokens contra 25.000 TPM es una petición por minuto, así que 204 peticiones cuestan 2 h 44 min—. **La comprobación manual encontró dos cosas que ningún test vio**: la tira de estado afirmaba un motivo de parada cuando la pasarela no había contestado, ya corregido; y **el pivote es inalcanzable si el operario nombra la pieza por su nombre**, porque `buscar_catalogo` no devuelve el nombre del producto — establecido con un experimento HTTP (por SKU pivota, por nombre no), **fuera del alcance de C42** y abierto en `DEFERRED_TASKS.md`. Informe [`c42-implementation-measurements.md`](informes/c42-implementation-measurements.md) y guion de comprobación manual [`c42-manual-check-runbook.md`](informes/c42-manual-check-runbook.md) |
 | **C43** | `add-shop-activity-projection` | **ai-service** + .NET *(feed)* + despliegue | **C41**, **C39a-bis** | ✅ **archivado 2026-09-27** | **Nace el 2026-09-27, del hallazgo principal de C39a-bis, y no estaba en ninguna ola**: es el quinto change del proyecto salido de una comprobación manual. El despliegue `36322635852` **falló con el entorno sano** porque la quinta condición de `verify.sh` contaba puntos de venta sin surtido **sin preguntar si la tienda está activa**, y `HT-ARTRUTX` lleva cerrada a propósito desde C10; el falso positivo llegaba además en rojo a la tarjeta del administrador, así que arreglar sólo el guión no bastaba. **El arreglo no cabía donde parecía**: el rol `jbg_ai` recibe `permission denied for table PointOfSales`, de modo que la decisión D9 / Q-5 de C41 estaba **impuesta por los permisos**. Vía B2: `ai.pos_shop` en el esquema `ai`, poblada por un *feed* nuevo sin cursor —una columna en `ai.pos_projection` habría nacido rancia para siempre, porque el *feed* de disponibilidad es incremental por *keyset* sobre el *watermark* de inventario y un cambio de estado de tienda no mueve ninguna fila—. Lleva con él el **segundo defecto de la misma familia**, que es su requisito previo: la espera acotada al drenaje en `verify.sh`. Cierra **dos** de las cuatro fichas diferidas de C39a-bis y hace la mitad barata de una tercera (`failed_pages` por *feed*: las 66 filas de `catalog` dejan de ser invisibles). **Sin migración de EF Core, sin ruta bajo `/v1`, sin mover `openapi.json` y sin tocar el frontend ni el *feed* de disponibilidad.** La confirmación de extremo a extremo **es el despliegue** y la recoge C39b |
@@ -1239,6 +1321,30 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 
 **⛔ Cortado el 2026-09-12 (1):** **C27**, complementarios — el corte nº 1 del §6, disparado **con medición y no por juicio de plazo**. Sus dos señales están vacías (co-ocurrencia: 98,6 % de los pares vistos **una sola vez** y ninguno tres veces, sobre un generador que **diversifica las cestas a propósito**; etiquetas de color/estilo: **1 de 404** productos reales con estilo) y el proyecto nunca le reservó categoría en el golden set. Ficha conservada con el sello y la condición de reactivación; detalle en el §0 y en [`c27-cut-measurements.md`](informes/c27-cut-measurements.md).
 
+> **Recuento cerrado el 2026-09-27 al archivar C39b — y desde aquí cada cifra dice su unidad, que es lo
+> que faltaba.** Es el **quinto** recuento del mismo día y el último: **la cola del Proyecto Final queda
+> vacía.**
+>
+> | Unidad | Cifra | Cómo se comprueba |
+> |---|---:|---|
+> | **Directorios** en `openspec/changes/archive/`, total | **79** | `ls openspec/changes/archive/ \| wc -l` |
+> | …del MVP | **33** | los 32 con fecha `< 2026-08-03` **más** `barcode-qr-scanning`, del MVP por contenido |
+> | …del **Proyecto Final** | **46** | los 47 con fecha `>= 2026-08-03` **menos** ese |
+> | **Fichas** de la tabla maestra archivadas | **45** | las 45 filas con slug, todas ya archivadas |
+>
+> **Las dos unidades no coinciden ni deben coincidir**, y la distancia tiene **un solo nombre**:
+> `fix-boot-drain-retries-both-drains`, el seguimiento de C43, que es un directorio de archivo **sin ficha
+> propia**. Los 79 directorios son además **76 slugs distintos** —tres pares duplicados, **los tres del
+> MVP**—, que se declaran y **no se deduplican**: reordenar el archivo histórico para que un total sume
+> redondo es lo contrario de hacer una cifra verificable. Criterio completo y su derivación en el
+> [informe de C39b](informes/c39b-implementation-measurements.md), §2.
+>
+> **Y en este recuento entra la fila que faltaba:** `C40_FIX` no estaba en la tabla maestra —aparecía una
+> sola vez, en prosa—, así que **todo recuento hecho contra ella se quedaba corto en uno** y había que
+> corregirlo «sumándole `C40_FIX`». Con su fila añadida, el cruce entre directorios y filas cierra sin
+> corrección de memoria. **No archivados y que no deben sumarse como tales:** C38 retirada, C19 · C29 ·
+> C33 · C35 · C37 anulados, y C27 cortado.
+>
 > **Recuento puesto al día el 2026-09-27, dos veces el mismo día.** Se archiva **C42**, se **retira C38
 > entero**, **C39 se parte en C39a y C39b** y, al implementar C39a, **éste se parte a su vez en C39a y
 > C39a-bis** (§0). Pendientes: **3 — C39a, C39a-bis y C39b, en ese orden**, y el orden lo fija el
@@ -2597,12 +2703,42 @@ checkpoint venía del mismo drenaje. **Cualquier verificación de este change le
 > componentes, informes, despliegue AWS, reconocimiento por *embeddings*, escaneo de códigos— y **41**
 > del 2026-08-03 en adelante que son el Proyecto Final. Verificable por cualquiera contra
 > `openspec/changes/archive/`.
+>
+> **Medido el 2026-09-27, al implementarlo: las tres cifras de arriba estaban desfasadas, y el párrafo se
+> conserva como registro.** Hoy son **78 directorios · 33 del MVP · 45 del Proyecto Final**. El **32**
+> coincide exactamente con el de esta ficha, escrito meses antes, así que **la frontera por fecha queda
+> validada por el lado del MVP**; lo que faltaba era el criterio, y es lo que este change fija:
+>
+> 1. **La unidad canónica es el directorio** de `openspec/changes/archive/` — lo único que un lector
+>    reproduce en un comando y **sin leer este plan**, que es el documento cuyas cifras estaban en duda.
+> 2. **La fecha `2026-08-03`, con una excepción nombrada**: `barcode-qr-scanning` lleva esa fecha y es del
+>    MVP **por contenido**. Una excepción nombrada es auditable; una regla de fecha a secas daría 46.
+> 3. **La segunda unidad es la ficha de este plan**, la que usa `epicas.md`, y **no coincide ni debe
+>    coincidir**: la distancia es exactamente `fix-boot-drain-retries-both-drains`, el seguimiento de C43,
+>    un directorio de archivo **sin ficha**.
+> 4. **Los duplicados se declaran, no se borran**: 78 directorios son **75 slugs distintos** —tres pares,
+>    **los tres del MVP**—. Reordenar el archivo histórico para que un total sume redondo es lo contrario
+>    de hacer una cifra verificable.
+>
+> **Y el cruce destapó un defecto de la tabla maestra de este plan**, que es la mitad del enredo de
+> recuentos: **`C40_FIX` no tenía fila** y aparecía una sola vez, en prosa, así que todo recuento hecho
+> contra la tabla se quedaba corto en uno y había que corregirlo «sumándole `C40_FIX`». **Su fila se añade
+> con este change.** Desarrollo completo en
+> [`c39b-implementation-measurements.md`](informes/c39b-implementation-measurements.md), §2.
 
 **Objetivo.** Empaquetar la entrega para que un evaluador externo entienda, reproduzca y pruebe el sistema.
 **Prereq.** **C39a** · **Zona.** docs
 **Alcance.** README del PF (dominio, arquitectura con la frontera .NET/Python justificada, CAG/RAG/agentes/evaluación/despliegue, arranque local, autoría, limitaciones, próximos pasos); **tabla de ablations v0→v3**; **métricas de revisión humana** (tasa de corrección y tiempo medio); sección del reranking descartado con su protocolo; progresión de prompts v1→v2 con impacto medido; **declaración explícita de lo que queda para fase posterior** (packing list, liquidación, upsell, políticas de inventario); vídeo de 2-3 min; usuario demo; `docker compose up` verificado desde cero; rama `finalproject-[INICIALES]` y tag `v1.0-final-[INICIALES]`.
 **Tres declaraciones nuevas** *(31 ago)*, que son puntos a favor si están escritas y huecos si faltan: **un solo agente**, con el diseño del de inventario (§10 del documento hermano) adjunto como próximo paso; **golden set sin acuerdo entre anotadores**, por etiquetador único; y **proyecto individual**, no en pareja.
 **Tests.** Ensayo de reproducibilidad en máquina limpia y `openspec validate --all`.
+
+> **Implementado el 2026-09-27, y tres puntos de esta ficha se cumplen de otra forma o no se cumplen, dicho aquí y no descubierto al leer el README.**
+>
+> **`Zona. docs` es correcta esta vez** —al contrario que en la ficha de C39 antes de partirse—, con una única excepción: el artefacto que `agent_sweep --rescore` escribe cae bajo `ai-service/evals/results/`, porque es donde el comando lo escribe por diseño. **Y eso tiene una consecuencia operativa que conviene saber antes de decidir nada:** el filtro de rutas del flujo de despliegue de la demo ignora `openspec/**`, `Documentos/**` y `**/README.md`, pero **no** `ai-service/**`, así que **mergear este change a `demo` sí dispara un despliegue**. Cuesta tres minutos, no cambia el contenido de ninguna imagen, y es el fallo hacia el lado seguro que ese filtro declara buscar por ser una lista negra.
+>
+> **El vídeo no se graba**: una sesión no tiene con qué. Lo que se entrega es el **guion**, con siete tramos, la cuenta y la consulta literal de cada uno y las dos cosas en rojo explicadas **antes** del tramo que las muestra — y se descubre al escribirlo que una de las dos no es una tarjeta sino un **aviso que salta al iniciar sesión como administrador**, diez segundos y una vez por sesión, así que entra en cámara si nadie la anticipa.
+>
+> **El `docker compose up` desde cero en máquina limpia NO se ensaya**, y se declara como no verificado en vez de firmarse: no hay máquina limpia en esta sesión. Lo que sí se escribe es el arranque de los tres servicios con sus puertos en el `### 1.4` del README. **Y la `rama finalproject-[INICIALES]` y el `tag v1.0-final-[INICIALES]` se proponen y no se crean**: `finalproject-SVL` y `v1.0-final-SVL`, con la discrepancia contra la ficha §0.1 del README —que nombra a otra persona— **reportada y no resuelta**, porque resolverla es editar una sección congelada.
 
 ---
 

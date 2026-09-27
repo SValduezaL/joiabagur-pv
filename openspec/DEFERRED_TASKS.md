@@ -1756,4 +1756,87 @@ foto no es un modelo caducado: es un modelo que no aplica, y el informe no disti
 
 **Recomendado:** la 1 para la entrega y la 2 como arreglo. La 3 sólo si hay prisa.
 
+> **La vía 1 queda EJECUTADA por C39b (2026-09-27).** El guion del vídeo de entrega la explica **antes
+> del tramo que la muestra**, con el dato que la sostiene —1.200 productos, 0 con foto— y con la razón
+> por la que `CRITICAL` está mal elegido. Se documenta además **cómo se presenta realmente**, que no es
+> sólo la tarjeta: `ModelHealthAlert` está montado a nivel de `App` y lanza un **aviso con icono rojo
+> durante diez segundos, una sola vez por sesión y sólo para administradores**, así que salta justo al
+> iniciar sesión con `demo.admin` y entra en cámara si nadie lo ha anticipado. Guion en
+> [`c39b-video-script.md`](../Documentos/Proyecto%20Final%20AIEng/informes/c39b-video-script.md), §0.1.
+>
+> **Las vías 2 y 3 siguen abiertas**, y la 2 sigue siendo el arreglo correcto. C39b **no toca código**.
+
+---
+
+## C38 · El validador determinista .NET no está implementado, y su cifra esperada es cero
+
+**Estado: declarado como limitación por C39b (2026-09-27), con su vía de cierre.** Nace de la retirada
+entera de **C38** el mismo día, como una de sus **tres tareas supervivientes**.
+
+**Qué no está hecho.** La mitad .NET del validador determinista: una comprobación, en la pasarela, de que
+ningún número del argumentario generado aparezca pegado a una marca de moneda o de existencias.
+
+**Por qué su cifra esperada es cero, que es lo que lo convierte en limitación y no en deuda.** Es **un
+espejo**: la regla que aplicaría es **la misma** que la puerta numérica de Python ya aplica **al mismo
+texto**, así que todo lo que .NET rechazaría Python lo rechazó antes. Tres datos lo sostienen:
+
+- De los tres caminos de generación, **sólo la ficha de venta comprueba algo en .NET**.
+  `FreeQuerySearchService` y `AgentAssistService` hacen `Pitch = ai.Pitch`, y `grep "{{\|Resolve"` sobre
+  los dos devuelve **cero líneas**.
+- `placeholder_in_free_query` es **causa dura** desde C40: un marcador en modo libre retira el
+  argumentario entero, en Python, antes de que .NET lo vea.
+- Medido: **0 marcadores de 102** peticiones en C42; **2 de 90** y **1 de 90** con el prompt anterior en
+  C40, y **0 y 0** con el vigente.
+
+**Sigue siendo un seguro defendible** —una regla que hoy no dispara puede disparar el día que alguien
+cambie el prompt o añada un cuarto camino de generación—, pero es **un seguro y no un arreglo**.
+
+### Qué hace falta cuando se haga
+
+- **Dónde va:** junto a `PitchPlaceholderResolver`, que es el único punto de la pasarela por el que pasan
+  los tres caminos. Poner la comprobación en cada servicio la haría tres y con tres oportunidades de
+  divergir.
+- **Con qué vocabulario rechaza:** el mismo conjunto cerrado de causas que Python, para que un rechazo
+  de .NET y uno de Python sean el mismo suceso para quien lea el registro.
+- **Y el criterio de aceptación que NO vale:** «atrapa algo». No atrapará nada, porque su cifra esperada
+  es cero. Lo que hay que exigir es un test que le entregue un texto con una cifra pegada a un símbolo de
+  moneda y compruebe que **retira el argumentario y sirve el resto** — nunca que falle la respuesta.
+
+**Y lo que no hay que hacer:** subirlo a puerta de despliegue ni a métrica de alarma. Una regla con cero
+esperado que se vigila como si fuera a disparar acaba silenciada por ruido de cero.
+
+---
+
+## C39a · Nada compara lo desplegado con la rama que debería servirse
+
+**Estado: abierta, declarada por C39b (2026-09-27).** Es el defecto que **C39a destapó** y que C39a no
+cerró: la rama `demo` estuvo **84 commits y cinco semanas** por detrás de `ai-eng` —su último commit en
+el QA de C34, del 22 de septiembre— y **ninguna pantalla, ningún registro y ninguna condición de
+`verify.sh` lo dijo**. Lo desplegado no contenía C36, C40, `C40_FIX`, C41 ni C42: **cuatro de las cinco
+superficies más visibles del Proyecto Final**.
+
+**Lo incómodo del caso es que los dos datos ya existen.** Medido a mano el 2026-09-27:
+
+| Dato | Dónde | Valor ese día |
+|---|---|---|
+| Etiqueta de la imagen desplegada | `/jbg-demo/IMAGE_TAG` en SSM | `sha-7d3a15ae8bb2807a7fd97e0fcc096f90f9efd971` |
+| Cabeza de la rama que se sirve | `git rev-parse origin/demo` | `7d3a15ae8bb2807a7fd97e0fcc096f90f9efd971` |
+
+**Coinciden: ese día no había deriva.** La comprobación que falta cabe en una comparación de cadenas, y
+nadie la ha escrito — que es exactamente por lo que la deriva pudo durar cinco semanas.
+
+### Qué hace falta cuando se haga
+
+- **Dónde va:** una octava condición en `deploy/demo/verify.sh`, junto a las siete que ya tiene. El
+  guión ya corre dentro del anfitrión y ya lee del almacén de parámetros, así que no necesita permisos
+  nuevos.
+- **Qué compara:** `IMAGE_TAG` contra `sha-$(git rev-parse origin/demo)`. **No** contra `HEAD` local ni
+  contra `ai-eng`: la pregunta es si lo desplegado es lo que la rama de despliegue dice, y cualquier otra
+  referencia responde a otra pregunta.
+- **Y el detalle que decide si sirve de algo:** tiene que fallar **también** cuando el parámetro está
+  ausente o vacío. Comparar contra una cadena vacía y no encontrar diferencia es la misma forma de
+  «pasar en vacío» que las condiciones del índice, la proyección y el corpus existen para impedir.
+- **Coste de comprobarla:** un despliegue. Por eso **no entra en C39b**, que no toca el paquete de
+  despliegue.
+
 ---
