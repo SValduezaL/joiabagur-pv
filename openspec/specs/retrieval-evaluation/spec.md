@@ -6,9 +6,7 @@ How retrieval quality is measured in this service, and what makes one measuremen
 Judgements are graded on three levels and published on both scales under one declared binarisation rule, with a divergence between the readings reported as a finding rather than resolved by picking one; a third, operational reading joins them whenever a configuration under evaluation reorders by a business signal, its gain function of labelled grade and availability declared before the measurement and never modifying what was recorded. They are keyed by the pair of query and document, so a later configuration appends to them instead of re-recording what exists, and each carries the content hash of the text it was made against, so labels resting on since-changed documents are counted beside the metrics and not in a separate log. The judged pool is the union of what the indexed configurations return, deepened in blocks while the previous block still contributed a relevant document and stopped at the branch depth beyond which the live retriever cannot surface anything; the depth reached is recorded per query, everything outside the pool is declared irrelevant by assumption, and the unjudged share of a configuration's top results marks that row not comparable instead of scoring it silently. Retrieval always executes over the complete indexed catalogue — restricting the corpus by data origin is not an available configuration — while the breakdown by origin counts only the relevant documents of each, and the report records how often an irrelevant synthetic product outranks the first relevant real one, so that interference is measured rather than assumed.
 
 The comparison is against baselines that replicate what they claim to replicate: the substring-over-name plus exact-code product search that preceded this project's AI work, the degraded Spanish full-text searcher composed over the same text the .NET side indexes rather than over the richer canonical document — an equivalence an automated test breaks when the renderer drifts — and a context-only configuration that places the whole catalogue in the model context without retrieval, priced per query, carrying no product price, truncating deterministically with the omitted count recorded, and projected to the catalogue size at which it no longer fits. Every run records its provenance — golden set version, configuration, index fingerprint, embedding model version, code revision and how its ranked lists were composed, that last value read from the code rather than from any setting because it is recorded even where no configuration can select it — and two runs whose provenance differs are reported as not comparable rather than compared; query embeddings are frozen per embedding model version so that repeating a run does not depend on a provider answering identically. Latency is two figures, retrieval and end-to-end, measured warm with the first execution discarded, and cost comes from a versioned price list, recorded as zero rather than absent for a configuration that calls no paid provider and declared unverified when the source cannot be reached. Abstention is measured over the out-of-domain category with both the per-document distance distribution and the per-query best-hit distribution published, and the live distance threshold and the abstention rule may be re-fixed under a rule recorded before the measurement, justified from the per-query distribution rather than the per-document one and reported with both sides of the trade: the rate gained over out-of-domain queries and the answerable queries the rule silenced. A configured default moves only under a rule written before the measurement, in the reading that decides — the queries no calibration has seen, because the tuning subset is saturated and contaminated and is published as a diagnostic that cannot veto a change — and the outcome is documented whether or not anything moves. An evaluation reporting more than one change publishes a row isolating each of them beside the combined one and keeps the previous baseline citable, its figures, provenance and measured configuration archived as versioned artefacts and the row marked historical and not re-executable once that configuration leaves the code, neither loadable as a configuration nor restated inside the harness; deepening the golden set re-runs every row so the table carries one provenance tuple and re-confirms the decision against the incumbent; and an absolute acceptance criterion the evidence cannot reach is restated as a relative one with the gap declared, never met by relabelling or by weakening the criterion after the fact. The normative output is the versioned report and the per-query detail under `ai-service/evals/results/`, written on every run; persistence to the evaluation tables is optional and the component that produces the results does not depend on the one that stores them. The harness tests run offline against fixtures, with no provider and no production database.
-
 ## Requirements
-
 ### Requirement: The golden set is a versioned repository artefact with a written annotation criterion
 The golden set, its judgements, its frozen query vectors and its annotation criterion MUST live as files under `ai-service/evals/golden/` and be versioned in the repository. They MUST NOT be stored only in the database: changing the yardstick MUST require a code review, and every measurement taken before a change MUST remain interpretable against the version it used.
 
@@ -431,3 +429,48 @@ The test suite of the evaluation harness MUST run without calling embedding prov
 #### Scenario: A ranking metric is verified against a hand-computed value
 - **WHEN** the ranking metric is computed over a fixed fixture
 - **THEN** it equals the value computed by hand for that fixture
+
+### Requirement: Task success over the agent's calibration scenarios is a defined verdict, recomputed without a provider and published with its failures named
+
+Task success over the agent's calibration scenarios SHALL be a verdict defined before it is published — a scenario succeeds when the tool expectation written for it is met, meaning every tool it requires was invoked, at least one of any it admits was invoked and none it forbids was, and the scenario does not itself declare a discrepancy — and that verdict MUST be recomputable from a committed run artefact with no provider call and no database, so that any reader reproduces it from the repository alone.
+
+The published form MUST be a count over the scenario set with the failing scenarios named individually, and MUST NOT be a success rate expressed as a percentage. The reason is measured and not stylistic: scoring two runs of the same scenario set against each other puts the between-run noise at 2 of 20, so a single rate would claim a precision the evidence does not have, while the count with its names carries strictly more information.
+
+Fields the run records but for which no per-scenario expectation was written — the terminal stop reason, the iteration and tool-call counters, the number of groups, whether an argument was generated — MUST be published beside the verdict as context and MUST NOT enter it, because admitting them after the figures are in hand would be defining the criterion from the data.
+
+A scenario whose transcript changed after the run MUST be reported as not comparable rather than scored against the definition as it stands today, and the count of such scenarios MUST be published with the verdict.
+
+#### Scenario: The verdict is recomputed from a committed artefact
+
+- **WHEN** the task-success verdict is published
+- **THEN** it is recomputed from a run artefact committed to the repository
+- **AND** the recomputation calls no model provider and reads no database
+- **AND** the artefact is identified by name and by a digest of its bytes
+
+#### Scenario: The verdict is published as a count with its failures named
+
+- **WHEN** the verdict over the calibration set is published
+- **THEN** it is stated as a count over the set with every failing scenario named
+- **AND** no success rate expressed as a percentage is published in its place
+- **AND** the measured between-run noise is stated beside the count
+
+#### Scenario: A scenario declaring its own discrepancy is counted apart
+
+- **GIVEN** a calibration scenario that declares a discrepancy of its own
+- **WHEN** the verdict is computed
+- **THEN** that scenario is counted apart from both the successes and the unexplained failures
+
+#### Scenario: A scenario that changed after the run is not scored
+
+- **GIVEN** a calibration scenario whose transcript differs from the one the run executed
+- **WHEN** the verdict is recomputed against the scenario set as it stands today
+- **THEN** that scenario is reported as not comparable
+- **AND** the number of scenarios in that state is published with the verdict
+
+#### Scenario: Terminal state is context and not part of the verdict
+
+- **GIVEN** a scenario whose tool expectation is met and whose loop stopped on a budget
+- **WHEN** the verdict is computed
+- **THEN** the scenario counts as a success
+- **AND** its stop reason and counters are published beside the verdict rather than inside it
+

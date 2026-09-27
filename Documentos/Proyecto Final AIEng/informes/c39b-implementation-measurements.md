@@ -723,6 +723,44 @@ editar una sección congelada: va al anexo A.3.
 
 ---
 
+## 9. El cierre, recontado **después** de archivar
+
+El recuento se cierra al archivar y no antes, porque archivar es lo que mueve la cifra. Medido tras
+`openspec archive`:
+
+```text
+directorios en openspec/changes/archive/    79      (78 + este change)
+  < 2026-08-03                              32
+  >= 2026-08-03                             47
+slugs distintos                             76
+changes activos en openspec/changes/         0      <-- la cola queda vacía
+openspec validate --all --strict            65 passed, 0 failed
+```
+
+| Unidad | Cifra final |
+|---|---:|
+| Directorios del **MVP** | **33** |
+| Directorios del **Proyecto Final** | **46** |
+| **Fichas** de la tabla maestra, todas archivadas | **45** |
+| Distancia entre las dos unidades | **1**, y se llama `fix-boot-drain-retries-both-drains` |
+
+**El cruce cierra sin ninguna fila sin directorio y con exactamente dos directorios sin fila** —la
+excepción del MVP y el seguimiento de C43—, que es el estado que el criterio de §2.1 predice. **Con esto
+el Proyecto Final queda cerrado.**
+
+**Y una comprobación del propio archivado, que el comprobador no hace.** `openspec validate` excluye
+`openspec/changes/archive/**` por diseño, así que un change archivado queda un nivel más profundo y sus
+`](../../../…)` se rompen **en silencio** — la ceguera que dejó acumular 874 enlaces. Revisado a mano:
+**los artefactos de este change no contienen ningún enlace relativo**, sólo rutas entre comillas
+invertidas, así que no hay nada que repuntar. Los enlaces de los dos documentos nuevos viven en
+`Documentos/`, que no se mueve, y se comprobaron uno a uno: **0 rotos**.
+
+**La spec viva nueva nació con su `## Purpose` en `TBD`** —el archivado lo deja así y lo dice— y **se ha
+escrito**, porque una spec viva sin propósito es exactamente la clase de sync a medias que
+`--all --strict` no puede ver: la sección existe y está vacía de contenido.
+
+---
+
 ## Anexo A · Las secciones congeladas del README, con el texto propuesto
 
 `README.md` no es un README técnico: **es el documento de entrega del máster**, y su estructura la fija la

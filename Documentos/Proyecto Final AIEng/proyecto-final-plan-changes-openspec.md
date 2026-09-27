@@ -2690,7 +2690,7 @@ checkpoint venía del mismo drenaje. **Cualquier verificación de este change le
 
 ---
 
-#### C39b · `finalize-pf-readme-and-evidence` 🔴
+#### C39b · `finalize-pf-readme-and-evidence` ✅ **archivado 2026-09-27**
 
 > **Queda con el alcance original de C39 menos el despliegue** *(27 sep, §0)*, más tres cosas que esa
 > misma sesión añade: la **frontera contable** entre lo preexistente y el PF, el **resumen de fases** y

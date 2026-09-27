@@ -13,7 +13,7 @@
 - [x] 1.2 Aplicarlo en **`Documentos/epicas.md`**: la fila `TOTAL PF` y la nota de recuento vigente pasan a decir su unidad. **Las bitácoras anteriores no se reescriben** —son registro fechado—: se añade la entrada nueva encima. *Validación: `grep -n "archivad" Documentos/epicas.md` y ninguna cifra vigente sin unidad declarada.*
 - [x] 1.3 Aplicarlo en **el plan de changes**: la ficha de C39b —que hoy dice «74 archivados · 32 · 41»— y el recuento vigente del §2. Entrada nueva en la bitácora del §0 con la fecha y el criterio. *Validación: la ficha ya no contiene una cifra desfasada y el §2 declara su unidad.*
 - [x] 1.4 **Barrer el repositorio buscando cifras de recuento que hayan quedado atrás** en documentos vigentes —no en el registro histórico— y corregirlas o fecharlas. *Validación: la lista de ficheros tocados, con la cifra antigua y la nueva, en el informe.*
-- [ ] 1.5 Cerrar el recuento **al archivar**, no antes: con C39b archivado son **46 directorios del PF y 45 fichas**. *Validación: recontado después del `openspec archive` y escrito en la entrada de cierre.*
+- [x] 1.5 Cerrar el recuento **al archivar**, no antes: con C39b archivado son **46 directorios del PF y 45 fichas**. *Validación: recontado después del `openspec archive` y escrito en la entrada de cierre.*
 
 ## 2. Las tres tareas que sobreviven a C38
 
@@ -94,8 +94,8 @@
 
 ## 12. Cierre
 
-- [ ] 12.1 `openspec validate --all --strict`, que es **la única puerta que valida algo**, y debe reportar **`0 failed`**. `openspec validate` a secas no valida nada y sale 1. *Validación: la línea de resumen, pegada en el informe.*
-- [ ] 12.2 Sincronizar las deltas en las specs vivas: `pf-delivery-package` nace como capability nueva —con su `# … Specification`, su `## Purpose` y su `## Requirements`— y `retrieval-evaluation` gana su requisito. **Sintaxis de delta en una spec viva es un sync roto.** *Validación: `--all --strict` verde después del sync y ninguna spec viva contiene `## ADDED Requirements`.*
-- [ ] 12.3 Archivar el change y **revisar a mano los enlaces relativos** del árbol archivado, que quedan un nivel más profundo y que el comprobador **no ve** porque excluye `openspec/changes/archive/**`. *Validación: cada `](../…)` del change archivado resuelve.*
-- [ ] 12.4 Poner al día `epicas.md` y el plan con el cierre: **la cola del Proyecto Final queda vacía**. *Validación: los dos documentos lo dicen con la unidad declarada, y el recuento de 1.5 aplicado.*
+- [x] 12.1 `openspec validate --all --strict`, que es **la única puerta que valida algo**, y debe reportar **`0 failed`**. `openspec validate` a secas no valida nada y sale 1. *Validación: la línea de resumen, pegada en el informe.*
+- [x] 12.2 Sincronizar las deltas en las specs vivas: `pf-delivery-package` nace como capability nueva —con su `# … Specification`, su `## Purpose` y su `## Requirements`— y `retrieval-evaluation` gana su requisito. **Sintaxis de delta en una spec viva es un sync roto.** *Validación: `--all --strict` verde después del sync y ninguna spec viva contiene `## ADDED Requirements`.*
+- [x] 12.3 Archivar el change y **revisar a mano los enlaces relativos** del árbol archivado, que quedan un nivel más profundo y que el comprobador **no ve** porque excluye `openspec/changes/archive/**`. *Validación: cada `](../…)` del change archivado resuelve.*
+- [x] 12.4 Poner al día `epicas.md` y el plan con el cierre: **la cola del Proyecto Final queda vacía**. *Validación: los dos documentos lo dicen con la unidad declarada, y el recuento de 1.5 aplicado.*
 - [ ] 12.5 Preguntar si se merge `ai-eng` a `demo`, **declarando antes que este change sí dispararía un despliegue** por el artefacto de `--rescore` bajo `ai-service/`. *Validación: la pregunta hecha y la consecuencia escrita; nada empujado sin respuesta.*
