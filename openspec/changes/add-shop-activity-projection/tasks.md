@@ -30,10 +30,10 @@
 
 ## 5. La quinta condición de `verify.sh`
 
-- [ ] 5.1 Reescribir el bloque: **(a)** falla si `active_points_of_sale` está presente y es 0 —«el servicio no conoce ninguna tienda activa»—; **(b)** falla si `shops_without_scope > 0`, nombrándolas **activas**. Conservar la tolerancia con una imagen anterior que **omita** la sección entera, que es desfase de versión y no un entorno vacío. *Validación: el guión canalizado contra cuerpos de `/health` sintéticos, uno por caso, incluido el de la imagen vieja.*
-- [ ] 5.2 Añadir la **espera acotada**: reintentar la sonda hasta que el informe declare los dos drenajes hechos, con techo de tiempo, y sólo entonces evaluar las condiciones. Arregla de paso la rancidez caducada que el despliegue registra por el caché de 10 s. *Validación: se ejercita contra el compose local arrancando la pila y lanzando `verify.sh` inmediatamente; la sonda espera en lugar de fallar.*
-- [ ] 5.3 Actualizar la cabecera del guión: la quinta condición pasa a hablar de tiendas activas, y se nombra **esta** como la cuarta instancia de la familia —C34, C41, C39a— para que el índice quede en el sitio donde se lee. *Validación: lectura de la cabecera; las siete condiciones siguen siendo siete.*
-- [ ] 5.4 Prueba completa contra el **compose local**: levantar la pila, aplicar la revisión, dejar drenar y correr `verify.sh` entero. *Validación: sale 0 y la quinta condición imprime cero tiendas activas sin surtido.*
+- [x] 5.1 Reescribir el bloque: **(a)** falla si `active_points_of_sale` está presente y es 0 —«el servicio no conoce ninguna tienda activa»—; **(b)** falla si `shops_without_scope > 0`, nombrándolas **activas**. Conservar la tolerancia con una imagen anterior que **omita** la sección entera, que es desfase de versión y no un entorno vacío. *Validación: el guión canalizado contra cuerpos de `/health` sintéticos, uno por caso, incluido el de la imagen vieja.*
+- [x] 5.2 Añadir la **espera acotada**: reintentar la sonda hasta que el informe declare los dos drenajes hechos, con techo de tiempo, y sólo entonces evaluar las condiciones. Arregla de paso la rancidez caducada que el despliegue registra por el caché de 10 s. *Validación: se ejercita contra el compose local arrancando la pila y lanzando `verify.sh` inmediatamente; la sonda espera en lugar de fallar.*
+- [x] 5.3 Actualizar la cabecera del guión: la quinta condición pasa a hablar de tiendas activas, y se nombra **esta** como la cuarta instancia de la familia —C34, C41, C39a— para que el índice quede en el sitio donde se lee. *Validación: lectura de la cabecera; las siete condiciones siguen siendo siete.*
+- [x] 5.4 Prueba completa contra el **compose local**: levantar la pila, aplicar la revisión, dejar drenar y correr `verify.sh` entero. *Validación: sale 0 y la quinta condición imprime cero tiendas activas sin surtido.*
 
 ## 6. Higiene del entorno desplegado
 
