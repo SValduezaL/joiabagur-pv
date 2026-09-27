@@ -10,17 +10,17 @@
 
 ## 2. El *endpoint* de *feed* en .NET
 
-- [ ] 2.1 DTO del retrato en `IndexFeedDtos.cs`: un ítem por tienda con `pointOfSaleId` e `isActive`, y la página con su `computedAsOf`. **Sin cursor, sin `hasMore`, sin `pageSize`** — no deriva de `IndexFeedPageDto`, porque heredar su forma añadiría tres campos permanentemente nulos a un contrato que no los usa. *Validación: compila y el nombre de los campos en el JSON serializado es el camelCase que Python espera.*
-- [ ] 2.2 Lectura en `IndexFeedRepository` + `IIndexFeedRepository`: todas las tiendas de `PointOfSales` con su `IsActive`, ordenadas por identificador. **Es el `join` que el *feed* de disponibilidad no tiene**, y no se toca `GetPosPageAsync`. *Validación: test de integración que devuelve las doce y marca la inactiva.*
-- [ ] 2.3 Método en `IndexFeedService` + `IIndexFeedService` y ruta `GET /api/ai/index-feed/pos-shops` en `AiIndexFeedController`, bajo el mismo `[IndexFeedKey]`. *Validación: test de integración `GetPosShops_WithoutFeedKey_ReturnsUnauthorized` y `GetPosShops_WithFeedKey_ReturnsEveryPointOfSale`, siguiendo `AiIndexFeedAuthTests` y `AiIndexFeedPosTests`.*
-- [ ] 2.4 Test de integración que fija la **no regresión del *feed* de disponibilidad**: cursor, tamaño de página doscientos y `aggregateHash` idénticos a antes del change. *Validación: el test pasa y `AiIndexFeedPosTests` sigue verde por nombre.*
+- [x] 2.1 DTO del retrato en `IndexFeedDtos.cs`: un ítem por tienda con `pointOfSaleId` e `isActive`, y la página con su `computedAsOf`. **Sin cursor, sin `hasMore`, sin `pageSize`** — no deriva de `IndexFeedPageDto`, porque heredar su forma añadiría tres campos permanentemente nulos a un contrato que no los usa. *Validación: compila y el nombre de los campos en el JSON serializado es el camelCase que Python espera.*
+- [x] 2.2 Lectura en `IndexFeedRepository` + `IIndexFeedRepository`: todas las tiendas de `PointOfSales` con su `IsActive`, ordenadas por identificador. **Es el `join` que el *feed* de disponibilidad no tiene**, y no se toca `GetPosPageAsync`. *Validación: test de integración que devuelve las doce y marca la inactiva.*
+- [x] 2.3 Método en `IndexFeedService` + `IIndexFeedService` y ruta `GET /api/ai/index-feed/pos-shops` en `AiIndexFeedController`, bajo el mismo `[IndexFeedKey]`. *Validación: test de integración `GetPosShops_WithoutFeedKey_ReturnsUnauthorized` y `GetPosShops_WithFeedKey_ReturnsEveryPointOfSale`, siguiendo `AiIndexFeedAuthTests` y `AiIndexFeedPosTests`.*
+- [x] 2.4 Test de integración que fija la **no regresión del *feed* de disponibilidad**: cursor, tamaño de página doscientos y `aggregateHash` idénticos a antes del change. *Validación: el test pasa y `AiIndexFeedPosTests` sigue verde por nombre.*
 
 ## 3. El drenaje de tiendas en Python
 
 - [x] 3.1 Cliente tipado del *feed* nuevo en `feed.py`: `fetch_pos_shops_page`, parseo tolerante con `dict.get` como el resto, y su ítem. Sin cursor y sin *keyset*. *Validación: tests de parseo, incluido un cuerpo con campos desconocidos y otro sin `isActive`.*
 - [x] 3.2 Drenaje en `indexing/` —módulo propio, al modo de `pos_drain.py`— que lee el retrato completo y lo aplica con el repositorio de 1.2. **No embebe nada y no construye ningún cliente de proveedor**, que es lo que permite alcanzarlo desde el proceso que responde HTTP. *Validación: test que verifica que se completa sin ninguna credencial configurada y que no abre socket hacia ningún proveedor.*
 - [x] 3.3 Engancharlo al planificador de C41: misma `lifespan`, mismo intervalo, mismas tres condiciones de `scheduler_should_run`, mismo reintento de arranque, y **antes** del drenaje de disponibilidad en cada pasada. Un fallo de uno no impide intentar el otro y **ninguno levanta excepción fuera de la tarea**. *Validación: tests del orden dentro de una pasada, del fallo aislado y de que `GET /health` responde durante el arranque.*
-- [ ] 3.4 Alcanzarlo también desde la línea de órdenes, junto a `sync-pos`, para poder repararlo a mano — que es como se reparó cada incidente registrado de proyección rancia. *Validación: el comando corre contra el compose local y llena la tabla.*
+- [x] 3.4 Alcanzarlo también desde la línea de órdenes, junto a `sync-pos`, para poder repararlo a mano — que es como se reparó cada incidente registrado de proyección rancia. *Validación: el comando corre contra el compose local y llena la tabla.*
 
 ## 4. El recuento en el informe de salud
 

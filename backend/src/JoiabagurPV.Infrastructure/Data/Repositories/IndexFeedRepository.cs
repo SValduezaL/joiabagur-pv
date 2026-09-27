@@ -158,6 +158,25 @@ public class IndexFeedRepository : IIndexFeedRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<PosShopRow>> GetPosShopsAsync(
+        CancellationToken cancellationToken)
+    {
+        // Every shop, active or not. Filtering to the active ones here would make "closed"
+        // and "deleted" the same thing on the wire, and the consumer needs them apart: the
+        // first keeps its row and stops being counted, the second loses its row.
+        //
+        // Ordered by identifier so two readings of an unchanged world are byte-identical,
+        // which makes a diff between them mean something.
+        var shops = await _context.PointOfSales
+            .AsNoTracking()
+            .OrderBy(pointOfSale => pointOfSale.Id)
+            .Select(pointOfSale => new PosShopRow(pointOfSale.Id, pointOfSale.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return shops;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<PosSalesAggregate>> GetSalesAggregatesAsync(
         IReadOnlyList<PosAssignmentPair> pairs,
         DateTime now,

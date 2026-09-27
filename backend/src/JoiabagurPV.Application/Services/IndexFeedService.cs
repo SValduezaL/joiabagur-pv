@@ -218,6 +218,41 @@ public class IndexFeedService : IIndexFeedService
         return JsonSerializer.Deserialize<List<string>>(json) ?? [];
     }
 
+    /// <inheritdoc/>
+    public async Task<PosShopsReadingDto> GetPosShopsReadingAsync(
+        CancellationToken cancellationToken)
+    {
+        var shops = await _repository.GetPosShopsAsync(cancellationToken);
+
+        // Resolved the same way the availability feed resolves its instant, and reported on
+        // the reading rather than per item: every row of one reading was read at one moment,
+        // unlike the sales windows next door, which the incremental feed spreads over several.
+        var computedAsOf = _options.Value.SalesAsOfUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
+
+        var dto = new PosShopsReadingDto
+        {
+            Items = shops
+                .Select(shop => new PosShopItemDto
+                {
+                    PointOfSaleId = shop.PointOfSaleId,
+                    IsActive = shop.IsActive
+                })
+                .ToList(),
+            ComputedAsOf = computedAsOf
+        };
+
+        // The active count is logged and not just the total: it is the number the consumer's
+        // health report is about, so a reading that suddenly halves it is visible here.
+        _logger.LogInformation(
+            "index_feed_reading {Feed} {ItemCount} {ActiveCount} {TraceId}",
+            "pos-shops",
+            dto.Items.Count,
+            dto.Items.Count(item => item.IsActive),
+            _traceContext.CurrentTraceId);
+
+        return dto;
+    }
+
     private static IndexFeedCursorDto CursorFrom(DateTime watermark, Guid id) =>
         new() { Since = watermark, SinceId = id };
 
