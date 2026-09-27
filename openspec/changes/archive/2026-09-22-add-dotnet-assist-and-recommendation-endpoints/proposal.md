@@ -9,7 +9,7 @@ miembros de la familia existen en la tienda, cuántas unidades hay, qué sustitu
 y con qué precio se escribe el argumentario — y garantiza que un fallo de la IA nunca deja el card
 vacío.
 
-La exploración del 2026-09-21 ([informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md))
+La exploración del 2026-09-21 ([informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md))
 refutó la anotación de la ficha que daba a este change la ruta de la consulta libre —los marcadores
 `{{price}}`/`{{stock}}` no dicen de qué pieza son, y en ese modo hay varias— y midió cuatro cifras que
 fijan el diseño: el presupuesto de 5 s corta el 7,5 % de las peticiones, `{{stock}}` se escribe como

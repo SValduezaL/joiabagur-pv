@@ -1,13 +1,24 @@
 name: Frontend Tests
 
+# BRANCHES CORRECTED BY C39a. Same defect and same reasoning as
+# `test-backend.yml`: the trigger named `[main, develop]`, neither branch exists,
+# and this workflow had therefore never executed once.
+#
+# INFORMATIVE AND NOT A GATE. The frontend suite is red before anyone touches it —
+# 113 of 729 across 14 of 54 files, measured at the head of C40 — and the set of
+# failing names ROTATES between runs of the same commit, over at least three files.
+# `vitest` also exits 0 when piped, so a green prompt says nothing: the summary line
+# is what counts.
+#
+# The `paths` filter stays, for the asymmetry explained in the backend workflow.
 on:
   push:
-    branches: [main, develop]
+    branches: [ai-eng, master]
     paths:
       - 'frontend/**'
       - '.github/workflows/test-frontend.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [ai-eng, master]
     paths:
       - 'frontend/**'
       - '.github/workflows/test-frontend.yml'

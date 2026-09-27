@@ -1,7 +1,7 @@
 # T-AIENG-008: Product AI profile entity — per-field hybrid review, renegotiated enrichment contract and catalog-scoped calls (C08)
 
 > Ticket técnico del change OpenSpec `add-product-ai-profile-entity`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG §7.8, plan de changes, apuntes del Máster S4/S6), specs vivas de `openspec/specs/`, el contrato `ai-service/openapi.json`, el código real de `backend/src/` y `ai-service/src/`, y [HU-AIENG-008](../../../Documentos/Historias/AI-Eng/HU-AIENG-008.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG §7.8, plan de changes, apuntes del Máster S4/S6), specs vivas de `openspec/specs/`, el contrato `ai-service/openapi.json`, el código real de `backend/src/` y `ai-service/src/`, y [HU-AIENG-008](../../../../Documentos/Historias/AI-Eng/HU-AIENG-008.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -303,14 +303,14 @@ Nomenclatura .NET `Method_Scenario_ExpectedResult`, Python `test_<unidad>_<escen
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-008](../../../Documentos/Historias/AI-Eng/HU-AIENG-008.md)
+- **HU origen:** [HU-AIENG-008](../../../../Documentos/Historias/AI-Eng/HU-AIENG-008.md)
 - **Change OpenSpec:** `openspec/changes/add-product-ai-profile-entity/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C08, §0 revisiones, reglas transversales de testing) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.1, §7.2, §7.3, **§7.8**) · [especificaciones funcionales v2](../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) (§4.5, §4.6, §4.9)
-- **Apuntes del Máster (S4, S6):** [Extracción de datos estructurados](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Extraccion%20de%20datos%20estructurados.md) · [Guardrails y validación de outputs](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md) · [Calidad del Dato y decisiones de Arquitectura](../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Calidad%20del%20Dato%20y%20decisiones%20de%20Arquitectura.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C08, §0 revisiones, reglas transversales de testing) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.3, §7.1, §7.2, §7.3, **§7.8**) · [especificaciones funcionales v2](../../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) (§4.5, §4.6, §4.9)
+- **Apuntes del Máster (S4, S6):** [Extracción de datos estructurados](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Extraccion%20de%20datos%20estructurados.md) · [Guardrails y validación de outputs](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md) · [Calidad del Dato y decisiones de Arquitectura](../../../../Documentos/Sesiones%20Master%20AIEng/S6_Fundamentos_Data_Driven_AI/Calidad%20del%20Dato%20y%20decisiones%20de%20Arquitectura.md)
 - **Specs vivas afectadas:** `openspec/specs/ai-gateway-client/spec.md` · `openspec/specs/ai-service-auth/spec.md` · `openspec/specs/ai-service-api-contracts/spec.md` · `openspec/specs/ai-vector-schema/spec.md` (consumidor aguas abajo)
 - **Precedentes de código:** `ProductSearchEventConfiguration.cs` (jsonb, índices, reglas de borrado) · `AiSearchEventsController.cs` (validación explícita, sin superficie de lectura) · `SchemaAssert.cs` y `ProductSearchEventSchemaTests.cs` (arnés heredado) · `AiGatewayServiceCollectionExtensions.cs` (familia de ruta con breaker propio)
 - **Contrato:** `ai-service/openapi.json` — **este change lo modifica**, con el snapshot como testigo
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

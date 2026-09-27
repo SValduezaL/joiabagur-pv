@@ -131,12 +131,12 @@ de sustituirla.
 
 | run | prompt | modelo | `catalog` | falso positivo | silenciadas | degradadas | veto |
 |---|---|---|---|---|---|---|---|
-| [`426a70070ad3`](../../../ai-service/evals/results/c31-routing-confusion-426a70070ad3.md) | `router/v1` | `gpt-4o-mini` | 47,9 % | 31,25 % | **15** | 0 | **NO PASA** |
-| [`de9297ad6515`](../../../ai-service/evals/results/c31-routing-confusion-de9297ad6515.md) | `router/v2` | `gpt-4o-mini` | 79,2 % | 8,33 % | **4** | 22 ⚠ | **NO PASA** |
-| [`e36e4b0196df`](../../../ai-service/evals/results/c31-routing-confusion-e36e4b0196df.md) | `router/v3` | `gpt-4o-mini` | 81,3 % | 6,25 % | **3** | 0 | **NO PASA** |
-| [`88de06b89194`](../../../ai-service/evals/results/c31-routing-confusion-gpt4o-88de06b89194.md) | `router/v3` | `gpt-4o` | — | — | 0 | **89** ⚠ | *pasada rota, §10.3* |
-| [`0d9f3fd1492a`](../../../ai-service/evals/results/c31-routing-confusion-gpt4o-0d9f3fd1492a.md) | `router/v3` | `gpt-4o` | 81,3 % | 0,00 % | 0 | 26 ⚠ | **NO PASA** (cobertura) |
-| **[`2b5b98c81e28`](../../../ai-service/evals/results/c31-routing-confusion-gpt4o-2b5b98c81e28.md)** | **`router/v3`** | **`gpt-4o`** | **100 %** | **0,00 %** | **0** | **0** | **PASA** |
+| [`426a70070ad3`](../../../../ai-service/evals/results/c31-routing-confusion-426a70070ad3.md) | `router/v1` | `gpt-4o-mini` | 47,9 % | 31,25 % | **15** | 0 | **NO PASA** |
+| [`de9297ad6515`](../../../../ai-service/evals/results/c31-routing-confusion-de9297ad6515.md) | `router/v2` | `gpt-4o-mini` | 79,2 % | 8,33 % | **4** | 22 ⚠ | **NO PASA** |
+| [`e36e4b0196df`](../../../../ai-service/evals/results/c31-routing-confusion-e36e4b0196df.md) | `router/v3` | `gpt-4o-mini` | 81,3 % | 6,25 % | **3** | 0 | **NO PASA** |
+| [`88de06b89194`](../../../../ai-service/evals/results/c31-routing-confusion-gpt4o-88de06b89194.md) | `router/v3` | `gpt-4o` | — | — | 0 | **89** ⚠ | *pasada rota, §10.3* |
+| [`0d9f3fd1492a`](../../../../ai-service/evals/results/c31-routing-confusion-gpt4o-0d9f3fd1492a.md) | `router/v3` | `gpt-4o` | 81,3 % | 0,00 % | 0 | 26 ⚠ | **NO PASA** (cobertura) |
+| **[`2b5b98c81e28`](../../../../ai-service/evals/results/c31-routing-confusion-gpt4o-2b5b98c81e28.md)** | **`router/v3`** | **`gpt-4o`** | **100 %** | **0,00 %** | **0** | **0** | **PASA** |
 
 > Las pasadas marcadas ⚠ degradaron por **`RateLimitError` del proveedor**, no por el
 > clasificador. Se repitieron a concurrencia 1 y con pausa hasta obtener **cobertura completa**;
@@ -253,7 +253,7 @@ razón que las seis del enrutado:
 | `ab3a0aaf0a44` | `assist/v2` | 4 | 4 | 4 | sonda; sin captura de causas |
 | `ab6f3e56ead3` | `assist/v2` | 4 | 4 | **3** | sonda que **destapó `dangling_citation`** — recuento, no tasa |
 | `2498116e6f5b` | `assist/v3` | 90 | 41 | 2 | **superseded**: 49 degradaciones del enrutador y el fallo de captura del §10.8 |
-| **[`387fa94e792a`](../../../ai-service/evals/results/c31-free-query-gate-387fa94e792a.json)** | **`assist/v3`** | **90** | **89** | **2** | **la publicada** — 0 degradaciones |
+| **[`387fa94e792a`](../../../../ai-service/evals/results/c31-free-query-gate-387fa94e792a.json)** | **`assist/v3`** | **90** | **89** | **2** | **la publicada** — 0 degradaciones |
 
 | | M2/M3 (C30b) | **M1 (C31)** |
 |---|---|---|
@@ -296,7 +296,7 @@ Reparto de rutas sobre las 90, decidido por el enrutador: `catalog` **50**, `kno
 | **8** Argumentario de M1 | *payload* propio, lista blanca sin ids ni scores, `v2` conservando `v1`, generación por ruta | ✅ §5 · **la línea de corte no se usó** |
 | **9** Contrato | descripciones, regeneración, verificación hoja a hoja | ✅ §8 |
 | **10** Evaluación | manifiesto que falla, matriz, dos cifras, falso positivo, M1 aparte, contraste, `run_id` | ✅ §3, §5, §11 |
-| **11** Cierre | suite por nombres, validate, `DEFERRED_TASKS`, informe, docs, fichas | ✅ §1 · `DEFERRED_TASKS.md` · [informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c31-implementation-measurements.md) |
+| **11** Cierre | suite por nombres, validate, `DEFERRED_TASKS`, informe, docs, fichas | ✅ §1 · `DEFERRED_TASKS.md` · [informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c31-implementation-measurements.md) |
 
 ---
 

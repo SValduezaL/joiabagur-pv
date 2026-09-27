@@ -2,7 +2,7 @@
 
 > Registro de las comprobaciones **realmente ejecutadas** sobre la implementación del change, con sus resultados y su evidencia.
 > **Fecha:** exploración y artefactos el **2026-09-26**, implementación el mismo día · **Rama:** `c40-fix-all-shops-scope-unreachable` · **Artefactos de partida:** `501c97c` (`proposal`, HU, ticket enriquecido y `epicas.md`), publicado en `origin` · **Implementación commiteada después** en `4b1d056`, que es el árbol que verifica el §11.
-> **Idioma:** cuerpo en español, identificadores técnicos en inglés, por coherencia con [ticket.md](ticket.md) y con la [HU](../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md).
+> **Idioma:** cuerpo en español, identificadores técnicos en inglés, por coherencia con [ticket.md](ticket.md) y con la [HU](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md).
 > **Alcance:** **38/38 tareas**. La 10.2 —comprobación manual en el entorno— la ejecutó el desarrollador el 2026-09-26 sobre el entorno local; evidencia en el §6, **con una salvedad que se declara y no se disimula**.
 > **Este change NO mueve el contrato:** `ai-service/openapi.json` sin diff y `ai-service/` sin tocar (§5).
 > **Este change NO crea migraciones:** ninguna entidad, columna ni índice cambia (§5).

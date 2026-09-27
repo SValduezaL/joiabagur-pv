@@ -1,12 +1,12 @@
 # T-AIENG-028: Stratified human review of AI product profiles, with per-field correction rate and review timing (C28)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-026](../archive/2026-09-12-add-substitutes-retrieval/ticket.md) y el resto de los
+> siguen [T-AIENG-026](../../archive/2026-09-12-add-substitutes-retrieval/ticket.md) y el resto de los
 > tickets del Proyecto Final.
 
-**HU origen:** [HU-AIENG-028](../../../Documentos/Historias/AI-Eng/HU-AIENG-028.md)
+**HU origen:** [HU-AIENG-028](../../../../Documentos/Historias/AI-Eng/HU-AIENG-028.md)
 **Change:** `add-profile-review-ui-and-metrics` (C28) · **Épica:** EP13
-**Rama:** `c28-add-profile-review-ui-and-metrics` · **Mediciones:** [c28-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c28-exploration-measurements.md)
+**Rama:** `c28-add-profile-review-ui-and-metrics` · **Mediciones:** [c28-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c28-exploration-measurements.md)
 
 ---
 
@@ -61,15 +61,15 @@ predicción falsable, y confirmarla o refutarla es el resultado del change.
 
 | Pieza | Estado hoy | Qué hace C28 |
 |---|---|---|
-| [`Domain/Entities/ProductAiProfile.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/ProductAiProfile.cs) | `ProposedProfileJson`, `FieldConfidenceJson`, `FieldSourceJson`, `ReviewStatus`, `ReviewOrigin`, `ReviewedByUserId`, `ReviewedAt`, `ReviewDurationMs` — **todas presentes** | **Sin cambios y sin migración.** C08 reservó el almacenamiento por escrito y cumplió |
-| [`Application/Interfaces/IProductAiProfileService.cs`](../../../backend/src/JoiabagurPV.Application/Interfaces/IProductAiProfileService.cs) | **Una sola operación**: `EnrichBatchAsync`. Su docstring dice que leer, aprobar y medir *«are the review capability's job»* | **Se respeta:** el trabajo va en un servicio nuevo, no aquí |
-| [`API/Controllers/AiCatalogController.cs`](../../../backend/src/JoiabagurPV.API/Controllers/AiCatalogController.cs) | `[Route("api/ai/catalog")]`, `[Authorize(Roles = "Administrator")]`. Ya sirve `family-audit`, `family-verdicts` y `family-review-metrics` | **Tres rutas nuevas** bajo el mismo prefijo y el mismo rol |
-| [`Application/Services/FamilyAuditService.cs`](../../../backend/src/JoiabagurPV.Application/Services/FamilyAuditService.cs) `GetMetricsAsync` | Reporta **dos poblaciones aparte**, `AverageReviewSeconds` **nulo y nunca cero** cuando no hay tiempos | **Es el patrón a replicar**, no a reinventar |
-| [`Infrastructure/Data/Repositories/IndexFeedRepository.cs`](../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/IndexFeedRepository.cs) | La marca de agua incluye `profile.UpdatedAt`; `IsActive` y `ReviewStatus` viajan en la fila | **Sin cambios.** Una corrección se reindexa sola y una baja se propaga |
-| [`API/Controllers/ProductFamiliesController.cs`](../../../backend/src/JoiabagurPV.API/Controllers/ProductFamiliesController.cs) | `POST` (línea 110) y `PUT {id}/members` (166) ya existen, ambos solo administrador | **Sin cambios.** Crear familia desde la revisión es **frontend puro** |
-| [`frontend/src/pages/admin/family-review.tsx`](../../../frontend/src/pages/admin/family-review.tsx) | **920 líneas**, monolítica, `shadcn/Table`, cronómetro por ítem ya corregido, **cero manejadores de teclado** | Cede **tres piezas** a un hook/componente compartido y **recibe los atajos** |
-| [`frontend/src/services/family-review.service.ts`](../../../frontend/src/services/family-review.service.ts) | Rutas relativas (`VITE_API_BASE_URL` ya trae `/api`), resultado discriminado para distinguir «vacío» de «no se pudo» | **Es el patrón** del servicio nuevo |
-| [`frontend/src/routing/routes.tsx`](../../../frontend/src/routing/routes.tsx) | `FAMILY_REVIEW: '/admin/family-review'` | **Una entrada nueva**: `PROFILE_REVIEW: '/admin/profile-review'` |
+| [`Domain/Entities/ProductAiProfile.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/ProductAiProfile.cs) | `ProposedProfileJson`, `FieldConfidenceJson`, `FieldSourceJson`, `ReviewStatus`, `ReviewOrigin`, `ReviewedByUserId`, `ReviewedAt`, `ReviewDurationMs` — **todas presentes** | **Sin cambios y sin migración.** C08 reservó el almacenamiento por escrito y cumplió |
+| [`Application/Interfaces/IProductAiProfileService.cs`](../../../../backend/src/JoiabagurPV.Application/Interfaces/IProductAiProfileService.cs) | **Una sola operación**: `EnrichBatchAsync`. Su docstring dice que leer, aprobar y medir *«are the review capability's job»* | **Se respeta:** el trabajo va en un servicio nuevo, no aquí |
+| [`API/Controllers/AiCatalogController.cs`](../../../../backend/src/JoiabagurPV.API/Controllers/AiCatalogController.cs) | `[Route("api/ai/catalog")]`, `[Authorize(Roles = "Administrator")]`. Ya sirve `family-audit`, `family-verdicts` y `family-review-metrics` | **Tres rutas nuevas** bajo el mismo prefijo y el mismo rol |
+| [`Application/Services/FamilyAuditService.cs`](../../../../backend/src/JoiabagurPV.Application/Services/FamilyAuditService.cs) `GetMetricsAsync` | Reporta **dos poblaciones aparte**, `AverageReviewSeconds` **nulo y nunca cero** cuando no hay tiempos | **Es el patrón a replicar**, no a reinventar |
+| [`Infrastructure/Data/Repositories/IndexFeedRepository.cs`](../../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/IndexFeedRepository.cs) | La marca de agua incluye `profile.UpdatedAt`; `IsActive` y `ReviewStatus` viajan en la fila | **Sin cambios.** Una corrección se reindexa sola y una baja se propaga |
+| [`API/Controllers/ProductFamiliesController.cs`](../../../../backend/src/JoiabagurPV.API/Controllers/ProductFamiliesController.cs) | `POST` (línea 110) y `PUT {id}/members` (166) ya existen, ambos solo administrador | **Sin cambios.** Crear familia desde la revisión es **frontend puro** |
+| [`frontend/src/pages/admin/family-review.tsx`](../../../../frontend/src/pages/admin/family-review.tsx) | **920 líneas**, monolítica, `shadcn/Table`, cronómetro por ítem ya corregido, **cero manejadores de teclado** | Cede **tres piezas** a un hook/componente compartido y **recibe los atajos** |
+| [`frontend/src/services/family-review.service.ts`](../../../../frontend/src/services/family-review.service.ts) | Rutas relativas (`VITE_API_BASE_URL` ya trae `/api`), resultado discriminado para distinguir «vacío» de «no se pudo» | **Es el patrón** del servicio nuevo |
+| [`frontend/src/routing/routes.tsx`](../../../../frontend/src/routing/routes.tsx) | `FAMILY_REVIEW: '/admin/family-review'` | **Una entrada nueva**: `PROFILE_REVIEW: '/admin/profile-review'` |
 | `ai-service/` | — | **No se toca.** Ni `openapi.json`, ni `confidence.py`, ni `vocabularies.yaml`, ni los prompts |
 
 ---
@@ -173,7 +173,7 @@ afectado.
 - **Capas** (`Documentos/modelo-c4.md`): el trabajo entra por `Application/` → `API/` → `frontend/`.
   `Domain/` e `Infrastructure/` quedan intactos, lo que es coherente con un change **sin 🗄️**.
 - **Decisión estructural:** la cola es de **origen** y no de **estado**, apoyándose en un requisito
-  ya vivo de [`product-ai-profile`](../../specs/product-ai-profile/spec.md) — *«Review status and
+  ya vivo de [`product-ai-profile`](../../../specs/product-ai-profile/spec.md) — *«Review status and
   review origin are independent»*. El estado gobierna el índice, el origen gobierna la métrica.
   **Abrir el lote a `Pending` sacaría 180 documentos del índice a mitad de sesión**, porque el feed
   selecciona `Approved`.
@@ -249,13 +249,13 @@ afectado.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-028](../../../Documentos/Historias/AI-Eng/HU-AIENG-028.md)
-- **Mediciones:** [c28-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c28-exploration-measurements.md)
-- **Diseño:** §7.8, §11.5, §15 limitación 2, §16 de [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Capabilities:** [`product-ai-profile`](../../specs/product-ai-profile/spec.md) · [`family-review`](../../specs/family-review/spec.md) · [`index-feed`](../../specs/index-feed/spec.md)
-- **Herencias de C18b:** [c18b-family-review-report.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c18b-family-review-report.md) §8.3 y § *«El tiempo medio no está»*
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md) · [testing-frontend.md](../../../Documentos/testing-frontend.md)
+- **HU origen:** [HU-AIENG-028](../../../../Documentos/Historias/AI-Eng/HU-AIENG-028.md)
+- **Mediciones:** [c28-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c28-exploration-measurements.md)
+- **Diseño:** §7.8, §11.5, §15 limitación 2, §16 de [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Capabilities:** [`product-ai-profile`](../../../specs/product-ai-profile/spec.md) · [`family-review`](../../../specs/family-review/spec.md) · [`index-feed`](../../../specs/index-feed/spec.md)
+- **Herencias de C18b:** [c18b-family-review-report.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c18b-family-review-report.md) §8.3 y § *«El tiempo medio no está»*
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md) · [testing-frontend.md](../../../../Documentos/testing-frontend.md)
 
 ---
 

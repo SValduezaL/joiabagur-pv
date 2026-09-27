@@ -1,24 +1,24 @@
 # T-AIENG-040: Free-query panel — M1 on the assisted search screen, filters on every path, an availability badge before the search, and sixteen states told apart (C40)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya siguen
-> [T-AIENG-036](../archive/2026-09-24-add-frontend-assist-card-and-family-disambiguation/ticket.md),
-> [T-AIENG-034](../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md) y el
+> [T-AIENG-036](../../archive/2026-09-24-add-frontend-assist-card-and-family-disambiguation/ticket.md),
+> [T-AIENG-034](../../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md) y el
 > resto de tickets del Proyecto Final.
 >
 > **Fuentes de verdad:** `openspec/project.md`,
-> [HU-AIENG-040](../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md),
-> [informe de exploración](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-exploration-decisions.md)
+> [HU-AIENG-040](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md),
+> [informe de exploración](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-exploration-decisions.md)
 > (once hallazgos, diecisiete decisiones, una regla transversal de completitud, cuatro preguntas
-> cerradas), [tabla de estados](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md),
-> [ficha C40](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
-> [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+> cerradas), [tabla de estados](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md),
+> [ficha C40](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
+> [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
 > (§4, §6.4, §7.3, §7.7, §11.2, §15.11-§15.14), las specs vivas
-> [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md),
-> [`ai-assisted-search`](../../specs/ai-assisted-search/spec.md),
-> [`assist-generation`](../../specs/assist-generation/spec.md) y
-> [`retrieval-abstention`](../../specs/retrieval-abstention/spec.md), y el código real de las tres capas.
+> [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md),
+> [`ai-assisted-search`](../../../specs/ai-assisted-search/spec.md),
+> [`assist-generation`](../../../specs/assist-generation/spec.md) y
+> [`retrieval-abstention`](../../../specs/retrieval-abstention/spec.md), y el código real de las tres capas.
 
-**HU origen:** [HU-AIENG-040](../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
+**HU origen:** [HU-AIENG-040](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
 **Change:** `add-frontend-free-query-panel` (C40) · **Épica:** EP15, que **se reabre**
 **Rama:** `c40-add-frontend-free-query-panel` · **Anterior:** C36 · **Siguiente:** C38
 **Orden obligado:** C40 **antes** de C38 — sube el prompt a `assist/v5` y mueve la fase de la
@@ -82,7 +82,7 @@ corregir, hecha por él mismo.
 > hay una pieza y se la vende; en libre hay hasta quince y lo que se pide es comparar. La regla lo
 > permitía, la tarea no lo pedía. `v5` y la causa dura siguen valiendo —la tasa de rechazo del modo
 > libre cae de **8,9 % a 0 %**— pero por esa magnitud, no por la predicha. Las dos cifras y sus
-> artefactos, en [c40-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md).
+> artefactos, en [c40-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md).
 
 ### Estado actual del código, verificado en el repositorio (2026-09-24, `810dd70`)
 
@@ -315,7 +315,7 @@ limitación 3 de C34 y separa `product_not_indexed` de `ai_unavailable`.
 ### frontend · los dieciséis estados
 
 La tabla completa, con qué trae cada estado y qué acción ofrece, está en
-[`c40-m1-panel-states.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md).
+[`c40-m1-panel-states.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md).
 Los cinco que hay que leer antes de escribir una línea:
 
 | # | Estado | Qué pinta, y el error por defecto que evita |
@@ -599,57 +599,57 @@ ningún dato que el backend haya emitido.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-040](../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
+- **HU origen:** [HU-AIENG-040](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
 - **Informes de exploración:**
-  [c40-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-exploration-decisions.md)
+  [c40-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-exploration-decisions.md)
   *(§1-§9 contra el servicio real, §10 contra el código)* ·
-  [c40-m1-panel-states.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md)
+  [c40-m1-panel-states.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-m1-panel-states.md)
   *(los dieciséis estados, y las tres recomendaciones P1, P2 y P3)*
 - **Plan y diseño:**
-  [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
+  [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
   ficha C40 y su línea de corte;
-  [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md),
+  [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md),
   §4, §6.4, §7.3, §7.7, §11.2 y §15.11-§15.14.
 - **Specs vivas que entran en el delta:**
-  [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md) ·
-  [`ai-assisted-search`](../../specs/ai-assisted-search/spec.md) ·
-  [`assist-generation`](../../specs/assist-generation/spec.md) ·
-  [`retrieval-abstention`](../../specs/retrieval-abstention/spec.md) ·
-  [`vector-retrieval`](../../specs/vector-retrieval/spec.md) ·
-  [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md) ·
-  [`ai-sales-assist`](../../specs/ai-sales-assist/spec.md) ·
-  [`ai-search-telemetry`](../../specs/ai-search-telemetry/spec.md) ·
-  [`ai-gateway-client`](../../specs/ai-gateway-client/spec.md) ·
-  [`ai-service-auth`](../../specs/ai-service-auth/spec.md) ·
-  [`sales-assist-card`](../../specs/sales-assist-card/spec.md) *(consume `degradedReason`)*
+  [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md) ·
+  [`ai-assisted-search`](../../../specs/ai-assisted-search/spec.md) ·
+  [`assist-generation`](../../../specs/assist-generation/spec.md) ·
+  [`retrieval-abstention`](../../../specs/retrieval-abstention/spec.md) ·
+  [`vector-retrieval`](../../../specs/vector-retrieval/spec.md) ·
+  [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md) ·
+  [`ai-sales-assist`](../../../specs/ai-sales-assist/spec.md) ·
+  [`ai-search-telemetry`](../../../specs/ai-search-telemetry/spec.md) ·
+  [`ai-gateway-client`](../../../specs/ai-gateway-client/spec.md) ·
+  [`ai-service-auth`](../../../specs/ai-service-auth/spec.md) ·
+  [`sales-assist-card`](../../../specs/sales-assist-card/spec.md) *(consume `degradedReason`)*
 - **Precedentes:**
-  [T-AIENG-016](../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md) *(el panel que se
-  amplía)* · [T-AIENG-031](../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) *(el
+  [T-AIENG-016](../../archive/2026-08-29-add-frontend-assisted-search-panel/ticket.md) *(el panel que se
+  amplía)* · [T-AIENG-031](../../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) *(el
   enrutador y sus dos cifras que nunca se suman)* ·
-  [T-AIENG-034](../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md) *(el
+  [T-AIENG-034](../../archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md) *(el
   cliente generativo y los marcadores)* ·
-  [T-AIENG-036](../archive/2026-09-24-add-frontend-assist-card-and-family-disambiguation/ticket.md) *(la
+  [T-AIENG-036](../../archive/2026-09-24-add-frontend-assist-card-and-family-disambiguation/ticket.md) *(la
   tabla de copy y la distinción de estados)*
 - **Apuntes del Máster (guía, no dogma):**
-  [S4 · De interfaz conversacional a interfaz de producto](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md)
+  [S4 · De interfaz conversacional a interfaz de producto](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md)
   *(el panel es «chat con parámetros», no un chat)* ·
-  [S9 · Retrieval que no es sólo cosine](../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K,%20threshold%20y%20filtros%20sobre%20pgvector.md)
+  [S9 · Retrieval que no es sólo cosine](../../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K,%20threshold%20y%20filtros%20sobre%20pgvector.md)
   *(pre contra post filtrado: el que descarta la alternativa barata de D17)* ·
-  [S16 · Un sistema debe saber decir «no lo sé»](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
+  [S16 · Un sistema debe saber decir «no lo sé»](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
   *(los tres caminos, y «un guardrail es código, no una frase en el prompt»)* ·
-  [S16 · Coste, latencia y A/B testing](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md)
+  [S16 · Coste, latencia y A/B testing](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md)
   *(que es lo que matiza D3: el toggle demuestra la ablación, no la mide)* ·
-  [S11 · Citación y atribución verificable](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md)
-- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md). Se **cierra** la limitación 3 de
+  [S11 · Citación y atribución verificable](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Citacion%20y%20Atribucion%20verificable.md)
+- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md). Se **cierra** la limitación 3 de
   C34. Siguen abiertas *«C32b — política de timeout y circuito de `/v1/assist/agent`»*, *«C34 — el
   corpus no viaja en la imagen de `jbg-ai`»* —que **pesa más aquí**: sin corpus, M1 responde siempre sin
   citas— y *«telemetría de la ficha»*, que sale como change propio.
-- **Testing:** [testing-frontend.md](../../../Documentos/testing-frontend.md) ·
-  [testing-backend.md](../../../Documentos/testing-backend.md), las dos en *Estado de la suite: fallos
+- **Testing:** [testing-frontend.md](../../../../Documentos/testing-frontend.md) ·
+  [testing-backend.md](../../../../Documentos/testing-backend.md), las dos en *Estado de la suite: fallos
   conocidos*.
-- **Componentes:** [analisis-metronic-frontend.md](../../../Documentos/Propuestas/analisis-metronic-frontend.md).
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-  · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Componentes:** [analisis-metronic-frontend.md](../../../../Documentos/Propuestas/analisis-metronic-frontend.md).
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+  · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

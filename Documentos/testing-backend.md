@@ -549,7 +549,22 @@ git stash pop              # recuperarlo
 
 ### Qué haría falta para cerrarlo
 
-No es trabajo de un change de funcionalidad y **merece uno propio**. En orden de rentabilidad: extender el disparador de CI a las ramas de trabajo, para que esto deje de crecer en silencio; arreglar la familia de las cookies, que son 16 tests con una sola corrección; fijar los datos generados que chocan con límites de columna; y alinear ImageSharp con lo que `PdfSharpCore` espera.
+No es trabajo de un change de funcionalidad y **merece uno propio**. En orden de rentabilidad: ~~extender el disparador de CI a las ramas de trabajo, para que esto deje de crecer en silencio~~; arreglar la familia de las cookies, que son 16 tests con una sola corrección; fijar los datos generados que chocan con límites de columna; y alinear ImageSharp con lo que `PdfSharpCore` espera.
+
+> **El primero está hecho desde el 2026-09-27, con C39a.** `test-backend.yml` y
+> `test-frontend.yml` disparaban sobre `[main, develop]` y **ninguna de las dos ramas existe** en este
+> repositorio —las reales son `master`, `ai-eng` y `demo`—, así que los workflows estaban bien escritos
+> y eran **inertes**: no se habían ejecutado nunca, ni una vez. Ahora disparan sobre `[ai-eng, master]`,
+> conservando el filtro `paths:`.
+>
+> **Entran informativos y no como puerta**, y eso sigue siendo deliberado: una comprobación obligatoria
+> sobre los ~50 fallos preexistentes no es una puerta, es un bloqueo permanente que alguien acabará
+> saltándose. Lo que el arreglo compra no es que la suite pase: es que **deje de crecer en silencio**,
+> que era exactamente lo que esta línea pedía. Los otros tres puntos siguen pendientes.
+>
+> Y si alguna vez se hace obligatoria, hay una trampa escrita en `openspec/DEFERRED_TASKS.md`: un
+> workflow **omitido** por filtro de rutas nunca reporta estado, y una comprobación requerida que no
+> reporta deja la PR bloqueada para siempre.
 
 Dos de estas familias se toparon y se corrigieron **dentro de los tests nuevos** de C04, así que el patrón de arreglo ya está escrito en `AiSearchEventsControllerTests`.
 

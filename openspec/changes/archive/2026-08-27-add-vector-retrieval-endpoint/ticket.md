@@ -1,7 +1,7 @@
 # T-AIENG-014: Vector retrieval on POST /v1/retrieval/products (C14)
 
 > Ticket técnico del change OpenSpec `add-vector-retrieval-endpoint`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-014](../../../Documentos/Historias/AI-Eng/HU-AIENG-014.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C14, §0 `query_log`), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §7.6), sesión de exploración 2026-08-27, código real de `ai-service/src/` y `backend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-014](../../../../Documentos/Historias/AI-Eng/HU-AIENG-014.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C14, §0 `query_log`), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §7.6), sesión de exploración 2026-08-27, código real de `ai-service/src/` y `backend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -264,14 +264,14 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-014](../../../Documentos/Historias/AI-Eng/HU-AIENG-014.md)
+- **HU origen:** [HU-AIENG-014](../../../../Documentos/Historias/AI-Eng/HU-AIENG-014.md)
 - **Change OpenSpec:** `openspec/changes/add-vector-retrieval-endpoint/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C14) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §7.6)
-- **Apuntes del Máster (guía, no dogma):** [S9 retrieval](../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K,%20threshold%20y%20filtros%20sobre%20pgvector.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C14) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §7.6)
+- **Apuntes del Máster (guía, no dogma):** [S9 retrieval](../../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K,%20threshold%20y%20filtros%20sobre%20pgvector.md)
 - **Specs vivas:** `ai-service-api-contracts` · `ai-service-auth` · `ai-service-runtime` · `ai-vector-schema` · `product-document-indexer` · `catalog-source-text` · `ai-gateway-client`
 - **Precedentes:** C09 (`enrich.py` stub/real) · C11 (`LiteLlmEmbeddingClient`, `model_version_key`) · C13 (`index.py` 503 + `app.state`) · C02 (contrato) · C03 (800 ms)
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

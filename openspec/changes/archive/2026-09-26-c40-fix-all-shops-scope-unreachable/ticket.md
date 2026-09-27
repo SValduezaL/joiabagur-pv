@@ -4,16 +4,16 @@
 > tickets del Proyecto Final.
 >
 > **Fuentes de verdad:** las specs vivas
-> [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md) y
-> [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md), el
-> [change archivado de C40](../archive/2026-09-25-add-frontend-free-query-panel/) con su
-> [ticket](../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) y su
-> [informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md),
-> la historia [HU-AIENG-040-FIX](../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md),
+> [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md) y
+> [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md), el
+> [change archivado de C40](../../archive/2026-09-25-add-frontend-free-query-panel/) con su
+> [ticket](../../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) y su
+> [informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md),
+> la historia [HU-AIENG-040-FIX](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md),
 > y **el código real**, que es de donde sale todo lo que sigue.
 
 **Change:** `c40-fix-all-shops-scope-unreachable` (C40_FIX) · **Épica:** EP15
-**HU origen:** [HU-AIENG-040-FIX](../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md)
+**HU origen:** [HU-AIENG-040-FIX](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md)
 **Abierto:** 2026-09-25 · **Enriquecido:** 2026-09-26 · **Corrige:** C40, archivado el 2026-09-25
 **Origen:** pruebas manuales del usuario sobre el entorno levantado tras el cierre de C40.
 
@@ -57,7 +57,7 @@ Así que la letra se cumple, y por eso los **136 escenarios de C40 salieron verd
 independiente —que sí encontró una cuarta infracción de completitud y dos afirmaciones falsas del
 informe— **pasó por encima de esto**.
 
-**Pero el hueco no es pasivo: es peor.** [`assisted-search-panel/spec.md:88`](../../specs/assisted-search-panel/spec.md) afirma hoy:
+**Pero el hueco no es pasivo: es peor.** [`assisted-search-panel/spec.md:88`](../../../specs/assisted-search-panel/spec.md) afirma hoy:
 
 > *The panel SHALL send a concrete point of sale on every search.*
 
@@ -81,20 +81,20 @@ camino hasta ella*. Eso debería dejar rastro en la spec, no sólo en el código
 
 | Dónde | Qué impide |
 |---|---|
-| [`assisted.tsx:357`](../../../frontend/src/pages/sales/assisted.tsx) | `{pointsOfSale.length > 1 \|\| isAdmin ? (…) : null}` — con **una sola asignación el selector no se renderiza**. Añadir un `SelectItem` no le llega a ese usuario |
-| [`assisted.tsx:365-369`](../../../frontend/src/pages/sales/assisted.tsx) | El `<SelectContent>` mapea **sólo** `pointsOfSale`. **No existe** una opción «Todas las tiendas» |
-| [`assisted.tsx:196`](../../../frontend/src/pages/sales/assisted.tsx) | `if (!trimmed \|\| !pointOfSaleId) return;` — la búsqueda **no se dispara** sin tienda |
-| [`assisted.tsx:403`](../../../frontend/src/pages/sales/assisted.tsx) | El botón *Buscar* está `disabled` sin tienda |
-| [`ai-search.types.ts:284`](../../../frontend/src/types/ai-search.types.ts) | `pointOfSaleId: string` — **obligatorio**, con el comentario *«Required: searching every shop is a scope of its own»* |
-| [`ai-search.types.ts:19`](../../../frontend/src/types/ai-search.types.ts) | Igual en `AssistedSearchRequest`: *«Always required — never inferred by the server»* |
+| [`assisted.tsx:357`](../../../../frontend/src/pages/sales/assisted.tsx) | `{pointsOfSale.length > 1 \|\| isAdmin ? (…) : null}` — con **una sola asignación el selector no se renderiza**. Añadir un `SelectItem` no le llega a ese usuario |
+| [`assisted.tsx:365-369`](../../../../frontend/src/pages/sales/assisted.tsx) | El `<SelectContent>` mapea **sólo** `pointsOfSale`. **No existe** una opción «Todas las tiendas» |
+| [`assisted.tsx:196`](../../../../frontend/src/pages/sales/assisted.tsx) | `if (!trimmed \|\| !pointOfSaleId) return;` — la búsqueda **no se dispara** sin tienda |
+| [`assisted.tsx:403`](../../../../frontend/src/pages/sales/assisted.tsx) | El botón *Buscar* está `disabled` sin tienda |
+| [`ai-search.types.ts:284`](../../../../frontend/src/types/ai-search.types.ts) | `pointOfSaleId: string` — **obligatorio**, con el comentario *«Required: searching every shop is a scope of its own»* |
+| [`ai-search.types.ts:19`](../../../../frontend/src/types/ai-search.types.ts) | Igual en `AssistedSearchRequest`: *«Always required — never inferred by the server»* |
 
-Añádase que el efecto de carga **fija la tienda a la primera activa** ([`assisted.tsx:152-154`](../../../frontend/src/pages/sales/assisted.tsx)),
+Añádase que el efecto de carga **fija la tienda a la primera activa** ([`assisted.tsx:152-154`](../../../../frontend/src/pages/sales/assisted.tsx)),
 así que el estado «sin tienda» no es que sea difícil de alcanzar: **no se alcanza nunca**. Todo lo que
 hay aguas abajo de él no se ejecuta en la aplicación real, ni una vez.
 
 #### 1.2 · La sonda de disponibilidad exige punto de venta, y el panel se queda colgado
 
-Lo rechaza con un 400 ([`AiSearchController.cs:239-250`](../../../backend/src/JoiabagurPV.API/Controllers/AiSearchController.cs)):
+Lo rechaza con un 400 ([`AiSearchController.cs:239-250`](../../../../backend/src/JoiabagurPV.API/Controllers/AiSearchController.cs)):
 
 ```csharp
 public IActionResult Availability([FromQuery] Guid pointOfSaleId)
@@ -104,7 +104,7 @@ public IActionResult Availability([FromQuery] Guid pointOfSaleId)
         return BadRequest(new { errors = new[] { "El punto de venta es obligatorio." } });
 ```
 
-Y el panel, sin tienda, **se pone en blanco a sí mismo** ([`assisted.tsx:171-176`](../../../frontend/src/pages/sales/assisted.tsx)):
+Y el panel, sin tienda, **se pone en blanco a sí mismo** ([`assisted.tsx:171-176`](../../../../frontend/src/pages/sales/assisted.tsx)):
 
 ```tsx
 useEffect(() => {
@@ -112,23 +112,23 @@ useEffect(() => {
 ```
 
 **Y el síntoma es peor de lo que la primera pasada anotó.** Con `settled = false`,
-[`ai-availability-badge.tsx:41-49`](../../../frontend/src/components/sales/ai-availability-badge.tsx)
+[`ai-availability-badge.tsx:41-49`](../../../../frontend/src/components/sales/ai-availability-badge.tsx)
 renderiza **«Comprobando disponibilidad…» para siempre**: no es sólo el toggle apagado sin motivo, es
 un estado de carga que no termina nunca. Y el toggle
-([`assisted.tsx:378-385`](../../../frontend/src/pages/sales/assisted.tsx)) recibe
+([`assisted.tsx:378-385`](../../../../frontend/src/pages/sales/assisted.tsx)) recibe
 `assistedAvailable={availability?.assistedAnswerAvailable ?? false}` — **deshabilitado y sin motivo que
 enseñar**. Es **la misma forma de avería que C40 existió para corregir**: un camino que se apaga solo y
 no lo dice.
 
 **Y el cambio no son tres líneas en el controlador**, como decía la versión anterior de este ticket.
 `GetAvailability` **no vive en `FreeQuerySearchService`**: vive en
-[`AssistedSearchService.cs:154-170`](../../../backend/src/JoiabagurPV.Application/Services/AssistedSearchService.cs)
+[`AssistedSearchService.cs:154-170`](../../../../backend/src/JoiabagurPV.Application/Services/AssistedSearchService.cs)
 y llama a `IsEnabledFor(Guid)` sobre **tres** clases de opciones distintas —
 `AiFreeQuerySearchOptions`, `AiSalesAssistOptions` y `AiSearchOptions`. Cambian la interfaz, la firma,
 las tres ramas y el DTO de respuesta.
 
 Lo que sí es cierto es que **el predicado ya está decidido y razonado** en
-[`FreeQuerySearchService.cs:90-94`](../../../backend/src/JoiabagurPV.Application/Services/FreeQuerySearchService.cs):
+[`FreeQuerySearchService.cs:90-94`](../../../../backend/src/JoiabagurPV.Application/Services/FreeQuerySearchService.cs):
 
 ```csharp
 // With no shop named there is no per-shop entry to look up, so the default governs.
@@ -145,27 +145,27 @@ private static bool IsEnabled(AiFreeQuerySearchOptions options, Guid? pointOfSal
 #### 1.3 · **EL HALLAZGO NUEVO Y EL QUE DIMENSIONA EL TICKET** — la ruta rápida rechaza el ámbito global
 
 El panel tiene **dos** rutas y `route` arranca en `'semantic'`
-([`assisted.tsx:139`](../../../frontend/src/pages/sales/assisted.tsx)), deliberadamente: *«el valor por
+([`assisted.tsx:139`](../../../../frontend/src/pages/sales/assisted.tsx)), deliberadamente: *«el valor por
 defecto es la barata»*. `runSearch` construye **un** payload y lo despacha por ruta
-([`assisted.tsx:210-215`](../../../frontend/src/pages/sales/assisted.tsx)). Y el ámbito global sólo se
+([`assisted.tsx:210-215`](../../../../frontend/src/pages/sales/assisted.tsx)). Y el ámbito global sólo se
 construyó para una de las dos:
 
 | | `route: semantic` → `POST /api/ai/search` (**por defecto**) | `route: assisted` → `POST /api/ai/search/assisted` |
 |---|---|---|
-| **DTO** | [`AssistedSearchDtos.cs:18`](../../../backend/src/JoiabagurPV.Application/DTOs/Ai/AssistedSearchDtos.cs) → `Guid PointOfSaleId` | [`FreeQuerySearchDtos.cs:30`](../../../backend/src/JoiabagurPV.Application/DTOs/Ai/FreeQuerySearchDtos.cs) → `Guid?` |
-| **Validación** | [`AssistedSearchRequestValidator.cs:29`](../../../backend/src/JoiabagurPV.Application/Validators/AssistedSearchRequestValidator.cs) → `.NotEmpty()`, **400** | El controlador distingue **ausencia de `Guid.Empty`**: ausente → global, en blanco → 400 |
+| **DTO** | [`AssistedSearchDtos.cs:18`](../../../../backend/src/JoiabagurPV.Application/DTOs/Ai/AssistedSearchDtos.cs) → `Guid PointOfSaleId` | [`FreeQuerySearchDtos.cs:30`](../../../../backend/src/JoiabagurPV.Application/DTOs/Ai/FreeQuerySearchDtos.cs) → `Guid?` |
+| **Validación** | [`AssistedSearchRequestValidator.cs:29`](../../../../backend/src/JoiabagurPV.Application/Validators/AssistedSearchRequestValidator.cs) → `.NotEmpty()`, **400** | El controlador distingue **ausencia de `Guid.Empty`**: ausente → global, en blanco → 400 |
 | **Ámbito** | `AiCallScope.ForPointOfSale(...)` fijo | `ScopeOf(...)` → `ForAllPointsOfSale` con nulo |
 | **ámbito «todas»** | ❌ **400** «La búsqueda asistida requiere un punto de venta» | ✅ 200, catálogo completo |
 
 **Síntoma exacto si se implementara el ticket tal como estaba escrito:** el administrador elige «Todas
 las tiendas», pulsa *Buscar* sin tocar el toggle, `toOutcome` mapea el 400 a `{kind:'invalid'}`
-([`ai-search.service.ts:57-65`](../../../frontend/src/services/ai-search.service.ts)) y el panel pinta
+([`ai-search.service.ts:57-65`](../../../../frontend/src/services/ai-search.service.ts)) y el panel pinta
 el mensaje del servidor. **La pantalla contradiciéndose a sí misma es peor que el hueco actual.**
 
 #### 1.4 · El interruptor de la consulta libre no está puesto en ningún sitio del repositorio
 
 `compose.demo.yaml` pone dos de los tres interruptores de despliegue y **no el tercero**
-([`compose.demo.yaml:193,198`](../../../compose.demo.yaml)):
+([`compose.demo.yaml:193,198`](../../../../compose.demo.yaml)):
 
 ```yaml
 AiSearch__EnabledByDefault:      "true"   # lo añadió C17
@@ -187,7 +187,7 @@ estarlo»*.
 
 #### 1.5 · Una mina dormida en la rama léxica, que la decisión de alcance deja dormida a propósito
 
-[`AssistedSearchRepository.cs`](../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/AssistedSearchRepository.cs):
+[`AssistedSearchRepository.cs`](../../../../backend/src/JoiabagurPV.Infrastructure/Data/Repositories/AssistedSearchRepository.cs):
 
 | Método | Acepta `Guid?` | Agrupa por producto con nulo |
 |---|---|---|
@@ -206,7 +206,7 @@ ruta degradada es la que corre siempre.
 #### 1.6 · Lo que YA funciona y no hay que reconstruir
 
 Comprobado en el código y en el §12 del
-[informe de C40](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md):
+[informe de C40](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md):
 
 - `AiCallScope.ForAllPointsOfSale` / `AiCallScopeKind.AllPointsOfSale`, aceptado en recuperación y
   assist, rechazado en ficha, sustitutos e inventario. El test por reflexión fija que hay exactamente
@@ -230,7 +230,7 @@ Comprobado en el código y en el §12 del
   así que `ai-service/` no se toca en ningún escenario.
 - El hueco de telemetría ya está declarado: una búsqueda global **no se registra**
   (`ProductSearchEvent.PointOfSaleId` es no nulo e indexado; registrarla exige migración de EF Core).
-  Está en [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md), y el embudo ya tiene la línea «Sin
+  Está en [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md), y el embudo ya tiene la línea «Sin
   registrar: búsqueda en todas las tiendas».
 - `POST /api/ai/search/assisted` **sin** `pointOfSaleId` responde 200 y sirve resultados de todo el
   catálogo, con cantidad e indicador de stock nulos — comprobado contra el servicio en marcha.
@@ -242,10 +242,10 @@ el contrato interno y su copia— existe y nadie puede llegar a él.**
 
 | Dónde | Qué dice |
 |---|---|
-| [`assisted-search-panel/spec.md:41`](../../specs/assisted-search-panel/spec.md) | *«Changing the point of sale MUST clear the displayed results»* |
-| [`assisted-search-panel/spec.md:596`](../../specs/assisted-search-panel/spec.md) | *«Changing the selected point of sale MUST refresh the stock figures»* |
+| [`assisted-search-panel/spec.md:41`](../../../specs/assisted-search-panel/spec.md) | *«Changing the point of sale MUST clear the displayed results»* |
+| [`assisted-search-panel/spec.md:596`](../../../specs/assisted-search-panel/spec.md) | *«Changing the selected point of sale MUST refresh the stock figures»* |
 
-El código **limpia** ([`assisted.tsx:268-274`](../../../frontend/src/pages/sales/assisted.tsx):
+El código **limpia** ([`assisted.tsx:268-274`](../../../../frontend/src/pages/sales/assisted.tsx):
 `setState({ kind: 'idle' })`), y el test de la tarea 12.6 de C40 —`should issue no assisted request when
 the shop changes`— sólo comprobó el **segundo** `THEN` del escenario, nunca el primero. Es un **tercer
 `SHALL` falso** en la misma spec, y toca este flujo de lleno: volver de «todas» a una tienda concreta
@@ -335,7 +335,7 @@ apagado, que es otra cosa y es falso.
   hay que tocar la regla de ocultación** ni el requisito *«A single assignment needs no choice»*.
 - **El centinela vive sólo en el componente** y se traduce a **ausencia** del campo antes de la
   petición. La página ya usa el patrón para la categoría
-  ([`assisted.tsx:456`](../../../frontend/src/pages/sales/assisted.tsx)):
+  ([`assisted.tsx:456`](../../../../frontend/src/pages/sales/assisted.tsx)):
   `value={category || 'all'}` con `onValueChange={(v) => setCategory(v === 'all' ? '' : v)}`.
 - **Los dos guards relajados**, para que el ámbito sin tienda sea un estado válido de la pantalla y no
   un formulario incompleto.
@@ -368,7 +368,7 @@ comprobación manual de la DoD no se puede hacer.
 
 **Los existentes no cubrían esto, y no era descuido**: los de la fila pasan `pointOfSaleName` —y el
 `hasStock` nulo— **directamente al componente**
-([`assisted-search-result-row.test.tsx:167`](../../../frontend/src/components/sales/__tests__/assisted-search-result-row.test.tsx)),
+([`assisted-search-result-row.test.tsx:167`](../../../../frontend/src/components/sales/__tests__/assisted-search-result-row.test.tsx)),
 así que nunca ejercitaron el camino del panel. Es la misma lección del hallazgo central en forma de test:
 el componente estaba probado, el camino hasta él no.
 
@@ -497,7 +497,7 @@ desperdicia nada, y con el prerrequisito del §E es un estado raro y no el norma
 ## Criterios de Aceptación
 
 Los once escenarios en formato Dado/Cuando/Entonces están en la historia
-[HU-AIENG-040-FIX](../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md#criterios-de-aceptación).
+[HU-AIENG-040-FIX](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md#criterios-de-aceptación).
 Resumen de los que gobiernan el cierre:
 
 1. El administrador ve la opción de ámbito global; el operario **no**, y la ruta sigue sirviéndosela.
@@ -517,8 +517,8 @@ Resumen de los que gobiernan el cierre:
 
 ## Definición de Hecho (DoD)
 
-- [ ] Código implementado según las capas de [`Documentos/modelo-c4.md`](../../../Documentos/modelo-c4.md)
-      y las convenciones de [`openspec/project.md`](../../project.md)
+- [ ] Código implementado según las capas de [`Documentos/modelo-c4.md`](../../../../Documentos/modelo-c4.md)
+      y las convenciones de [`openspec/project.md`](../../../project.md)
 - [ ] **Backend:** xUnit + Moq + FluentAssertions + Bogus, nomenclatura
       `Método_Escenario_ResultadoEsperado`, cobertura ≥70 % sobre el código nuevo
 - [ ] **Frontend:** Vitest + React Testing Library + MSW, nomenclatura
@@ -533,15 +533,15 @@ Resumen de los que gobiernan el cierre:
       validando su forma
 - [ ] Las suites **vienen rojas de fábrica**: comparar **nombres**, no recuentos, contra la línea base
       del propio commit. Frontend ~113-114 de 729 en 14 ficheros; backend ~50. **Cero nombres nuevos en
-      rojo en el área propia.** Detalle en [`CLAUDE.md`](../../../CLAUDE.md)
+      rojo en el área propia.** Detalle en [`CLAUDE.md`](../../../../CLAUDE.md)
 - [ ] `dotnet build` y `npm run build` en verde, **y `tsc --noEmit` filtrado a los ficheros propios sin
       errores nuevos** — obligatorio porque el change mueve un tipo, y C40 se comió un commit entero con
       `npm run build` verde sobre un error de tipos
 - [ ] **Comprobación manual en el entorno levantado**, por la interfaz y con los dos roles — es la única
       puerta que detecta el defecto que este change corrige
-- [ ] Documentación actualizada: [`Documentos/epicas.md`](../../../Documentos/epicas.md) (EP15),
+- [ ] Documentación actualizada: [`Documentos/epicas.md`](../../../../Documentos/epicas.md) (EP15),
       `frontend/README.md`, `backend/README.md`, y las dos tareas diferidas en
-      [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) con su motivo
+      [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) con su motivo
 - [ ] Compatibilidad hacia atrás verificada en el contrato REST; el único consumidor es el panel
 - [ ] Sin TODO/FIXME sin tarea de seguimiento asociada
 - [ ] UI en español (es-ES) y moneda EUR (€)
@@ -610,25 +610,25 @@ la versión original de este ticket.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-040-FIX](../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md)
+- **HU origen:** [HU-AIENG-040-FIX](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040-FIX.md)
 - **Change:** [`c40-fix-all-shops-scope-unreachable`](./) · [proposal.md](./proposal.md)
-- **Change que origina el defecto:** [`2026-09-25-add-frontend-free-query-panel`](../archive/2026-09-25-add-frontend-free-query-panel/)
-  · su [ticket](../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) · su
-  [informe §12](../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md)
-  · [HU-AIENG-040](../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
-- **Specs vivas:** [`assisted-search-panel`](../../specs/assisted-search-panel/spec.md) ·
-  [`ai-free-query-search`](../../specs/ai-free-query-search/spec.md)
-- **Precedente de ticket correctivo:** [T-AIENG-FIX1](../archive/2026-09-05-fix-enrichment-vocabulary-gaps/ticket.md),
+- **Change que origina el defecto:** [`2026-09-25-add-frontend-free-query-panel`](../../archive/2026-09-25-add-frontend-free-query-panel/)
+  · su [ticket](../../archive/2026-09-25-add-frontend-free-query-panel/ticket.md) · su
+  [informe §12](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c40-implementation-measurements.md)
+  · [HU-AIENG-040](../../../../Documentos/Historias/AI-Eng/HU-AIENG-040.md)
+- **Specs vivas:** [`assisted-search-panel`](../../../specs/assisted-search-panel/spec.md) ·
+  [`ai-free-query-search`](../../../specs/ai-free-query-search/spec.md)
+- **Precedente de ticket correctivo:** [T-AIENG-FIX1](../../archive/2026-09-05-fix-enrichment-vocabulary-gaps/ticket.md),
   que también nace de una spec bien formada y falsa
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
-  · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Contexto:** [`openspec/project.md`](../../project.md) ·
-  [`Documentos/arquitectura.md`](../../../Documentos/arquitectura.md) ·
-  [`Documentos/modelo-c4.md`](../../../Documentos/modelo-c4.md) ·
-  [`Documentos/epicas.md`](../../../Documentos/epicas.md) (EP15)
-- **Pruebas:** [testing-backend.md](../../../Documentos/testing-backend.md) ·
-  [testing-frontend.md](../../../Documentos/testing-frontend.md) · [`CLAUDE.md`](../../../CLAUDE.md)
-- **Tareas diferidas:** [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+  · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Contexto:** [`openspec/project.md`](../../../project.md) ·
+  [`Documentos/arquitectura.md`](../../../../Documentos/arquitectura.md) ·
+  [`Documentos/modelo-c4.md`](../../../../Documentos/modelo-c4.md) ·
+  [`Documentos/epicas.md`](../../../../Documentos/epicas.md) (EP15)
+- **Pruebas:** [testing-backend.md](../../../../Documentos/testing-backend.md) ·
+  [testing-frontend.md](../../../../Documentos/testing-frontend.md) · [`CLAUDE.md`](../../../../CLAUDE.md)
+- **Tareas diferidas:** [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md)
 
 ---
 

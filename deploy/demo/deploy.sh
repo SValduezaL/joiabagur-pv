@@ -111,6 +111,39 @@ else
   log "Generation credential: absent (the sale card serves no argument; see deploy/demo/README.md)"
 fi
 
+# C31 · C32b · C39a. The other TWO optional credentials, one per remaining
+# generation stage, and the same rule as the one above for the same reason: each
+# one absent is a declared state with a rollback of its own, so `|| true` here and
+# NO `:?` line in the validation block below.
+#
+# They are three separate parameters and never one read three times, which is the
+# OPPOSITE of the rule the two shared credentials below follow. The distinction is
+# the point: there the risk is DRIFT between two halves that must agree literally,
+# so one parameter is safer. Here the risk is CONFUSING THREE COSTS — the three
+# stages run different models, and the router in particular was measured on
+# `gpt-4o` after `gpt-4o-mini` was vetoed for silencing answerable queries — so
+# three parameters is what keeps the bill readable. They may hold the same value.
+#
+# Until C39a neither existed, and both stages fell back to the argument's key:
+# the C34 deployment logged `stage=router_client ... credential=assist_fallback`
+# and the agent had no consumer at all.
+export ROUTER_LLM_API_KEY="$(read_parameter ROUTER_LLM_API_KEY || true)"
+export AGENT_LLM_API_KEY="$(read_parameter AGENT_LLM_API_KEY || true)"
+
+# Whether each is there, never what it is. One line per stage, because a single
+# line for the three would not say WHICH one is missing, and the three degrade to
+# three different things.
+if [ -n "${ROUTER_LLM_API_KEY}" ]; then
+  log "Router credential: present (intent is classified with the router's own model)"
+else
+  log "Router credential: absent (the classifier falls back to the generation key, or to none: intent is 'unclassified')"
+fi
+if [ -n "${AGENT_LLM_API_KEY}" ]; then
+  log "Agent credential: present (the sale assistant loop will run)"
+else
+  log "Agent credential: absent (POST /v1/assist/agent answers without running the loop)"
+fi
+
 # The two shared credentials. Each is ONE parameter, read ONCE here, and
 # interpolated by the composition file into the TWO services that must agree on
 # it literally:

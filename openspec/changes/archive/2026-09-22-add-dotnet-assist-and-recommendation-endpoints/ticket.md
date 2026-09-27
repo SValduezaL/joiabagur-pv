@@ -1,18 +1,18 @@
 # T-AIENG-034: Sale assist and substitutes endpoints — authoritative hydration, placeholder resolution and bounded degradation (C34)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-032b](../archive/2026-09-21-add-sales-assistant-agent-loop/ticket.md),
-> [T-AIENG-015](../archive/2026-08-28-add-dotnet-ai-search-endpoint/ticket.md) y el resto de tickets
+> siguen [T-AIENG-032b](../../archive/2026-09-21-add-sales-assistant-agent-loop/ticket.md),
+> [T-AIENG-015](../../archive/2026-08-28-add-dotnet-ai-search-endpoint/ticket.md) y el resto de tickets
 > del Proyecto Final.
 >
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-034](../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md),
-> [informe de exploración](../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md)
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-034](../../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md),
+> [informe de exploración](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md)
 > (nueve hallazgos, catorce decisiones, cinco mediciones reproducibles), [ficha C34 y §0 del
-> 2026-09-21](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
-> [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+> 2026-09-21](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md),
+> [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
 > (§6.2, §6.4, §7.6, §7.7, §15.10, §15.12), `ai-service/openapi.json` y el código real de `backend/src/`.
 
-**HU origen:** [HU-AIENG-034](../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md)
+**HU origen:** [HU-AIENG-034](../../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md)
 **Change:** `add-dotnet-assist-and-recommendation-endpoints` (C34) · **Épica:** EP15
 **Rama:** `c34-add-dotnet-assist-and-recommendation-endpoints` · **Anterior en la rama:** C26/C30a ·
 **Siguiente:** C36
@@ -43,7 +43,7 @@ contrastó con el árbol, y cuatro hallazgos gobiernan el diseño:
 
 1. **Los marcadores no dicen de qué pieza son.** Son dos tokens sin referencia. En M2 y M3 hay una sola
    pieza y se resuelven sin ambigüedad. En M1 y en el agente, el argumentario habla de varias piezas
-   con los mismos tokens ([`v4.md:104-108`](../../../ai-service/prompts/assist/v4.md#L104-L108)). **C34 se
+   con los mismos tokens ([`v4.md:104-108`](../../../../ai-service/prompts/assist/v4.md#L104-L108)). **C34 se
    queda con el card**, y la anotación del 14 de septiembre que le daba la ruta de la consulta libre se
    marca como refutada.
 2. **El presupuesto de 5 s está por debajo del peor caso de Python.** En la pasada de C30b, en el ancho
@@ -359,7 +359,7 @@ el log de `jbg-ai`.
 ### Demo — última tarea
 
 Los cuatro pasos de *«C30b — la demo no genera argumentario»* de
-[`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md), más lo que C34 añade:
+[`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md), más lo que C34 añade:
 
 | Fichero | Cambio |
 |---|---|
@@ -536,30 +536,30 @@ de las reglas de logs.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-034](../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md)
-- **Informe de exploración:** [c34-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md)
+- **HU origen:** [HU-AIENG-034](../../../../Documentos/Historias/AI-Eng/HU-AIENG-034.md)
+- **Informe de exploración:** [c34-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md)
 - **Plan y diseño:**
-  - [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C34 y §0 del 2026-09-21;
-  - [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md), §6.2, §6.4, §7.6, §7.7, §15.10 y §15.12.
+  - [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C34 y §0 del 2026-09-21;
+  - [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md), §6.2, §6.4, §7.6, §7.7, §15.10 y §15.12.
 - **Specs vivas:**
-  - [`ai-gateway-client`](../../specs/ai-gateway-client/spec.md) *(se modifica)*
-  - [`ai-assisted-search`](../../specs/ai-assisted-search/spec.md) *(patrón)*
-  - [`assist-generation`](../../specs/assist-generation/spec.md)
-  - [`substitutes-retrieval`](../../specs/substitutes-retrieval/spec.md)
-  - [`access-control`](../../specs/access-control/spec.md)
-  - [`product-family`](../../specs/product-family/spec.md)
+  - [`ai-gateway-client`](../../../specs/ai-gateway-client/spec.md) *(se modifica)*
+  - [`ai-assisted-search`](../../../specs/ai-assisted-search/spec.md) *(patrón)*
+  - [`assist-generation`](../../../specs/assist-generation/spec.md)
+  - [`substitutes-retrieval`](../../../specs/substitutes-retrieval/spec.md)
+  - [`access-control`](../../../specs/access-control/spec.md)
+  - [`product-family`](../../../specs/product-family/spec.md)
 - **Precedentes:**
-  - [T-AIENG-015](../archive/2026-08-28-add-dotnet-ai-search-endpoint/ticket.md): hidratación, ventana y degradación.
-  - [T-AIENG-030a](../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md): la forma.
-  - [T-AIENG-030b](../archive/2026-09-14-add-assist-pitch-generation/ticket.md): los estados del argumentario.
-  - [T-AIENG-026](../archive/2026-09-12-add-substitutes-retrieval/ticket.md): sustitutos.
+  - [T-AIENG-015](../../archive/2026-08-28-add-dotnet-ai-search-endpoint/ticket.md): hidratación, ventana y degradación.
+  - [T-AIENG-030a](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md): la forma.
+  - [T-AIENG-030b](../../archive/2026-09-14-add-assist-pitch-generation/ticket.md): los estados del argumentario.
+  - [T-AIENG-026](../../archive/2026-09-12-add-substitutes-retrieval/ticket.md): sustitutos.
 - **Apuntes del Máster (guía, no dogma):**
-  - [S4 · Guardrails y validación de outputs](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md): las tres políticas de fallo.
-  - [S9 · Retrieval que no es solo cosine](../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K%2C%20threshold%20y%20filtros%20sobre%20pgvector.md): el post-filtrado instrumentado.
-  - [S15 · Partir en servicios](../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Partir%20en%20servicios.md): síncrono hasta que duela, errores como contrato.
-- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md). Se cierra *«C30b — la demo no genera argumentario»*; siguen abiertas *«C32b — política de timeout y circuito de `/v1/assist/agent`»* y *«C32a — consulta puntual de disponibilidad»*.
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md), sección *Estado de la suite: fallos conocidos*.
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+  - [S4 · Guardrails y validación de outputs](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/Guardrails%20y%20validacion%20de%20outputs.md): las tres políticas de fallo.
+  - [S9 · Retrieval que no es solo cosine](../../../../Documentos/Sesiones%20Master%20AIEng/S9_Fundamentos_RAG/Retrieval%20que%20no%20es%20solo%20cosine%20-%20top-K%2C%20threshold%20y%20filtros%20sobre%20pgvector.md): el post-filtrado instrumentado.
+  - [S15 · Partir en servicios](../../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Partir%20en%20servicios.md): síncrono hasta que duela, errores como contrato.
+- **Tareas diferidas:** [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md). Se cierra *«C30b — la demo no genera argumentario»*; siguen abiertas *«C32b — política de timeout y circuito de `/v1/assist/agent`»* y *«C32a — consulta puntual de disponibilidad»*.
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md), sección *Estado de la suite: fallos conocidos*.
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

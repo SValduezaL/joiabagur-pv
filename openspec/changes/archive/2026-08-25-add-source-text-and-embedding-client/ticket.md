@@ -1,7 +1,7 @@
 # T-AIENG-011: Canonical SourceText and hash-keyed embedding client (C11)
 
 > Ticket técnico del change OpenSpec `add-source-text-and-embedding-client`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-011](../../../Documentos/Historias/AI-Eng/HU-AIENG-011.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C11, §0 C05/C07/C08, §7), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.1, §7.2, D3), sesión de exploración 2026-08-25, código real de `ai-service/src/` y `backend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-011](../../../../Documentos/Historias/AI-Eng/HU-AIENG-011.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C11, §0 C05/C07/C08, §7), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.1, §7.2, D3), sesión de exploración 2026-08-25, código real de `ai-service/src/` y `backend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -236,14 +236,14 @@ Ninguna pendiente. Las de la exploración (biblioteca, campos, caché RAM, clave
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-011](../../../Documentos/Historias/AI-Eng/HU-AIENG-011.md)
+- **HU origen:** [HU-AIENG-011](../../../../Documentos/Historias/AI-Eng/HU-AIENG-011.md)
 - **Change OpenSpec:** `openspec/changes/add-source-text-and-embedding-client/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C11) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.1, §7.2, D3) · specs v2 §4.7
-- **Apuntes del Máster (guía):** [S11 Reindexación](../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md) · [S3 LiteLLM](../../../Documentos/Sesiones%20Master%20AIEng/S3_Patrones_Diseños_Wrappers_Modelos/Abstracci%C3%B3n%20de%20proveedores%20y%20estrategias%20de%20fallback.md) · [S7 Embeddings](../../../Documentos/Sesiones%20Master%20AIEng/S7_Embeddings/Embeddings.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C11) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.1, §7.2, D3) · specs v2 §4.7
+- **Apuntes del Máster (guía):** [S11 Reindexación](../../../../Documentos/Sesiones%20Master%20AIEng/S11_RAG_avanzado/Reindexacion%20y%20Versionado%20Embeddings.md) · [S3 LiteLLM](../../../../Documentos/Sesiones%20Master%20AIEng/S3_Patrones_Diseños_Wrappers_Modelos/Abstracci%C3%B3n%20de%20proveedores%20y%20estrategias%20de%20fallback.md) · [S7 Embeddings](../../../../Documentos/Sesiones%20Master%20AIEng/S7_Embeddings/Embeddings.md)
 - **Specs vivas:** `ai-vector-schema` · `ai-service-runtime` · `catalog-enrichment-pipeline` · `product-ai-profile` · **no** `embedding-management` (visual)
 - **Precedentes:** `ProductEnrichmentSourceHash.cs` · migración `f46c55c056e2` (`EMBEDDING_DIM = 1536`) · `jbg_ai/enrichment/llm.py` (puerto, no reutilizar) · `tests/README.md` (`indexing/` reservada)
 - **Contrato:** `ai-service/openapi.json` — **no se modifica**
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

@@ -1,7 +1,7 @@
 # T-AIENG-018b: Family review UI, persisted review verdicts and orphan alert (C18b)
 
 > Ticket técnico del change OpenSpec `add-family-review-ui-and-orphan-alert`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-018b](../../../Documentos/Historias/AI-Eng/HU-AIENG-018b.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C18b, §0, §12), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.5, §7.8, §11.5, §16), sesión de exploración del 2026-08-31 con medición sobre el Postgres vivo, y código real de `ai-service/src/`, `backend/src/`, `frontend/src/` y `openspec/specs/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-018b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-018b.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C18b, §0, §12), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§7.5, §7.8, §11.5, §16), sesión de exploración del 2026-08-31 con medición sobre el Postgres vivo, y código real de `ai-service/src/`, `backend/src/`, `frontend/src/` y `openspec/specs/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el precedente de `add-ai-service-contracts-and-auth/ticket.md`.
 
 ---
@@ -132,7 +132,7 @@ Entidad `FamilyReviewVerdict` en `public`, junto a `Origin` / `ApprovedByUserId`
 
 ### Vocabulario
 
-`materials.synonyms` += `dorado: baño de oro` en [`enrichment/vocabularies.yaml`](../../../ai-service/src/jbg_ai/enrichment/vocabularies.yaml), espejado en `frontend/src/lib/materials-vocabulary.ts` con su test de fijación. **No se toca `piece_type.terms`** ni el prompt: eso es `fix-enrichment-vocabulary-gaps`, change propuesto en el §0 del plan y **sin número asignado** — no confundir con **C20 `add-synonym-dictionary`**, que es un diccionario de sinónimos **de consulta**, vive en `retrieval/` y no tiene relación con este trabajo.
+`materials.synonyms` += `dorado: baño de oro` en [`enrichment/vocabularies.yaml`](../../../../ai-service/src/jbg_ai/enrichment/vocabularies.yaml), espejado en `frontend/src/lib/materials-vocabulary.ts` con su test de fijación. **No se toca `piece_type.terms`** ni el prompt: eso es `fix-enrichment-vocabulary-gaps`, change propuesto en el §0 del plan y **sin número asignado** — no confundir con **C20 `add-synonym-dictionary`**, que es un diccionario de sinónimos **de consulta**, vive en `retrieval/` y no tiene relación con este trabajo.
 
 ### Frontend
 
@@ -140,7 +140,7 @@ Entidad `FamilyReviewVerdict` en `public`, junto a `Origin` / `ApprovedByUserId`
 - `services/family-review.service.ts` con rutas relativas (`VITE_API_BASE_URL` ya lleva `/api`), siguiendo el patrón de `ai-health.service.ts`.
 - `types/family-review.types.ts` espejando los DTOs.
 - Tabla con **TanStack Table** (ya en dependencias), navegación por teclado, confirmación en bloque y cronómetro por ítem.
-- Componentes de [`analisis-metronic-frontend.md`](../../../Documentos/Propuestas/analisis-metronic-frontend.md) **antes** de crear ninguno nuevo.
+- Componentes de [`analisis-metronic-frontend.md`](../../../../Documentos/Propuestas/analisis-metronic-frontend.md) **antes** de crear ninguno nuevo.
 - **Tres estados distinguibles por lista** (D20): *calculada y vacía*, *no disponible porque el servicio no contestó*, y *calculada con contenido*. El segundo nunca se pinta como el primero. Las listas que dependen de vectores —marcados y huérfanos— pueden estar no disponibles mientras la revisión de familias, que no los necesita, sigue operativa: son estados por lista, no de página.
 - UI en es-ES, moneda EUR (€).
 - Lo que C28 reutilizará se extrae **sólo** donde su ficha lo pide por escrito —tabla editable, atajos de teclado, aprobación masiva, registro de quién revisó y qué cambió—, no por conjetura.
@@ -226,15 +226,15 @@ Una sola cuestión sigue viva, y es **de otro change**: `fix-enrichment-vocabula
 
 ## Enlaces o Referencias
 
-- HU origen: [HU-AIENG-018b](../../../Documentos/Historias/AI-Eng/HU-AIENG-018b.md) · Anterior: [HU-AIENG-018a](../../../Documentos/Historias/AI-Eng/HU-AIENG-018a.md)
-- Change: [`add-family-review-ui-and-orphan-alert`](./) · Anterior: [`2026-08-31-add-family-suggestion-and-approval`](../archive/2026-08-31-add-family-suggestion-and-approval/)
-- Informe de C18a: [`c18a-family-suggestion-report.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md)
-- Plan: [`proyecto-final-plan-changes-openspec.md`](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) — ficha C18b, §0 (partición de C18, anulación de la rama de C19, propuesta `fix-enrichment-vocabulary-gaps`), §12 (turno de migración)
-- Diseño: [`proyecto-final-diseno-rag-joiabagur.md`](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §7.5, §7.8, §11.5, §16
-- Specs vivas: [`family-suggestion`](../../specs/family-suggestion/spec.md), [`product-family`](../../specs/product-family/spec.md), [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md), [`ai-gateway-client`](../../specs/ai-gateway-client/spec.md), [`index-feed`](../../specs/index-feed/spec.md), [`ai-vector-schema`](../../specs/ai-vector-schema/spec.md)
-- Procedimientos: [`Procedimiento-UserStories.md`](../../../Documentos/Procedimientos/Procedimiento-UserStories.md), [`Procedimiento-TicketsTrabajo.md`](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
-- Testing: [`testing-backend.md`](../../../Documentos/testing-backend.md), [`testing-frontend.md`](../../../Documentos/testing-frontend.md) — **ambas suites vienen rojas de base**; comparar **nombres** de test, nunca recuentos
-- Frontend: [`analisis-metronic-frontend.md`](../../../Documentos/Propuestas/analisis-metronic-frontend.md)
+- HU origen: [HU-AIENG-018b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-018b.md) · Anterior: [HU-AIENG-018a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-018a.md)
+- Change: [`add-family-review-ui-and-orphan-alert`](./) · Anterior: [`2026-08-31-add-family-suggestion-and-approval`](../../archive/2026-08-31-add-family-suggestion-and-approval/)
+- Informe de C18a: [`c18a-family-suggestion-report.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c18a-family-suggestion-report.md)
+- Plan: [`proyecto-final-plan-changes-openspec.md`](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) — ficha C18b, §0 (partición de C18, anulación de la rama de C19, propuesta `fix-enrichment-vocabulary-gaps`), §12 (turno de migración)
+- Diseño: [`proyecto-final-diseno-rag-joiabagur.md`](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §7.5, §7.8, §11.5, §16
+- Specs vivas: [`family-suggestion`](../../../specs/family-suggestion/spec.md), [`product-family`](../../../specs/product-family/spec.md), [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md), [`ai-gateway-client`](../../../specs/ai-gateway-client/spec.md), [`index-feed`](../../../specs/index-feed/spec.md), [`ai-vector-schema`](../../../specs/ai-vector-schema/spec.md)
+- Procedimientos: [`Procedimiento-UserStories.md`](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md), [`Procedimiento-TicketsTrabajo.md`](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- Testing: [`testing-backend.md`](../../../../Documentos/testing-backend.md), [`testing-frontend.md`](../../../../Documentos/testing-frontend.md) — **ambas suites vienen rojas de base**; comparar **nombres** de test, nunca recuentos
+- Frontend: [`analisis-metronic-frontend.md`](../../../../Documentos/Propuestas/analisis-metronic-frontend.md)
 
 ---
 

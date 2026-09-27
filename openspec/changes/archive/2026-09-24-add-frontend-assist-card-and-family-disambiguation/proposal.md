@@ -7,7 +7,7 @@ evaluación**. Este change es la pantalla, y es **el único del Proyecto Final q
 delante de una persona**: cierra la cadena crítica `C30a → C34 → C36` y es lo que el vídeo de entrega
 tiene que mostrar.
 
-La exploración del 2026-09-22 ([informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md))
+La exploración del 2026-09-22 ([informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c36-exploration-decisions.md))
 contrastó la ficha con el árbol y **refutó tres de las cinco filas de copy que hereda de C31**: el
 enrutador de intención corre sólo en el modo de consulta libre y las dos rutas de C34 son siempre
 ancladas, así que `clarification_question` es constante nulo y los dos códigos de rechazo son

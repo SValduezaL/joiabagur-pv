@@ -587,7 +587,11 @@ dotnet test
 > **The suite comes back red, and it is not you.** Around fifty failures predate any
 > given change. They are defects in the tests and dependency drift, not in the
 > application — and most went unnoticed for weeks because the integration tree only
-> runs when Docker is up, while CI only fires on `main` and `develop`.
+> runs when Docker is up, while CI **fired on `main` and `develop`, neither of which
+> exists in this repository**: the workflow had therefore never executed once. C39a
+> pointed it at `ai-eng` and `master`, so it runs now — **informative and not a merge
+> gate**, because a required check over ~50 pre-existing failures is a permanent block
+> rather than a gate.
 >
 > Judge a change by the failing test **names** against a stashed baseline
 > (`git stash push -u`, run, `git stash pop`), never by the count: a handful of the

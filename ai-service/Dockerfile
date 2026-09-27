@@ -14,6 +14,15 @@
 #
 # Context: `ai-service/` (not the repository root). The root `.dockerignore`
 # does not apply here; this directory has its own.
+#
+# PLUS ONE NAMED ADDITIONAL CONTEXT, `corpus` (C39a), because the knowledge corpus
+# lives at `<repo root>/data/knowledge`, outside the primary context:
+#
+#   docker build -f ai-service/Dockerfile --build-context corpus=./data/knowledge ai-service
+#
+# Building without it FAILS, deliberately. See the COPY at the end of the runtime
+# stage. Both consumers pass it: `.github/workflows/deploy-demo.yml` and, for local
+# development, `backend/docker-compose.yml` via `additional_contexts`.
 
 # ─── Stage 1: Resolve the locked dependency tree ─────────────────────────────
 FROM python:3.11-slim-bookworm AS build
@@ -55,6 +64,42 @@ COPY --from=build --chown=appuser:appuser /app/.venv ./.venv
 COPY --chown=appuser:appuser alembic.ini ./
 COPY --chown=appuser:appuser migrations ./migrations
 COPY --chown=appuser:appuser prompts ./prompts
+
+# The knowledge corpus, from a NAMED ADDITIONAL BUILD CONTEXT (C39a). It has to come
+# from outside the primary context because `CORPUS_DIR` is `<repo root>/data/knowledge`
+# and this image's context is `ai-service/` — so no `COPY data/knowledge` could ever
+# reach it, whatever the path.
+#
+#   docker build -f ai-service/Dockerfile --build-context corpus=./data/knowledge ai-service
+#
+# WITHOUT the corpus inside the image, `python -m jbg_ai.indexing sync-knowledge` has
+# nothing to read and `ai.knowledge_chunk` stays at zero. With that table empty the
+# piece-anchored argument is withheld for want of material to anchor it to and the
+# piece-anchored question answers `knowledge_not_covered` — which both read on screen as
+# a defect of the sale card, not of the image. C34 met this and worked around it by hand
+# on the host; the workaround was never committed, and it survived five weeks only because
+# the fragments live in the database volume and a redeployment does not touch it.
+#
+# WHY NOT move the whole context to the repository root, which was the first plan: this
+# same Dockerfile is also built by `backend/docker-compose.yml` with `context: ../ai-service`
+# for local development, so rewriting every COPY to `ai-service/…` would break it. The root
+# `.dockerignore` also states in writing that it does not govern this file.
+#
+# IF YOU SEE `failed to resolve source metadata for docker.io/library/corpus:latest`, the
+# flag is missing: BuildKit fell back to reading `corpus` as an image name. That failure is
+# deliberate and it is the property that matters — an image without the corpus cannot be
+# built silently.
+COPY --from=corpus --chown=appuser:appuser . ./data/knowledge
+
+# `/app/data/knowledge` is not an arbitrary choice: it is the THIRD CANDIDATE that
+# `knowledge/constants._CORPUS_CANDIDATES` searches, next to `/app/prompts`, which the prompt
+# loader has always found the same way.
+#
+# C39a fixed that resolution in the service rather than working around it here. Before the fix
+# `CORPUS_DIR` was derived from `parents[3].parent`, correct for a developer checkout and absurd
+# once `uv sync --no-editable` installs the package: measured in the deployed container, the
+# corpus was looked for at `/app/.venv/lib/data/knowledge`, inside the dependency tree. A symlink
+# from here would have papered over it; the search is what removes the divergence for good.
 
 USER appuser
 

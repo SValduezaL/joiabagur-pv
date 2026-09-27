@@ -1,7 +1,7 @@
 # T-AIENG-016: Assisted search panel with sale attribution (C16)
 
 > Ticket técnico del change OpenSpec `add-frontend-assisted-search-panel`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-016](../../../Documentos/Historias/AI-Eng/HU-AIENG-016.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C16 y §0 de 2026-08-29), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.4, §7.6, §11), sesión de exploración 2026-08-29, código real de `frontend/src/`, `backend/src/` y `ai-service/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-016](../../../../Documentos/Historias/AI-Eng/HU-AIENG-016.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C16 y §0 de 2026-08-29), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.4, §7.6, §11), sesión de exploración 2026-08-29, código real de `frontend/src/`, `backend/src/` y `ai-service/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -243,16 +243,16 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-016](../../../Documentos/Historias/AI-Eng/HU-AIENG-016.md)
+- **HU origen:** [HU-AIENG-016](../../../../Documentos/Historias/AI-Eng/HU-AIENG-016.md)
 - **Change OpenSpec:** `openspec/changes/add-frontend-assisted-search-panel/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C16 y §0 de 2026-08-29) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.4, §7.6, §11)
-- **Apuntes del Máster (guía, no dogma):** [S4 · De interfaz conversacional a interfaz de producto](../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md) *(hornear el prompting en la interfaz: formulario y verbo, no caja de texto desnuda)* · [S16 · Un sistema debe saber decir «No lo sé»](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md) *(la abstención es el sistema funcionando bien; hay que poder decirla en pantalla)* · [S16 · Coste, latencia y A/B testing](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md) · [S10 · Filtrado contextual y temporal](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) *(el filtro que descarta 48 y entrega 2 sin error visible)*
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C16 y §0 de 2026-08-29) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.4, §7.6, §11)
+- **Apuntes del Máster (guía, no dogma):** [S4 · De interfaz conversacional a interfaz de producto](../../../../Documentos/Sesiones%20Master%20AIEng/S4_Productos_IA_avanzados/De%20interfaz%20conversacional%20a%20interfaz%20de%20producto.md) *(hornear el prompting en la interfaz: formulario y verbo, no caja de texto desnuda)* · [S16 · Un sistema debe saber decir «No lo sé»](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md) *(la abstención es el sistema funcionando bien; hay que poder decirla en pantalla)* · [S16 · Coste, latencia y A/B testing](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md) · [S10 · Filtrado contextual y temporal](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) *(el filtro que descarta 48 y entrega 2 sin error visible)*
 - **Specs vivas:** `ai-assisted-search` *(se modifica)* · `sales-management` *(se modifica)* · `ai-search-telemetry` · `frontend` · `access-control` · `point-of-sale-management` · `inventory-management`
 - **Precedentes:** C04 (telemetría, `Sale.SearchEventId`, sin excepción de administrador) · C15 (endpoint, cuatro estados, límite de peticiones) · `scan.tsx` y `new-image.tsx` (entrega por estado de navegación) · `products/catalog.tsx` (patrón de listado que **no** se copia en el disparo)
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Testing:** [testing-frontend.md](../../../Documentos/testing-frontend.md) · [testing-backend.md](../../../Documentos/testing-backend.md) — *Estado de la suite: fallos conocidos*
-- **UI:** [analisis-metronic-frontend.md](../../../Documentos/Propuestas/analisis-metronic-frontend.md) — componentes reutilizados: `card`, `badge`, `button`, `input`, `select`, `toggle-group`, `skeleton`, `alert`, `collapsible`, `separator`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Testing:** [testing-frontend.md](../../../../Documentos/testing-frontend.md) · [testing-backend.md](../../../../Documentos/testing-backend.md) — *Estado de la suite: fallos conocidos*
+- **UI:** [analisis-metronic-frontend.md](../../../../Documentos/Propuestas/analisis-metronic-frontend.md) — componentes reutilizados: `card`, `badge`, `button`, `input`, `select`, `toggle-group`, `skeleton`, `alert`, `collapsible`, `separator`
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

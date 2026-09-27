@@ -22,7 +22,7 @@ tabla publicada. **Cumplido el 2026-09-12.**
 
 Las evidencias completas, con los lectores verificados de cada elemento y las cuatro
 contradicciones internas encontradas, están en
-[`c25bis-exploration-decisions.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md).
+[`c25bis-exploration-decisions.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md).
 
 ## Goals / Non-Goals
 

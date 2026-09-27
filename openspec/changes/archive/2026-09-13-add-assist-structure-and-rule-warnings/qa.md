@@ -96,7 +96,7 @@ El reparto del diff, por zona y sin mezclar código con documentación:
 
 ## 2. Los tres spikes, corridos antes de escribir código
 
-`tasks.md` los pone en el grupo 2 y el enunciado lo subraya: **el orden de los grupos es una dependencia, no una preferencia**, porque el resultado del spike 1 decidía cómo se implementa el grupo 5. Las cifras se escribieron **antes** de decidir sobre ellas, en [`c30a-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md).
+`tasks.md` los pone en el grupo 2 y el enunciado lo subraya: **el orden de los grupos es una dependencia, no una preferencia**, porque el resultado del spike 1 decidía cómo se implementa el grupo 5. Las cifras se escribieron **antes** de decidir sobre ellas, en [`c30a-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md).
 
 ### 2.1. Spike 1 — el filtro de exclusión, en dos brazos
 
@@ -318,7 +318,7 @@ A diferencia de C23 y C24, las 48 tareas de C30a **no nombran tests literalmente
 | **2.1** | Tabla de dos columnas escrita **antes** de fijar el umbral | §2.1, con el recuento de espurias **por categoría** y las cinco fuera de dominio nombradas |
 | **2.2** | Afirmación con la evidencia delante y la costura identificada | §2.2, con la trampa del espacio final **medida** |
 | **2.3** | Cifra máxima y tope con su holgura | §2.3 · máximo **8**, tope **24** |
-| **2.4** | Informe con las tres secciones | [`c30a-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md) §1-§3 |
+| **2.4** | Informe con las tres secciones | [`c30a-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md) §1-§3 |
 | **3.1** | Error nombrando los dos campos | `test_assist_request_without_any_anchor_is_rejected_naming_both_fields` |
 | **3.2** | El modelo acepta `None` | `test_assist_group_accepts_a_null_family_id` |
 | **3.3** | Campo presente, default lista vacía | `test_assist_group_member_defaults_match_reasons_to_an_empty_list` |
@@ -439,7 +439,7 @@ El movimiento, campo a campo:
 
 ## 8. Mediciones
 
-Las tres del §2, más lo que la implementación midió después. Todo en [`c30a-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md).
+Las tres del §2, más lo que la implementación midió después. Todo en [`c30a-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md).
 
 ### 8.1. Lo que la medición **no** demuestra, dicho aquí
 
@@ -557,7 +557,7 @@ El primer intento usó el `pos_id` del token de test, que **la proyección local
 | Plan de changes, §0 | Entrada nueva del **2026-09-13** con la tabla de los tres spikes, el efecto de promoción que el diseño no anticipó, las dos refutaciones y la corrección de las dos cifras |
 | Plan de changes, §2 y §3 | Estado de C30a a **🟢 implementado**; recuento de pendientes matizado; **ficha de C34 revisada** con los cuatro hechos del contrato nuevo que su implementación necesitará; **ficha de C36 revisada** con las dos garantías que ahora tiene |
 | `CLAUDE.md` | La trampa del validador de OpenSpec —**lee sólo la primera línea física** de la descripción de un requisito—; y **dos trampas de máquina**: el bundle de certificados en runtime y el bucle de eventos de Windows con `psycopg` |
-| Informe nuevo | [`c30a-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md): línea base, los tres spikes con sus tablas, **seis refutaciones**, la tabla de los 19 escenarios de la HU y la evidencia de los tres modos |
+| Informe nuevo | [`c30a-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md): línea base, los tres spikes con sus tablas, **seis refutaciones**, la tabla de los 19 escenarios de la HU y la evidencia de los tres modos |
 
 ---
 

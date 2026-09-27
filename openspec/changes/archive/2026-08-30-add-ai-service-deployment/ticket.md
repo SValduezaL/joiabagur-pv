@@ -1,7 +1,7 @@
 # T-AIENG-017: Isolated demo environment deployment for the AI service (C17)
 
 > Ticket técnico del change OpenSpec `add-ai-service-deployment`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-017](../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C17 y §0 de 2026-08-29), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.1, §6.4, §12, §15, §16), sesión de exploración 2026-08-29, código real de `terraform/`, `.github/workflows/`, `ai-service/src/`, `backend/src/` y `frontend/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-017](../../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C17 y §0 de 2026-08-29), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.1, §6.4, §12, §15, §16), sesión de exploración 2026-08-29, código real de `terraform/`, `.github/workflows/`, `ai-service/src/`, `backend/src/` y `frontend/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -20,7 +20,7 @@ Al diseñar sobre la infraestructura real aparecen cinco hechos que la ficha v3 
 
 **Primero: no hay acceso a la cuenta AWS de la tienda.** Y aunque lo hubiera, su RDS es la base de datos real del negocio. La ficha decía *«servicio en producción, alcanzable solo desde el backend»*; lo que C17 puede y debe hacer es levantar un **entorno de demo autocontenido en otra cuenta**, sin una sola arista hacia la de la joyería.
 
-**Segundo: en producción no hay `docker-compose`.** El §12.1 del diseño lo daba por sentado. La realidad de [`user_data.sh`](../../../terraform/templates/user_data.sh) es `docker run -d --name jpv-api -p 8080:8080` desde un heredoc, y `ec2.tf` declara `lifecycle { ignore_changes = [user_data] }`: editar el fichero no propaga nada, y re-ejecutarlo sobrescribiría la configuración de nginx que certbot ya modificó. En la demo **sí** hay compose, en una instancia nueva donde el repositorio es la fuente de verdad desde el minuto cero.
+**Segundo: en producción no hay `docker-compose`.** El §12.1 del diseño lo daba por sentado. La realidad de [`user_data.sh`](../../../../terraform/templates/user_data.sh) es `docker run -d --name jpv-api -p 8080:8080` desde un heredoc, y `ec2.tf` declara `lifecycle { ignore_changes = [user_data] }`: editar el fichero no propaga nada, y re-ejecutarlo sobrescribiría la configuración de nginx que certbot ya modificó. En la demo **sí** hay compose, en una instancia nueva donde el repositorio es la fuente de verdad desde el minuto cero.
 
 **Tercero: el dato es el problema, no el despliegue.** Los 1.200 productos, las 38 colecciones, los 12 puntos de venta, las 6.720 filas de inventario, los 1.200 `ProductAiProfile` en `Approved` y los 1.200 `ai.product_document` con sus vectores **no existen fuera de local**. Un despliegue impecable con el índice vacío pasa todos los tests y entrega una URL donde no se encuentra nada. Es la firma de A1 (C04) y de B5 (C16), por tercera vez.
 
@@ -261,16 +261,16 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-017](../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md)
+- **HU origen:** [HU-AIENG-017](../../../../Documentos/Historias/AI-Eng/HU-AIENG-017.md)
 - **Change OpenSpec:** `openspec/changes/add-ai-service-deployment/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C17 y §0 de 2026-08-29) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.1, §6.4, §12, §15, §16)
-- **Apuntes del Máster (guía, no dogma):** [S15 · Qué entendemos por producción](../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Que%20entendemos%20por%20produccion.md) *(las cuatro promesas y la frontera público/privado)* · [S15 · Despliegue en Clouds](../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Despliegue%20en%20Clouds.md) *(el health check barato; la herramienta más simple que resuelva el problema; persistencia y arranque en frío)* · [S15 · Contenerización con Docker](../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Contenerizacion%20Docker.md) *(un secreto dentro de una imagen es un secreto con pasaporte; sólo el backend publica puerto)* · [S16 · Observabilidad](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Observabilidad.md) *(no confundáis el latido con la vigilancia)*
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C17 y §0 de 2026-08-29) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.1, §6.4, §12, §15, §16)
+- **Apuntes del Máster (guía, no dogma):** [S15 · Qué entendemos por producción](../../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Que%20entendemos%20por%20produccion.md) *(las cuatro promesas y la frontera público/privado)* · [S15 · Despliegue en Clouds](../../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Despliegue%20en%20Clouds.md) *(el health check barato; la herramienta más simple que resuelva el problema; persistencia y arranque en frío)* · [S15 · Contenerización con Docker](../../../../Documentos/Sesiones%20Master%20AIEng/S15_Produccion_I/Contenerizacion%20Docker.md) *(un secreto dentro de una imagen es un secreto con pasaporte; sólo el backend publica puerto)* · [S16 · Observabilidad](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Observabilidad.md) *(no confundáis el latido con la vigilancia)*
 - **Specs vivas:** `ai-service-runtime` · `ai-service-dev-compose` *(**no** se modifica)* · `ai-assisted-search` · `vector-retrieval` · `product-document-indexer` · `dashboard-analytics` · `access-control`
 - **Precedentes:** C01 (Dockerfile y esqueleto) · C05 (`bootstrap.sql`, esquema `ai`, rol de mínimo privilegio) · C03 (**deuda de deprecación asignada a C17** en su ticket) · C12 (runbook de AutoBulk, patrón de procedimiento no ejecutado en el merge) · C15 (patrón de un controlador por capacidad) · C16 (presupuesto temporal de 2500 ms)
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md) · [testing-frontend.md](../../../Documentos/testing-frontend.md) — *Estado de la suite: fallos conocidos*
-- **UI:** [analisis-metronic-frontend.md](../../../Documentos/Propuestas/analisis-metronic-frontend.md) — componentes reutilizados en la tarjeta: `card`, `badge`, `alert`, `skeleton`, `separator`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md) · [testing-frontend.md](../../../../Documentos/testing-frontend.md) — *Estado de la suite: fallos conocidos*
+- **UI:** [analisis-metronic-frontend.md](../../../../Documentos/Propuestas/analisis-metronic-frontend.md) — componentes reutilizados en la tarjeta: `card`, `badge`, `alert`, `skeleton`, `separator`
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

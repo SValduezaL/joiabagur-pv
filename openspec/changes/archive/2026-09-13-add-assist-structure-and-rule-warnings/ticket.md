@@ -1,12 +1,12 @@
 # T-AIENG-030a: Structured sale-assist layer — three modes, rule-derived warnings and verifiable citations with no provider call (C30a)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-028](../archive/2026-09-13-add-profile-review-ui-and-metrics/ticket.md) y
-> [T-AIENG-026](../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
+> siguen [T-AIENG-028](../../archive/2026-09-13-add-profile-review-ui-and-metrics/ticket.md) y
+> [T-AIENG-026](../../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
 
-**HU origen:** [HU-AIENG-030a](../../../Documentos/Historias/AI-Eng/HU-AIENG-030a.md)
+**HU origen:** [HU-AIENG-030a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-030a.md)
 **Change:** `add-assist-structure-and-rule-warnings` (C30a) · **Épica:** EP15
-**Rama:** `c30a-add-assist-structure-and-rule-warnings` · **Decisiones:** [c30-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md)
+**Rama:** `c30a-add-assist-structure-and-rule-warnings` · **Decisiones:** [c30-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md)
 
 ---
 
@@ -69,20 +69,20 @@ mismo change en que movieron la frontera**.
 
 | Pieza | Estado hoy | Qué hace C30a |
 |---|---|---|
-| [`api/routers/assist.py`](../../../ai-service/src/jbg_ai/api/routers/assist.py) | Stub + `require_stub_mode`, **501** con stubs apagados | **Implementación real** cuando `STUB_MODE=false`; el fixture se conserva cuando está activo |
-| [`api/schemas/assist.py`](../../../ai-service/src/jbg_ai/api/schemas/assist.py) | `query` obligatoria, sin `product_id`; `AssistGroup.family_id: str`; `AssistGroupMember` sin razones; `Citation` de 3 campos; sin `abstained` ni `prompt_version` | **El bloque de contrato entero** |
-| [`api/schemas/common.py`](../../../ai-service/src/jbg_ai/api/schemas/common.py) | `PRICE_PLACEHOLDER`, `STOCK_PLACEHOLDER`, `Usage`, `ScopedResponse` | **Sin cambios**; `Usage` se emite a cero |
-| [`stubs/responses.py`](../../../ai-service/src/jbg_ai/stubs/responses.py) | `assist_sale_stub` fabrica un `family_id` para **cada** grupo | **Se ajusta al contrato nuevo**, incluyendo un grupo sin familia para que ningún cliente pueda ignorar el caso |
-| [`retrieval/orchestrator.py`](../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | `retrieve_products()`; `_Candidate` lleva `size_label`, `qty_bucket`, `family_id`, `variant_label`; `_to_result` **no emite** `size_label` ni `qty_bucket` | **Se consume, no se modifica.** `size_label` se lee del candidato interno para el aviso; `qty_bucket` **no se lee ni se emite** |
-| [`retrieval/ports.py`](../../../ai-service/src/jbg_ai/retrieval/ports.py) | `ProductSearchPort` con `search`, `search_lexical`, `source_document`, `count_*`, `scope_buckets`, `projection_synced_at`. **No hay `family_roster`** | **Método nuevo** `family_roster(family_id, …)`, leyendo **sólo `ai.product_document`** |
-| [`retrieval/abstention.py`](../../../ai-service/src/jbg_ai/retrieval/abstention.py) | `AbstentionRule`, `should_abstain`, `log_decision`. **Activa por defecto** | **Se consume.** La decisión se **propaga y se declara**; no se enciende nada |
-| [`config/settings.py`](../../../ai-service/src/jbg_ai/config/settings.py) | `jpv_abstention_enabled=True`, `α=0,03`, `N=15`; `jpv_knowledge_distance_threshold=0,51` | **Sin campos nuevos.** El valor efectivo viaja **por parámetro**, como en C20/C23/C25 |
-| [`knowledge/search.py`](../../../ai-service/src/jbg_ai/knowledge/search.py) | `search_knowledge()` es un callable; `compile_vector_sql` / `compile_lexical_sql` sólo aceptan `doc_type`, con `_DOC_TYPE_CLAUSE` inyectado condicionalmente | **Parámetro nuevo de exclusión por documento**, con la misma forma de cláusula condicional, en las dos sentencias y en el protocolo `KnowledgeSearchIndex` |
-| [`knowledge/indexer.py`](../../../ai-service/src/jbg_ai/knowledge/indexer.py) | `document_id(slug)` y `chunk_id(doc_slug, sec_slug)` = `uuid5(KNOWLEDGE_NAMESPACE, …)` | **Se reutilizan.** La exclusión va sobre la **clave primaria**; el lookup de M2 también |
-| [`knowledge/corpus.py`](../../../ai-service/src/jbg_ai/knowledge/corpus.py) | `material_sheet_slug(canonical)`, `missing_material_sheets()` | **Se reutilizan** para enumerar las nueve fichas canónicas |
-| [`enrichment/vocabularies.yaml`](../../../ai-service/src/jbg_ai/enrichment/vocabularies.yaml) | `materials.terms` = **9** términos | **Se lee, no se toca.** Tocarlo fuerza bump de prompt y re-enriquecimiento |
+| [`api/routers/assist.py`](../../../../ai-service/src/jbg_ai/api/routers/assist.py) | Stub + `require_stub_mode`, **501** con stubs apagados | **Implementación real** cuando `STUB_MODE=false`; el fixture se conserva cuando está activo |
+| [`api/schemas/assist.py`](../../../../ai-service/src/jbg_ai/api/schemas/assist.py) | `query` obligatoria, sin `product_id`; `AssistGroup.family_id: str`; `AssistGroupMember` sin razones; `Citation` de 3 campos; sin `abstained` ni `prompt_version` | **El bloque de contrato entero** |
+| [`api/schemas/common.py`](../../../../ai-service/src/jbg_ai/api/schemas/common.py) | `PRICE_PLACEHOLDER`, `STOCK_PLACEHOLDER`, `Usage`, `ScopedResponse` | **Sin cambios**; `Usage` se emite a cero |
+| [`stubs/responses.py`](../../../../ai-service/src/jbg_ai/stubs/responses.py) | `assist_sale_stub` fabrica un `family_id` para **cada** grupo | **Se ajusta al contrato nuevo**, incluyendo un grupo sin familia para que ningún cliente pueda ignorar el caso |
+| [`retrieval/orchestrator.py`](../../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | `retrieve_products()`; `_Candidate` lleva `size_label`, `qty_bucket`, `family_id`, `variant_label`; `_to_result` **no emite** `size_label` ni `qty_bucket` | **Se consume, no se modifica.** `size_label` se lee del candidato interno para el aviso; `qty_bucket` **no se lee ni se emite** |
+| [`retrieval/ports.py`](../../../../ai-service/src/jbg_ai/retrieval/ports.py) | `ProductSearchPort` con `search`, `search_lexical`, `source_document`, `count_*`, `scope_buckets`, `projection_synced_at`. **No hay `family_roster`** | **Método nuevo** `family_roster(family_id, …)`, leyendo **sólo `ai.product_document`** |
+| [`retrieval/abstention.py`](../../../../ai-service/src/jbg_ai/retrieval/abstention.py) | `AbstentionRule`, `should_abstain`, `log_decision`. **Activa por defecto** | **Se consume.** La decisión se **propaga y se declara**; no se enciende nada |
+| [`config/settings.py`](../../../../ai-service/src/jbg_ai/config/settings.py) | `jpv_abstention_enabled=True`, `α=0,03`, `N=15`; `jpv_knowledge_distance_threshold=0,51` | **Sin campos nuevos.** El valor efectivo viaja **por parámetro**, como en C20/C23/C25 |
+| [`knowledge/search.py`](../../../../ai-service/src/jbg_ai/knowledge/search.py) | `search_knowledge()` es un callable; `compile_vector_sql` / `compile_lexical_sql` sólo aceptan `doc_type`, con `_DOC_TYPE_CLAUSE` inyectado condicionalmente | **Parámetro nuevo de exclusión por documento**, con la misma forma de cláusula condicional, en las dos sentencias y en el protocolo `KnowledgeSearchIndex` |
+| [`knowledge/indexer.py`](../../../../ai-service/src/jbg_ai/knowledge/indexer.py) | `document_id(slug)` y `chunk_id(doc_slug, sec_slug)` = `uuid5(KNOWLEDGE_NAMESPACE, …)` | **Se reutilizan.** La exclusión va sobre la **clave primaria**; el lookup de M2 también |
+| [`knowledge/corpus.py`](../../../../ai-service/src/jbg_ai/knowledge/corpus.py) | `material_sheet_slug(canonical)`, `missing_material_sheets()` | **Se reutilizan** para enumerar las nueve fichas canónicas |
+| [`enrichment/vocabularies.yaml`](../../../../ai-service/src/jbg_ai/enrichment/vocabularies.yaml) | `materials.terms` = **9** términos | **Se lee, no se toca.** Tocarlo fuerza bump de prompt y re-enriquecimiento |
 | `ai-service/openapi.json` | Contrato congelado; `test_openapi_snapshot_is_stable` lo vigila | **Se regenera** con el perfil canónico, y el test se actualiza con él |
-| [`tests/api/test_assist_stub.py`](../../../ai-service/tests/api/test_assist_stub.py) | Cubre el fixture actual | **Se amplía**; el árbol espejo gana `tests/assist/` |
+| [`tests/api/test_assist_stub.py`](../../../../ai-service/tests/api/test_assist_stub.py) | Cubre el fixture actual | **Se amplía**; el árbol espejo gana `tests/assist/` |
 | `ai-service/src/jbg_ai/assist/` | **No existe** | La zona de este change |
 | `backend/` · `frontend/` | `IAiGatewayClient` sin método de assist; ninguna pantalla de tarjeta | **No se tocan.** Son C34 y C36 |
 
@@ -271,13 +271,13 @@ se comparó.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-030a](../../../Documentos/Historias/AI-Eng/HU-AIENG-030a.md)
-- **Decisiones de exploración:** [c30-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md)
-- **Diseño:** §7.7 con su bloque revisado del 13 sep, §9.1, §11.2–11.3, §15 limitaciones 12 y 13 — [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** ficha de C30a en el §3 y entrada del §0 del 13 sep — [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Capabilities consumidas:** [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md) · [`knowledge-corpus`](../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../specs/retrieval-abstention/spec.md) · [`hybrid-fusion`](../../specs/hybrid-fusion/spec.md) · [`product-family`](../../specs/product-family/spec.md)
-- **Precedentes de movimiento de contrato:** C18a y C18b, en [`archive/2026-08-31-add-family-suggestion-and-approval/`](../archive/2026-08-31-add-family-suggestion-and-approval/) y [`archive/2026-09-01-add-family-review-ui-and-orphan-alert/`](../archive/2026-09-01-add-family-review-ui-and-orphan-alert/)
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **HU origen:** [HU-AIENG-030a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-030a.md)
+- **Decisiones de exploración:** [c30-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md)
+- **Diseño:** §7.7 con su bloque revisado del 13 sep, §9.1, §11.2–11.3, §15 limitaciones 12 y 13 — [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** ficha de C30a en el §3 y entrada del §0 del 13 sep — [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Capabilities consumidas:** [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md) · [`knowledge-corpus`](../../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../../specs/retrieval-abstention/spec.md) · [`hybrid-fusion`](../../../specs/hybrid-fusion/spec.md) · [`product-family`](../../../specs/product-family/spec.md)
+- **Precedentes de movimiento de contrato:** C18a y C18b, en [`archive/2026-08-31-add-family-suggestion-and-approval/`](../../archive/2026-08-31-add-family-suggestion-and-approval/) y [`archive/2026-09-01-add-family-review-ui-and-orphan-alert/`](../../archive/2026-09-01-add-family-review-ui-and-orphan-alert/)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
 
 ---
 

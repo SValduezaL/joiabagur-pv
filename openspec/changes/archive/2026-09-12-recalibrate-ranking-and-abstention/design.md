@@ -6,7 +6,7 @@ criterio escrito antes de etiquetar. Al usarlo aparecieron cosas que ningún arg
 detectado, y este change las resuelve.
 
 **Estado verificado antes de diseñar** (mediciones completas en
-[c25-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)):
+[c25-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-exploration-measurements.md)):
 
 | Hecho | Cifra |
 |---|---|

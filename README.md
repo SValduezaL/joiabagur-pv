@@ -32,7 +32,7 @@ https://pv.joiabagur.com
 
 **Entorno de demostración del Proyecto Final de IA:** https://52-49-209-14.sslip.io
 
-Despliegue aislado en una cuenta AWS propia, con el catálogo real y sus 1.200 documentos vectorizados cargados, y dos cuentas de demostración —una de administración y una de operación— cuyas credenciales se entregan aparte. El nombre de dominio deriva de la IP elástica y es un parámetro del despliegue: migrar a un dominio propio no reconstruye ninguna imagen.
+Despliegue aislado en una cuenta AWS propia, con el catálogo real y sus 1.200 documentos vectorizados cargados, y **cuatro cuentas de demostración** —una de administración y **tres de operación, cada una en un punto de venta con un surtido deliberadamente distinto**— cuyas credenciales se entregan aparte. Las diferencias de surtido son parte de lo que hay que probar: la **abstención**, los **sustitutos** y el **pivote del agente** a piezas alternativas sólo son observables desde la tienda que los provoca, así que entrar con una sola cuenta de operación deja fuera comportamientos que sí existen. El nombre de dominio deriva de la IP elástica y es un parámetro del despliegue: migrar a un dominio propio no reconstruye ninguna imagen.
 
 ### 0.5. URL o archivo comprimido del repositorio
 

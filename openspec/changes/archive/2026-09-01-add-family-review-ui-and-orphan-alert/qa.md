@@ -231,7 +231,7 @@ Un caso más, verificado fallando durante la implementación y no por mutación 
 
 ## 7. Ejecución sobre datos reales
 
-Por el camino completo `.NET → jbg-ai → pgvector`, no por un script suelto. Detalle en [`informes/c18b-family-review-report.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c18b-family-review-report.md).
+Por el camino completo `.NET → jbg-ai → pgvector`, no por un script suelto. Detalle en [`informes/c18b-family-review-report.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c18b-family-review-report.md).
 
 | | |
 |---|---|

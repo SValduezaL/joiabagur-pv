@@ -73,7 +73,7 @@ El baseline no necesitó `git stash push -u`: en ese momento el árbol de trabaj
 | **Aislada, código actual** | **7** | **C — distinto de A y de B** |
 | Tras los arreglos de §10 (suite completa) | 4 | **D — distinto de A, B y C** |
 
-Ninguno de los 4 «nuevos» fallos aparece al ejecutar la clase sola, y `Operator_ViewStock_ForAssignedPOS_ShouldSucceed` —que «dejó de fallar» en la suite— sí falla en aislamiento. Cuatro ejecuciones, cuatro conjuntos distintos. Es la inestabilidad por orden que documenta *Estado de la suite: fallos conocidos* en [testing-backend.md](../../../Documentos/testing-backend.md), y C15 no toca ningún servicio, repositorio ni tabla que esa clase use.
+Ninguno de los 4 «nuevos» fallos aparece al ejecutar la clase sola, y `Operator_ViewStock_ForAssignedPOS_ShouldSucceed` —que «dejó de fallar» en la suite— sí falla en aislamiento. Cuatro ejecuciones, cuatro conjuntos distintos. Es la inestabilidad por orden que documenta *Estado de la suite: fallos conocidos* en [testing-backend.md](../../../../Documentos/testing-backend.md), y C15 no toca ningún servicio, repositorio ni tabla que esa clase use.
 
 ### 1.2. Desglose de tests nuevos
 
@@ -215,9 +215,9 @@ Todas las salidas **vacías**.
 
 | Documento | Qué se alineó |
 |---|---|
-| [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) | Entrada §0 de 2026-08-28; ficha C15 corregida en el sitio; fila `C15 ‖ C34` de §5; obligación **B6** heredada por C16 |
+| [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) | Entrada §0 de 2026-08-28; ficha C15 corregida en el sitio; fila `C15 ‖ C34` de §5; obligación **B6** heredada por C16 |
 | `Documentos/epicas.md` (EP14) | Bloque C15 + enlace a HU-AIENG-015 |
-| [HU-AIENG-015](../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md) | Creada antes del apply, con las siete decisiones cerradas |
+| [HU-AIENG-015](../../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md) | Creada antes del apply, con las siete decisiones cerradas |
 | [ticket.md](ticket.md) / [tasks.md](tasks.md) | 42/43 tareas marcadas; la restante es verificación posterior (§9) |
 
 ---

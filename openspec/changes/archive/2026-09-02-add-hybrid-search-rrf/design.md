@@ -4,7 +4,7 @@
 
 C05 created `ai.product_document.tsv` as a generated `to_tsvector('spanish', doc_text)` column with a GIN index. It is populated on all 1.168 live rows and **no code reads it**. C14 built the vector branch and left `mode=hybrid` and `mode=lexical` running it, saying so in `debug.notes`. C20 built the expansion dictionary; `expand_query` runs on every real retrieval, logs `stage=expand` and **nothing consumes its result**.
 
-Everything below was measured on 2026-09-02 against the local PostgreSQL (1.168 live documents) and, for the vector figures, against `openai/text-embedding-3-small`. The full record is [`c21-hybrid-exploration-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md); the rubric is the one C20 used — a hit is a top-ten result with the right `piece_type` **and** the right material — so the numbers are comparable with C20's.
+Everything below was measured on 2026-09-02 against the local PostgreSQL (1.168 live documents) and, for the vector figures, against `openai/text-embedding-3-small`. The full record is [`c21-hybrid-exploration-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md); the rubric is the one C20 used — a hit is a top-ten result with the right `piece_type` **and** the right material — so the numbers are comparable with C20's.
 
 Nine measurements govern the design. Four of them contradict something already written, and two of those four contradict the exploration's own earlier recommendation.
 
