@@ -50,4 +50,23 @@ public class AiIndexFeedController : ControllerBase
         var page = await _feedService.GetPosAvailabilityPageAsync(since, sinceId, cancellationToken);
         return Ok(page);
     }
+
+    /// <summary>
+    /// Shop activity feed: every point of sale in one complete reading, no cursor (C43).
+    /// </summary>
+    /// <remarks>
+    /// Takes no query parameters at all — not <c>since</c>, not <c>sinceId</c>, not
+    /// <c>pageSize</c> — because the reading is always the whole set. That is what lets the
+    /// consumer retire a point of sale that has left the business, which a keyset feed can
+    /// never express: a removed row simply stops being emitted.
+    /// </remarks>
+    [HttpGet("pos-shops")]
+    [ProducesResponseType(typeof(PosShopsReadingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PosShopsReadingDto>> GetPosShops(
+        CancellationToken cancellationToken)
+    {
+        var reading = await _feedService.GetPosShopsReadingAsync(cancellationToken);
+        return Ok(reading);
+    }
 }

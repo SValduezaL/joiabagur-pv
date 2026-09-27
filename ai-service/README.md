@@ -313,6 +313,47 @@ embeds nothing. It prints one line of counters — `upserted`, `soft_deleted`, `
 partially synchronised projection that reports success is exactly the shape of lie the
 freshness guard exists to prevent one layer up.
 
+### And the shop activity that scopes the count (C43)
+
+`ai.pos_shop` holds one row per point of sale with whether it is still trading. It is filled by
+a drain of its own, which the scheduler runs **before** the availability drain on every pass:
+
+```bash
+uv run --system-certs python -m jbg_ai.indexing sync-pos-shops    # always complete
+```
+
+**There is no `--full`, because there is no other mode.** The feed —
+`GET /api/ai/index-feed/pos-shops` — states the whole set every time, with no cursor, and the
+drain replaces the table with it in one transaction: what the reading states is written, what it
+omits is removed. That is the point. A keyset feed can only say what *changed*, so a point of
+sale removed from the business emits nothing and its row would outlive it for ever.
+
+It needs the same two feed settings as `sync-pos` and, like it, **no embedding key**.
+
+**Why the activity does not simply live as a column on `ai.pos_projection`.** The availability
+feed is incremental by keyset over the watermark of the inventory row, and a shop opening or
+closing touches no inventory row: the watermark would not move, the incremental pass would
+re-emit nothing, and the column would freeze at whatever it held when the assignment last
+changed. The aggregate hash cannot see it either — it digests `(pointOfSaleId, productId)` pairs.
+
+**What it is for.** `GET /health` reports the number of points of sale holding no assortment, and
+until C43 it counted over whatever the projection held, with no notion of whether a shop was
+still trading. A shop closed on purpose was therefore indistinguishable from a shop whose
+assortment had never arrived — and on 2026-09-27 that failed a deployment of a healthy
+demonstration environment. The count is now taken with the shops on the left:
+
+```sql
+SELECT count(*) FROM ai.pos_shop s
+WHERE s.is_active
+  AND NOT EXISTS (SELECT 1 FROM ai.pos_projection j
+                  WHERE j.pos_id = s.pos_id AND j.is_assigned_hint)
+```
+
+which also catches an active shop absent from the projection **altogether** — the worse of the
+two cases, and one a filter over the projection could never see. With `ai.pos_shop` empty the
+count is reported as `null` and not `0`: zero would claim every active shop is served, before
+the service knows of any shop at all.
+
 Its cursor lives in `ai.sync_checkpoint` under `feed = 'pos-availability'`, independent of
 the `catalog` row. A page that fails is recorded in `ai.sync_failure` and the drain carries
 on with the remaining pages; the bookmark stays before the page that failed, so a retry

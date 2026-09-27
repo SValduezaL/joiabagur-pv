@@ -541,6 +541,25 @@ usar en `cli.py`. Detectado con una comprobación de AST, retirado, y `tests/ind
 | **La línea base limpia de `ai-service`** | Derivada, no medida. Razón y aritmética en §1.1 |
 | **Los nombres de la línea base del frontend** | Perdidos por capturar con `tail`. Razón en §1.3 |
 
+> **Sello del 2026-09-27, puesto por C43 (`add-shop-activity-projection`) — la fila de
+> `verify.sh` se equivocaba en el juicio, no en el dato.** La fila dice que `/health` devolvía
+> `shops_without_scope: 1` «o sea que **fallaría el despliegue**, que es lo correcto». Lo
+> primero era cierto y sigue siéndolo; **lo segundo no**. Ese `1` es
+> `cd9bfd1f-f1b2-4795-9d14-867a75c18f90` = `HT-ARTRUTX` / «Hotel Cap d'Artrutx», **cerrada a
+> propósito** desde el mundo sintético de C10 —`is_active: false`, `closed_after: 2025-09-30`,
+> `operator: null`— y la única de las doce. Sus 144 filas conservan la asignación retirada, que
+> es exactamente lo que debe pasarle al surtido de una tienda que cerró. El despliegue
+> `36322635852` del 2026-09-27 **falló por esta única causa con el entorno sano**, y el falso
+> positivo llegaba también en rojo a la tarjeta del administrador.
+>
+> La predicción de esta fila era, pues, correcta como predicción —el despliegue efectivamente
+> falló— y equivocada como valoración. **No se reescribe: la casa conserva las fichas
+> archivadas como registro.** Lo que C41 no podía saber es que el recuento no tenía forma de
+> distinguir una tienda cerrada de una rota, porque el rol `jbg_ai` recibe `permission denied
+> for table PointOfSales` — de modo que la decisión D9 / Q-5 de este mismo change estaba
+> **impuesta por los permisos** y no sólo elegida. C43 lleva la actividad al esquema `ai` por
+> un *feed* propio y cuenta contra las tiendas **activas**.
+
 ---
 
 ## 10. Estado final

@@ -15,6 +15,7 @@ from jbg_ai.indexing.sync_errors import IndexFeedConfigError
 
 CATALOG_PATH = "/api/ai/index-feed/catalog"
 POS_PATH = "/api/ai/index-feed/pos-availability"
+POS_SHOPS_PATH = "/api/ai/index-feed/pos-shops"
 FEED_KEY_HEADER = "X-Index-Feed-Key"
 FEED_TIMEOUT_SECONDS = 10.0
 
@@ -106,6 +107,33 @@ class PosFeedPage:
     computed_as_of: datetime | None = None
 
 
+@dataclass(frozen=True)
+class PosShopItem:
+    """One point of sale and whether it is still trading. C43.
+
+    Carries the identifier and the activity and nothing else: the count this feeds asks how
+    many active shops hold no assortment, and a name or a code here would be a second copy of
+    a fact `public` owns, going stale between drains with nobody watching it.
+    """
+
+    pos_id: UUID
+    is_active: bool
+
+
+@dataclass(frozen=True)
+class PosShopsReading:
+    """The WHOLE set of points of sale, as of one instant. C43.
+
+    **A reading, not a page, and the distinction is the design.** There is no cursor and no
+    `has_more`: a cursored feed can only say what changed, so a point of sale *removed* from
+    the business emits nothing and would survive in `ai.pos_shop` for ever. Only a complete
+    statement of the set lets the drain retire what is no longer in it.
+    """
+
+    items: list[PosShopItem]
+    computed_as_of: datetime | None = None
+
+
 class IndexFeedClient(Protocol):
     """Async port. Implementations must not open sockets unless they are the httpx adapter."""
 
@@ -116,6 +144,8 @@ class IndexFeedClient(Protocol):
     async def fetch_pos_page(
         self, since: datetime | None, since_id: UUID | None
     ) -> PosFeedPage: ...
+
+    async def fetch_pos_shops(self) -> PosShopsReading: ...
 
 
 def _parse_datetime(value: object) -> datetime:
@@ -261,6 +291,36 @@ def parse_pos_page(payload: dict[str, object]) -> PosFeedPage:
     )
 
 
+def parse_pos_shop_item(raw: dict[str, object]) -> PosShopItem:
+    """Map one shop item onto its typed form.
+
+    `isActive` defaults to **True** when absent, matching how `parse_pos_item` reads
+    `isAssignedHint`. The default is the safe direction for this particular field: treating an
+    unstated shop as active can only ever make the count report a shop as lacking assortment
+    that does not, which is a visible alarm somebody investigates — whereas defaulting to
+    inactive would silently drop a genuinely broken shop out of the count, which is the exact
+    failure this whole capability exists to stop.
+    """
+    return PosShopItem(
+        pos_id=UUID(str(raw["pointOfSaleId"])),
+        is_active=bool(raw.get("isActive", True)),
+    )
+
+
+def parse_pos_shops_reading(payload: dict[str, object]) -> PosShopsReading:
+    items_raw = payload.get("items") or []
+    if not isinstance(items_raw, list):
+        raise ValueError("POS shops reading items must be a list")
+    items = [parse_pos_shop_item(item) for item in items_raw if isinstance(item, dict)]
+    computed_as_of = payload.get("computedAsOf")
+    return PosShopsReading(
+        items=items,
+        computed_as_of=(
+            _parse_datetime(computed_as_of) if computed_as_of is not None else None
+        ),
+    )
+
+
 def _query_params(since: datetime | None, since_id: UUID | None) -> dict[str, str]:
     if since is None and since_id is None:
         return {}
@@ -282,11 +342,13 @@ class HttpxIndexFeedClient:
         *,
         catalog_path: str = CATALOG_PATH,
         pos_path: str = POS_PATH,
+        pos_shops_path: str = POS_SHOPS_PATH,
     ) -> None:
         self._client = client
         self._api_key = api_key
         self._catalog_path = catalog_path
         self._pos_path = pos_path
+        self._pos_shops_path = pos_shops_path
 
     def _headers(self) -> dict[str, str]:
         return {FEED_KEY_HEADER: self._api_key}
@@ -336,3 +398,13 @@ class HttpxIndexFeedClient:
             unavailable="POS feed is unavailable",
         )
         return parse_pos_page(payload)
+
+    async def fetch_pos_shops(self) -> PosShopsReading:
+        # No cursor, so no query parameters: this route states the whole set every time.
+        payload = await self._get_json(
+            self._pos_shops_path,
+            None,
+            None,
+            unavailable="POS shops feed is unavailable",
+        )
+        return parse_pos_shops_reading(payload)

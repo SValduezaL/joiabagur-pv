@@ -159,6 +159,10 @@ public class IndexFeedSalesClockTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<PosAssignmentPair>>([new(Pos, Product)]);
 
+        public Task<IReadOnlyList<PosShopRow>> GetPosShopsAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<PosShopRow>>([new(Pos, true)]);
+
         public Task<IReadOnlyList<PosSalesAggregate>> GetSalesAggregatesAsync(
             IReadOnlyList<PosAssignmentPair> pairs,
             DateTime now,

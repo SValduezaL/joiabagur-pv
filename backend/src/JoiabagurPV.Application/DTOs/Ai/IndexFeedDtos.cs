@@ -164,3 +164,57 @@ public sealed class PosAvailabilityTombstoneItemDto
 
     public DateTime At { get; init; }
 }
+
+/// <summary>
+/// The WHOLE set of points of sale and whether each one is trading, as of one instant (C43).
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>A reading, not a page, and it deliberately does not derive from
+/// <see cref="IndexFeedPageDto"/>.</b> There is no cursor, no <c>hasMore</c> and no
+/// <c>pageSize</c>: inheriting that shape would add three permanently meaningless fields to a
+/// contract with no use for them, which is the same reasoning that kept
+/// <c>computedAsOf</c> off the catalog page.
+/// </para>
+/// <para>
+/// <b>Why complete rather than cursored.</b> A keyset feed can only say what changed, so a
+/// point of sale <em>removed</em> from the business emits nothing and would survive in the
+/// consumer's table for ever. Only a statement of the whole set lets the consumer retire what
+/// is no longer in it. The cardinality makes that affordable — this is a handful of rows,
+/// against the thousands the availability feed pages through.
+/// </para>
+/// <para>
+/// <b>Why it is not a field on the availability feed.</b> That feed is incremental by keyset
+/// over the watermark of the inventory row, and a point of sale changing its activity touches
+/// no inventory row: the watermark would not move, the incremental pass would re-emit nothing,
+/// and the flag would freeze at whatever it held when the assignment last changed.
+/// </para>
+/// </remarks>
+public sealed class PosShopsReadingDto
+{
+    public IReadOnlyList<PosShopItemDto> Items { get; init; } = [];
+
+    /// <summary>The instant this reading was taken, so a consumer can date what it stored.</summary>
+    public DateTime ComputedAsOf { get; init; }
+}
+
+/// <summary>
+/// One point of sale and whether it is trading. No code, no name, no address (C43).
+/// </summary>
+/// <remarks>
+/// The consumer counts and does not name: it answers "how many active shops hold no
+/// assortment". Sending a descriptive attribute would put a second copy of a fact this schema
+/// owns inside the AI schema, where it would go stale between drains with nobody watching it —
+/// and it would widen a feed that exists to carry one boolean.
+/// </remarks>
+public sealed class PosShopItemDto
+{
+    public Guid PointOfSaleId { get; init; }
+
+    /// <summary>
+    /// Reported for inactive shops too, never omitted: <em>closed</em> and <em>deleted</em>
+    /// need opposite treatment from the consumer — the first keeps its row and stops counting,
+    /// the second loses its row — and omission would make them indistinguishable on the wire.
+    /// </summary>
+    public bool IsActive { get; init; }
+}

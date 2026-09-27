@@ -713,8 +713,27 @@ operator.
 ### A `503` from a scoped search is one specific thing
 
 If assisted search answers `503` for a shop, its row in `ai.pos_projection` is missing, not its
-catalogue. Check `shops_without_scope` in the health card — and read 5.5c before concluding anything,
-because **`HT-ARTRUTX` is deliberately closed and always counts as one**.
+catalogue. Check `shops_without_scope` in the health card.
+
+**Since C43 that number counts only ACTIVE shops, so it should read `0` here.** It used to count
+`HT-ARTRUTX` — deliberately closed since 2025-09-30, keeping its 144 rows with every assignment
+correctly retired — and therefore always read `1`, which failed the deployment of 2026-09-27 over
+a healthy environment and painted a red line on the administrator's dashboard. The activity now
+reaches the AI service through `ai.pos_shop`, filled by `GET /api/ai/index-feed/pos-shops`,
+because the `jbg_ai` role is refused `SELECT` on `public."PointOfSales"`.
+
+So the reading changed, and so did what a non-zero value means:
+
+| What the health card says | What it means |
+|---|---|
+| `shopsWithoutScope: 0` | every trading shop has an assortment — the expected state |
+| `shopsWithoutScope: null` | `ai.pos_shop` has not been drained yet; the service knows of no shop **and says so** rather than reporting a reassuring zero |
+| `shopsWithoutScope: N > 0` | **N shops that are open have no assortment.** A real fault now, not a closed shop |
+
+`verify.sh` fails the deployment on the last two. It also waits, up to 180 s, for the start-up
+drains to report before judging — the health report is cached for 10 s and the boot drain can
+need a second attempt, which on 2026-09-27 made the deployment log record a staleness the drain
+had already cured six seconds earlier.
 
 ## 6. Moving to a purchased domain
 
