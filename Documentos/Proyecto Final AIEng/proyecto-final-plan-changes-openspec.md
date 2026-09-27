@@ -60,9 +60,14 @@ entorno queda con **cuatro cuentas que entran** —un administrador y un operari
 declaradas en el nuevo **§5.8 del *runbook***. Son mutaciones de un entorno público que **no aparecen
 en ningún diff**, y por eso se escriben.
 
-**Y queda un cabo suelto que hay que nombrar:** `demo.admin` es **el único administrador que puede
-entrar** y su contraseña **no está en el repositorio**. Mientras no se restablezca, la tarjeta de salud
-de la IA sigue sin ser alcanzable.
+**`demo.admin` es el único administrador que puede entrar**, y su contraseña **no está en el
+repositorio** —correctamente—. Con ella, aportada por el responsable, **la tarjeta de salud de la IA
+quedó ejercitada**: `200`, índice en 1.200, proyección `ok`. Y esa lectura añadió dos cosas. Una:
+`shopsWithoutScope: 1` aparece **al otro lado del proxy**, de modo que el falso positivo llega en rojo
+hasta la pantalla del evaluador. Otra: el mismo panel avisa en **`CRITICAL`** de que no existe modelo de
+reconocimiento de imagen, y **no puede existir**, porque el catálogo sintético tiene **0 fotos de 1.200
+productos** — funcionalidad del MVP, no del PF. **Dos rojos en la misma pantalla y ninguno señala nada
+roto**; el segundo queda anotado como tarea diferida.
 
 #### Lo que se confirmó, y lo que se refutó
 
@@ -92,8 +97,9 @@ Y **no bloquean**: ninguna rama tiene protección configurada.
 **Sin navegador en la sesión, no hay capturas.** El recorrido ejercitó los mismos *endpoints* que llaman
 las pantallas —y con eso quedan medidos el argumentario generado con citas, la abstención, los
 sustitutos, el aviso de agotado, el pivote, el ámbito global y el rechazo del enrutador—, pero **las
-cuatro tarjetas no se han visto** y **la tarjeta de salud no se ha ejercitado**, porque su ruta es
-`[Authorize(Roles = "Administrator")]` y la contraseña de `demo.admin` no está en el repositorio.
+cuatro tarjetas no se han visto**. La tarjeta de salud **sí quedó ejercitada por su ruta**, con la
+credencial que aportó el responsable; de las cuatro superficies de IA existe la respuesta de la API y no
+la pantalla que la pinta.
 
 ### 2026-09-27 — C39a se implementa, se parte otra vez, y refuta tres cosas propias
 

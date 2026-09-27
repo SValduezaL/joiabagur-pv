@@ -310,11 +310,40 @@ recrea en cada arranque con una contraseña que es una constante de un repositor
 `LoginAsync` rechaza a un usuario desactivado aun con la contraseña correcta. **Un `401` aquí es el
 sistema funcionando**, no un defecto, y responde exactamente lo que la tarea preguntaba.
 
-**La tarjeta de salud de la IA queda SIN EJERCITAR.** `AiHealthController` es
-`[Authorize(Roles = "Administrator")]`, comprobado: con un token de operario devuelve **`403`**. La
-contraseña de `demo.admin` no está en el repositorio —correctamente, se generó fuera del anfitrión y
-sólo viajó el hash— y este change no crea cuentas administradoras. Lo que **sí** está verificado es que
-el interruptor que la cuarta tarjeta necesita está puesto:
+**La tarjeta de salud de la IA SÍ quedó ejercitada**, en una segunda pasada y con la contraseña de
+`demo.admin` que aportó el responsable. Primero lo que ya estaba comprobado: `AiHealthController` es
+`[Authorize(Roles = "Administrator")]`, y con un token de operario devuelve **`403`**. Con sesión de
+administrador, `GET /api/ai/health` responde **`200`** y devuelve, a las **16:13 UTC**:
+
+```json
+{ "status": "OK", "version": "0.1.0", "database": "ok",
+  "index": { "documents": 1200, "model": "openai/text-embedding-3-small",
+             "configuredModel": "openai/text-embedding-3-small", "status": "ok" },
+  "provider": "configured",
+  "projection": { "status": "ok", "syncedAt": "2026-09-27T16:13:07.236446+00:00",
+                  "fullSyncedAt": "2026-09-22T18:22:29.657404+00:00",
+                  "ageSeconds": 381.2, "ceilingSeconds": 3600, "stale": false,
+                  "failedPages": 0, "pointsOfSale": 12, "shopsWithoutScope": 1 } }
+```
+
+**Tres cosas que esta lectura añade y que ninguna anterior daba.**
+
+**Primera: el falso positivo llega hasta la pantalla.** `shopsWithoutScope: 1` aparece aquí **atravesando
+el proxy y la capa .NET**, no leído desde dentro del anfitrión como todas las mediciones del §2.2. Y el
+panel lo pinta en rojo —«1 tienda sin surtido sincronizado: su búsqueda asistida no funciona»—, así que
+el defecto no se queda en el informe del servicio: **es lo que ve un evaluador**.
+
+**Segunda: el drenaje completo sigue sin correr, dos horas y media después.** `fullSyncedAt` continúa en
+`2026-09-22T18:22:29` mientras `syncedAt` avanza —`13:33:05`, `13:43:05`, `13:53:06`, `16:13:07`, la
+cadencia de 600 s intacta—. El matiz del §2.4 no era del momento del arranque: **es permanente**. Nadie
+ha comprobado `drift_count` contra este entorno.
+
+**Tercera: la contraseña sigue fuera del repositorio**, y este change no creó ninguna cuenta
+administradora. La aportó el responsable para esta comprobación.
+
+Lo que **no** se ha hecho es una captura de la tarjeta renderizada: la sesión no tiene navegador, y la
+confirmación visual la aportó el responsable, no este informe. Verificado aquí está que el interruptor
+que la cuarta tarjeta necesita está puesto:
 
 ```text
 AiAgentAssist__EnabledByDefault=true      AiSalesAssist__EnabledByDefault=true
@@ -660,12 +689,19 @@ escenario 11 que queda abierto.
 3. **`ai.sync_failure` acumula 66 filas del *feed* `catalog` que nada mira** — hallado de paso. No es
    un fallo vivo (el índice tiene sus 1.200 documentos), pero es una acumulación silenciosa en una
    tabla cuyo nombre dice exactamente lo contrario.
-4. **La deriva de rama**, que C39a dejó declarada: nada compara lo desplegado con la rama que debería
+4. **El panel avisa en `CRITICAL` de un modelo de reconocimiento de imagen que este entorno no puede
+   tener** — visto al alcanzar el panel con sesión de administrador. El catálogo sintético tiene
+   **0 fotos de 1.200 productos**, así que no hay material del que aprender y la alerta es estructural.
+   Conviven **dos rojos en la misma pantalla** —éste y el de la quinta condición— y ninguno de los dos
+   señala nada roto. Con el agravante de que el reconocimiento de imagen es del **MVP y no del Proyecto
+   Final**: la alerta más visible del panel no es de lo que se evalúa.
+5. **La deriva de rama**, que C39a dejó declarada: nada compara lo desplegado con la rama que debería
    servirse, aunque los dos datos existen.
 
-**Y lo que queda pendiente de una sesión con navegador**, dicho para que no se dé por hecho: las cuatro
-tarjetas del centro de IA **no se han visto**, y la tarjeta de salud de la IA **no se ha ejercitado**
-por falta de una credencial administradora.
+**Y lo que queda pendiente de una sesión con navegador**, dicho para que no se dé por hecho: **las cuatro
+tarjetas del centro de IA no se han visto**. La tarjeta de salud de la IA **sí quedó ejercitada** por su
+ruta, con la credencial que aportó el responsable (§3.1), pero de las cuatro superficies de IA existe la
+respuesta de la API y no la pantalla que la pinta.
 
 ---
 

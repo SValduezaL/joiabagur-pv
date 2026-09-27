@@ -361,9 +361,20 @@ una constante de un repositorio público y el entorno es accesible desde interne
 escenario era incorrecta al escribirse.
 
 La cuenta administradora utilizable es `demo.admin`, cuya contraseña **no está en el repositorio** —se
-generó fuera del anfitrión y sólo viajó el hash—, así que **la tarjeta de salud de la IA quedó sin
-ejercitar**. Verificado sí está que la ruta es `[Authorize(Roles = "Administrator")]` y que devuelve
-`403` a un operario, y que los cuatro interruptores `*__EnabledByDefault` están en `true`.
+generó fuera del anfitrión y sólo viajó el hash—. Con esa contraseña, aportada por el responsable, **la
+tarjeta de salud de la IA quedó ejercitada**: `GET /api/ai/health` responde `200` en sesión de
+administrador, con `documents: 1200`, `provider: configured`, proyección `ok` y `stale: false`. Y
+devuelve `403` a un operario, como debe. Los cuatro interruptores `*__EnabledByDefault` están en `true`.
+
+**Lo que esa lectura añadió al hallazgo principal:** `shopsWithoutScope: 1` aparece también **al otro
+lado del proxy y de la capa .NET**, y el panel lo pinta en rojo. El falso positivo no se queda en el
+informe del servicio — **es lo que ve un evaluador**.
+
+**Y destapó un segundo rojo en la misma pantalla**, de otro origen: el panel avisa en `CRITICAL` de que
+no existe modelo de reconocimiento de imagen, y no puede existir, porque el catálogo sintético tiene
+**0 fotos de 1.200 productos**. Es funcionalidad del MVP, no del Proyecto Final. Anotado como tarea
+diferida, con la observación de que `CRITICAL` está mal elegido para una funcionalidad que no está
+alimentada.
 
 ### Y dos cosas que el recorrido destapó y que no se arreglan aquí
 

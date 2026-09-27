@@ -24,7 +24,7 @@ C39b                    README de entrega, vídeo, tag, evidencias
 | proyección a **~120 ×** el techo de rancidez | curada, porque el drenaje de C41 corre al arrancar | ✅ curada — **pero la lectura del propio workflow no lo vio**, porque el informe se cachea 10 s y el drenaje de arranque necesitó **dos intentos**. Ver Q1 |
 | las siete condiciones de `verify.sh`, probadas canalizando el script | ejecutadas por el propio workflow, sobre el script desplegado | ⚠️ ejecutadas, y **la quinta falla**: no por el entorno, sino por contar una tienda cerrada a propósito. **Seis de siete en verde** |
 | ruta del agente respondiendo con credencial **de repliegue** | `stage=agent_client` con credencial propia | ✅ las tres propias: `credential=agent`, `credential=router`, `credential=assist`, **ningún `assist_fallback`** |
-| `AiAgentAssist__EnabledByDefault` ausente → cuarta tarjeta invisible | la tarjeta presente | ✅ `AiAgentAssist__EnabledByDefault=true` en el contenedor. **La tarjeta no se pudo ver**: sin navegador y sin credencial administradora |
+| `AiAgentAssist__EnabledByDefault` ausente → cuarta tarjeta invisible | la tarjeta presente | ✅ `AiAgentAssist__EnabledByDefault=true` en el contenedor, y la ruta del agente responde con el bucle completo. **La tarjeta no se pudo ver**: sin navegador. La de **salud de la IA** sí quedó ejercitada por su ruta, con la credencial del responsable |
 | *(no previsto)* las cuentas del recorrido | — | ❌ **`op-*` no existían y `admin` estaba desactivada.** El §5.3 había dejado **dos** cuentas. Ver la nota del grupo 3 de `tasks.md` |
 
 ### La restricción que gobierna el diseño

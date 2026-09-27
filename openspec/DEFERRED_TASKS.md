@@ -1661,3 +1661,45 @@ los purga cuando la página se reintenta con éxito. Decidir cuál exige saber s
 una página que hoy seguiría fallando, y eso no se ha medido.
 
 ---
+
+## C39a-bis · El panel de administración avisa en CRÍTICO de un modelo que el mundo sintético no puede alimentar
+
+**Visto el 2026-09-27**, al alcanzar por fin el panel con una sesión de administrador. Junto a la
+tarjeta de salud de la IA, el mismo panel pinta **una alerta en rojo de nivel `CRITICAL`** que viene de
+`GET /api/image-recognition/model/health`:
+
+```json
+{ "currentVersion": null, "lastTrainedAt": null, "alertLevel": "CRITICAL",
+  "alertMessage": "No AI model exists. Please train an initial model.",
+  "catalogMetrics": { "totalProducts": 1200, "productsWithPhotos": 0,
+                      "productsWithoutPhotos": 1200 },
+  "photoMetrics": { "totalPhotos": 0 }, "precisionMetrics": null }
+```
+
+**Y no se puede arreglar entrenando nada, porque la causa es estructural:** el catálogo sintético de
+C10 **no tiene ni una fotografía** —1.200 productos, 0 con foto—, así que el reconocimiento de imagen no
+tiene material del que aprender y **nunca** podrá tener modelo en este entorno. Lo corrobora la búsqueda
+asistida por otro camino: todos sus resultados llegan con `"primaryPhotoUrl": null`.
+
+**Es la misma forma que el falso positivo de la quinta condición**, y de hecho conviven en la misma
+pantalla: un aviso alarmante sobre un entorno que está **correcto para lo que es**. Con el agravante de
+que el reconocimiento de imagen es funcionalidad **del MVP y no del Proyecto Final**, así que la alerta
+más visible del panel no es ni de lo que se evalúa.
+
+**`CRITICAL` está mal elegido, y ésa es la parte que es un defecto de verdad.** Ese nivel describe algo
+que se ha roto; aquí no hay nada roto, hay una funcionalidad **no alimentada**. Un catálogo sin ninguna
+foto no es un modelo caducado: es un modelo que no aplica, y el informe no distingue los dos estados.
+
+**Tres vías, y no son excluyentes.**
+
+1. **Declararlo en el guion de la demo**, para que quien evalúe sepa de antemano que esa tarjeta no
+   aplica. Es documentación, y cabe en **C39b** sin tocar código.
+2. **Distinguir «no alimentado» de «sin entrenar»** en `ModelHealthService`: con
+   `productsWithPhotos == 0` el nivel debería ser informativo y el mensaje decir que la funcionalidad no
+   tiene material, no que falte entrenar. Es el arreglo correcto y es código.
+3. **Ocultar la tarjeta** cuando el catálogo no tiene fotos. Más barato que la 2 y peor: esconde el
+   estado en vez de nombrarlo, y deja a quien opere sin saber por qué no está.
+
+**Recomendado:** la 1 para la entrega y la 2 como arreglo. La 3 sólo si hay prisa.
+
+---
