@@ -569,6 +569,35 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 **Changes asociados:** **C26** (`add-substitutes-retrieval` — **archivado el 2026-09-12**, 62/62), ~~C27~~ (**cortado**), **C30a**, **C30b**, **C31** *(archivado el 16 sep)*, **C32a** *(archivado el 20 sep)*, **C32b** *(archivado el 21 sep)* *(partidos el 20 sep)*, **C34** *(archivado el 22 sep)*, **C36** *(archivado el 24 sep)*, **C40** (`add-frontend-free-query-panel` — **archivado el 25 sep**, no previsto en ninguna ola: nace al comprobar C36 en demo), **C40_FIX** (`c40-fix-all-shops-scope-unreachable` — **archivado el 26 sep**, fuera de la numeración C: corrige a C40), **C42** (`add-frontend-agent-panel` — **abierto el 26 sep**, no previsto en ninguna ola: nace al valorar la cola pendiente del PF)
 
 > **Ampliado el 2026-09-26 — C42, y el motivo es que un pilar no se puede enseñar.** **C42** (`add-frontend-agent-panel`) se abre con historia ([HU-AIENG-042](Historias/AI-Eng/HU-AIENG-042.md)), ticket ([T-AIENG-042](../openspec/changes/archive/2026-09-27-add-frontend-agent-panel/ticket.md)) y **dos informes de exploración del mismo día** ([v1, contra el código](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions.md) · [v2, contra los artefactos ya escritos](Proyecto%20Final%20AIEng/informes/c42-exploration-decisions-v2.md)), en la rama `c42-add-frontend-agent-panel`. **No estaba en el plan**: sale de una sesión abierta para decidir entre implementar C38 entero o dar superficie al agente, y gana el segundo por lo que el §5 de la convocatoria escribe —*«el sistema debe poder probarse»*—. Recuento: **40 archivadas** —entra C41— y **3 pendientes**: **C42**, C38 y C39, en ese orden. **Va antes de C38** por la misma cadena de prompts que puso a C40 antes que a C38: aquí la tarea del agente sube de versión, así que unas cifras de generación tomadas antes describirían un prompt sustituido.
+
+> **Actualizado el 2026-09-27 — C42 archivado, C38 retirado entero, y C39 partido en tres.** Tres
+> movimientos en un día y ninguno estaba previsto en ninguna ola.
+>
+> **C38 se retira** (`add-generation-and-agent-evals`) y no se recorta: se cae del todo, por valor
+> marginal y sobre mediciones tomadas en su propia sesión de exploración. Sus datos ya existían —los 20
+> escenarios del agente están corridos **dos veces contra el proveedor real** y sus filas traen
+> veredicto, con **17 de 20** cumpliendo su expectativa y **2 de 20** de ruido entre pasadas—, su
+> validador resultó ser **un espejo** de la regla que la puerta numérica de Python ya aplica al mismo
+> texto, y sólo los adversarios arrancaban de verdad en cero. Es la primera vez que cae un elemento de
+> la lista de *«nunca se recortan»* del plan, y queda escrito allí con su motivo.
+>
+> **C39 se parte**, primero en **C39a** (`redeploy-and-audit-demo-environment`) y **C39b**
+> (`finalize-pf-readme-and-evidence`), y al implementar el primero en **C39a** y **C39a-bis**
+> (`verify-demo-redeployment`). La segunda partición es de orden y no de tamaño: las tareas de
+> verificación de C39a exigían un entorno desplegado, y **el despliegue ocurre al mergear el change a la
+> rama `demo`** — un change que sólo se puede archivar después de archivarse no es un change. C39a-bis
+> toca sólo ficheros que el `paths-ignore` del despliegue ignora, así que **verificar no cuesta un
+> redespliegue**.
+>
+> **C39a se archiva el mismo día**, con historia ([HU-AIENG-043](Historias/AI-Eng/HU-AIENG-043.md)),
+> ticket ([T-AIENG-043](../openspec/changes/archive/2026-09-27-redeploy-and-audit-demo-environment/ticket.md))
+> e [informe](Proyecto%20Final%20AIEng/informes/c39a-implementation-measurements.md). Su hallazgo de
+> partida: **la rama `demo` llevaba cinco semanas 84 commits por detrás**, parada en el QA de C34, con el
+> `IMAGE_TAG` desplegado igual al HEAD de esa rama — así que la demo no tenía C36, C40, C40_FIX, C41 ni
+> C42, o sea cuatro de las cinco superficies más visibles del entregable.
+>
+> Recuento: **42 archivadas** —entran C42 y C39a—, **1 retirada** (C38) y **2 pendientes**: **C39a-bis**
+> y **C39b**, en ese orden.
 >
 > **Ocho hallazgos y dieciséis decisiones, y la segunda pasada refuta a la primera con cifras del propio repositorio.** El v1 encontró una **regresión latente que C40 introdujo sin tocar el agente** —la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`— y concluyó que sin arreglarlo C42 entregaría *«un panel de agente sin prosa»*. **El v2 lo desmiente**: la frase que ordena marcadores es **idéntica palabra por palabra** en `v3.md:47` y `v4.md:59`, así que **C40 ya midió este caso** sobre 90 consultas libres con payload sin anclar — **3 de 90 generaciones con marcador y 0 retiradas tras la reparación única**, que además *«no es una por comprobación»* sino una sola con la lista entera de violaciones. La referencia que el v1 usó —C30b, `{{price}}` en 147 de 213— es de los modos **anclados**, y la cabecera de `assist/v5.md` ya había escrito por qué no se traslada: *«anclado hay una pieza y se la vende; en libre hay hasta quince agrupadas y lo que se pide es comparar»*. **El arreglo entra igual pero no gobierna la línea de corte: la gobierna el consumidor .NET, que no existe** —`IAiGatewayClient` tiene siete métodos y ninguno es el del agente, que es el 100 % y no el 3 %—. Y **la causa que de verdad retira el argumentario del agente ya estaba medida y no es el marcador**: `dangling_citation`, 85 en el primer intento y 72 supervivientes, con el **92,2 % de las respuestas trayendo cero citas**.
 >

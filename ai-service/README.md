@@ -391,6 +391,29 @@ with their final shape and **nothing had ever written to them**; the content liv
 [`../data/knowledge/`](../data/knowledge/), versioned in git, and
 [its README](../data/knowledge/README.md) carries the seven authoring rules.
 
+> **Where the corpus is looked for, and why the image carries it (C39a).** The directory is
+> resolved by searching three candidates in order — the checkout, the working directory, and
+> `/app/data/knowledge` — which is the same search `load_prompt_file` performs for the prompts and
+> for the same stated reason: one search, so a container layout cannot diverge from a developer
+> checkout. It used to be **derived** by counting parent directories from the module file, which is
+> correct in a checkout and lands inside the virtual environment once `uv sync --no-editable`
+> installs the package: measured in the deployed container, the corpus was looked for at
+> `/app/.venv/lib/data/knowledge`, a directory nothing writes to.
+>
+> The corpus now also **ships inside the image**, because `data/knowledge/` sits outside this
+> image's build context. It arrives through a named additional context, so **a build that does not
+> supply it fails** instead of producing an image whose `sync-knowledge` has nothing to read:
+>
+> ```bash
+> docker build -f ai-service/Dockerfile --build-context corpus=./data/knowledge … ai-service
+> ```
+>
+> Both consumers pass it: the demo deployment workflow and, for local development,
+> `backend/docker-compose.yml` through `additional_contexts`. With the table empty the
+> piece-anchored argument is withheld for want of material to anchor it to and the piece-anchored
+> question answers `knowledge_not_covered` — which read on screen as a defect of the sale card and
+> are not one.
+
 Three commands need neither a database nor a provider:
 
 ```bash
