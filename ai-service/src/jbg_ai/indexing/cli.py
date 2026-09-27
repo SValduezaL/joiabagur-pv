@@ -25,6 +25,8 @@ from jbg_ai.indexing.orchestrator import CatalogSyncRequest, CatalogSyncResult, 
 from jbg_ai.indexing.pos_drain import run_pos_drain
 from jbg_ai.indexing.pos_orchestrator import PosSyncResult, describe
 from jbg_ai.indexing.pos_projection import PosProjectionRepo
+from jbg_ai.indexing.pos_shop import PosShopRepo
+from jbg_ai.indexing.pos_shop_drain import PosShopSyncResult, run_pos_shop_drain
 from jbg_ai.indexing.provenance import ProvenanceEntry, load_provenance_map
 from jbg_ai.indexing.repository import ProductDocumentRepo, SqlAlchemyProductDocumentRepo
 from jbg_ai.indexing.sync_errors import IndexFeedConfigError, ProvenanceMapError
@@ -128,6 +130,31 @@ async def run_cli_sync_pos(
     )
 
 
+async def run_cli_sync_shops(
+    *,
+    settings: Settings | None = None,
+    feed: IndexFeedClient | None = None,
+    repo: PosShopRepo | None = None,
+) -> PosShopSyncResult:
+    """Drain the shop activity feed. Needs no embedding key: it embeds nothing.
+
+    Reachable by hand because that is how every recorded incident of a stale projection was
+    actually repaired — and because the shop table is the one post-deployment verification
+    fails on when empty, so somebody needs a way to fill it that does not involve restarting
+    the service and waiting for a boot drain.
+
+    Takes no `--full`: this drain has no other mode. Every run states the whole set.
+    """
+    return await run_pos_shop_drain(settings=settings, feed=feed, repo=repo)
+
+
+def describe_shops(result: PosShopSyncResult) -> str:
+    return (
+        f"pos-shops written={result.written} removed={result.removed} "
+        f"active={result.active}"
+    )
+
+
 async def run_cli_sync_knowledge(
     *,
     full: bool = False,
@@ -197,6 +224,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Ignore the pos-availability checkpoint; start without query params",
     )
+    # No `--full`: this drain has no other mode. Every run states the whole set.
+    sub.add_parser(
+        "sync-pos-shops",
+        help="Drain the shop activity feed into ai.pos_shop (always complete)",
+    )
     knowledge_parser = sub.add_parser(
         "sync-knowledge",
         help="Index data/knowledge/ into ai.knowledge_document and ai.knowledge_chunk",
@@ -207,8 +239,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Re-embed every chunk, even the ones whose content and version are unchanged",
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
-    if args.command not in {"sync", "sync-pos", "sync-knowledge"}:
+    if args.command not in {"sync", "sync-pos", "sync-pos-shops", "sync-knowledge"}:
         parser.error("unknown command")
+
+    if args.command == "sync-pos-shops":
+        try:
+            shops_result = run_async(run_cli_sync_shops())
+        except IndexFeedConfigError as exc:
+            sys.stderr.write(f"{exc}\n")
+            return 1
+        sys.stdout.write(describe_shops(shops_result) + "\n")
+        # A reading that states no shop at all leaves the table empty, which is the state
+        # post-deployment verification fails on. Reporting success here would let somebody
+        # run this by hand, read "ok", and be surprised by the deployment later.
+        return 1 if shops_result.written == 0 else 0
 
     if args.command == "sync-knowledge":
         try:

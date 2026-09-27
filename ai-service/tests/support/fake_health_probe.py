@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from jbg_ai.api.health_report import IndexSnapshot
+from jbg_ai.indexing.pos_projection import POS_FEED
 
 
 class FakeHealthProbe:
@@ -24,9 +25,19 @@ class FakeHealthProbe:
         projection_synced_at: datetime | None = None,
         projection_full_synced_at: datetime | None = None,
         projection_points_of_sale: int = 0,
-        projection_scoped_points_of_sale: int = 0,
-        projection_failed_pages: int = 0,
+        projection_active_points_of_sale: int = 0,
+        projection_active_without_scope: int | None = None,
+        projection_failures_by_feed: dict[str, int] | None = None,
+        projection_failed_pages: int | None = None,
     ) -> None:
+        # `projection_failed_pages` is kept as a convenience for the many tests that only
+        # care about the POS feed's count: it is folded into the per-feed mapping the
+        # snapshot now carries, so neither those tests nor this double had to learn the
+        # breakdown in order to keep asserting what they always asserted.
+        failures = dict(projection_failures_by_feed or {})
+        if projection_failed_pages is not None:
+            failures.setdefault(POS_FEED, projection_failed_pages)
+
         self._snapshot = IndexSnapshot(
             database_reachable=database_reachable,
             documents=documents,
@@ -35,8 +46,9 @@ class FakeHealthProbe:
             projection_synced_at=projection_synced_at,
             projection_full_synced_at=projection_full_synced_at,
             projection_points_of_sale=projection_points_of_sale,
-            projection_scoped_points_of_sale=projection_scoped_points_of_sale,
-            projection_failed_pages=projection_failed_pages,
+            projection_active_points_of_sale=projection_active_points_of_sale,
+            projection_active_without_scope=projection_active_without_scope,
+            projection_failures_by_feed=failures,
         )
         self.calls = 0
 
