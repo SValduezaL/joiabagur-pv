@@ -24,17 +24,22 @@ name: Backend Tests
 # filter never reports a status, and a required check that never reports leaves a
 # pull request blocked forever. It needs a companion job that always runs and
 # publishes the same check name.
+# SOLO `pull_request`, y el disparo por `push` se retira (C39a, segunda pasada).
+#
+# Al encender la CI se vio que cada integracion disparaba DOS veces: el `pull_request` antes de
+# mergear y el `push` despues, sobre el commit de merge. El segundo mide practicamente el mismo
+# arbol que el primero, porque un `pull_request` ya se evalua sobre la fusion con la base, asi que
+# repetia el trabajo -- y aqui son OCHO MINUTOS por merge, medidos el 2026-09-27.
+#
+# `workflow_dispatch` entra en su lugar: sin el disparo por `push` no habria ninguna forma de correr
+# la suite sin abrir una PR, y en un repositorio cuya CI no se habia ejecutado nunca eso hace falta.
 on:
-  push:
-    branches: [ai-eng, master]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/test-backend.yml'
   pull_request:
     branches: [ai-eng, master]
     paths:
       - 'backend/**'
       - '.github/workflows/test-backend.yml'
+  workflow_dispatch:
 
 defaults:
   run:

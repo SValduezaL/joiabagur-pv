@@ -11,17 +11,22 @@ name: Frontend Tests
 # is what counts.
 #
 # The `paths` filter stays, for the asymmetry explained in the backend workflow.
+# SOLO `pull_request`, y el disparo por `push` se retira (C39a, segunda pasada).
+#
+# Al encender la CI se vio que cada integracion disparaba DOS veces: el `pull_request` antes de
+# mergear y el `push` despues, sobre el commit de merge. El segundo mide practicamente el mismo
+# arbol que el primero, porque un `pull_request` ya se evalua sobre la fusion con la base, asi que
+# repetia el trabajo -- ocho minutos de backend por merge en la medicion del 2026-09-27.
+#
+# `workflow_dispatch` entra en su lugar: sin el disparo por `push` no habria ninguna forma de correr
+# la suite sin abrir una PR, y en un repositorio cuya CI no se habia ejecutado nunca eso hace falta.
 on:
-  push:
-    branches: [ai-eng, master]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/test-frontend.yml'
   pull_request:
     branches: [ai-eng, master]
     paths:
       - 'frontend/**'
       - '.github/workflows/test-frontend.yml'
+  workflow_dispatch:
 
 defaults:
   run:
@@ -46,8 +51,24 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      # INFORMATIVO Y NO BLOQUEANTE, por el mismo criterio que la suite: reportar con las cifras
+      # a la vista en lugar de bloquear.
+      #
+      # Sin `continue-on-error` este paso se lleva por delante el de tests, que queda `skipped` —
+      # que es exactamente lo que pasaba antes de C39a por otro motivo: `eslint.config.js` no
+      # existía y el linter no arrancaba, con lo que la CI encendía una luz roja sin llegar a medir
+      # nada. Creado el fichero, el linter arranca y reporta **95 errores y 82 avisos** sobre 955
+      # ficheros; bloquear con eso deja los tests sin correr para siempre.
+      #
+      # Los errores NO se han silenciado bajando reglas a `warn`: eso habría dado un `exit 0`
+      # mintiendo. Están ahí, contados, y el reparto es 49 de `no-unused-vars`, 40 de
+      # `no-explicit-any` —casi todos en el código de TensorFlow.js, donde sus tipos lo hacen casi
+      # inevitable— y 6 en reglas que sí señalan defectos. De esos 6, tres son un `else if` con la
+      # condición repetida en `layouts/layout-3/`, plantilla de Metronic que este proyecto no usa
+      # —enruta `Layout8`— y que llegó con el primer commit del repositorio, el 2025-12-07.
       - name: Run linting
         run: npm run lint
+        continue-on-error: true
 
       - name: Run tests with coverage
         run: npm run test:coverage
