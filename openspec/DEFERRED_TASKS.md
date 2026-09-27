@@ -1535,7 +1535,29 @@ la cambie tiene que pasar por ahí y leer esta nota.
 
 ---
 
-## C39a-bis · La quinta condición de `verify.sh` marca en rojo un despliegue sano, porque no distingue una tienda cerrada
+## ~~C39a-bis · La quinta condición de `verify.sh` marca en rojo un despliegue sano, porque no distingue una tienda cerrada~~ — **CERRADA por C43 (2026-09-27)**
+
+> **Cerrada por C43 (`add-shop-activity-projection`) con la vía 1, la que esta ficha llamaba
+> «la correcta de fondo».** `ai.pos_shop` lleva una fila por tienda al esquema `ai`, poblada por
+> un *feed* nuevo —`GET /api/ai/index-feed/pos-shops`, retrato completo sin cursor— y el recuento
+> del informe de salud pasa a leerse con las **tiendas a la izquierda** y `NOT EXISTS`, contra las
+> activas. Se descartó la columna en `ai.pos_projection` porque el *feed* es incremental por
+> *keyset* sobre el *watermark* de inventario y un cambio de estado de tienda no mueve ninguna
+> fila, así que la columna nacería rancia y no se curaría nunca; y se descartó el `GRANT SELECT`
+> por lo que esta ficha ya decía. **La vía 3 se descartó por lo que la propia ficha advertía:**
+> arregla `verify.sh` y deja la tarjeta del panel contando mal.
+>
+> Reproducido contra la base **desplegada** el 2026-09-27, que es lo que esta ficha pedía:
+>
+> ```text
+> recuento viejo   points_of_sale=12  scoped=11  shops_without_scope=1   -> FALLA
+> recuento nuevo   active=11          active_without_scope=0            -> PASA
+> la tienda        HT-ARTRUTX | Hotel Cap d'Artrutx | IsActive = f
+> ```
+>
+> **La confirmación de extremo a extremo no es de este change**: la quinta condición sólo da su
+> veredicto real en un despliegue, que ocurre al mergear a `demo` después de archivar. La recoge
+> C39b.
 
 **Descubierta el 2026-09-27, verificando el redespliegue de la demo.** El despliegue
 `36322635852` construyó, publicó las dos imágenes, actualizó el `IMAGE_TAG` y **falló** en
@@ -1606,7 +1628,27 @@ despliegue del 2026-09-27 figura en rojo.
 
 ---
 
-## C39a-bis · El despliegue registra una rancidez de la proyección que ya era falsa al imprimirse
+## ~~C39a-bis · El despliegue registra una rancidez de la proyección que ya era falsa al imprimirse~~ — **CERRADA por C43 (2026-09-27)**
+
+> **Cerrada por C43 con la primera de las dos vías que esta ficha proponía: la espera explícita.**
+> `verify.sh` reintenta la sonda hasta que el informe declara los drenajes hechos —techo de 180 s,
+> sondeo cada 5 s— y sólo entonces evalúa las condiciones. Se prefirió a un parámetro de consulta
+> «sin caché» porque eso movería el contrato de una ruta que el *snapshot* de OpenAPI congela, y a
+> bajar `HEALTH_CACHE_TTL_SECONDS` porque el caché protege un *pool* capado a cinco conexiones y
+> se pagaría en todas partes para arreglar un sitio.
+>
+> **La espera no es sólo cosmética en C43: es requisito previo del otro defecto.**
+> `deploy/demo/deploy.sh:208` corre `alembic upgrade head` después de levantar la pila, así que
+> `ai.pos_shop` nace vacía a mitad del despliegue; sin la espera, la quinta condición sondearía
+> antes de que el drenaje la llenase.
+>
+> **Y de paso se curó lo que la rancidez describía.** El 2026-09-27 se corrió el drenaje completo
+> contra el entorno desplegado: `upserted=6050 soft_deleted=670 pages=34 failed_pages=0`, y
+> `last_full_sync_at` pasó de llevar parado desde el **2026-09-22 18:22:29** a
+> **2026-09-27 18:21:48**. El `last_aggregate_hash` es **idéntico antes y después**
+> (`3c239b0001ed2aeb…`) y el recuento de filas no se movió (6.720, y 6050 + 670 = 6720), o sea
+> **deriva cero**: la proyección ya era consistente con el *feed*, comprobado por primera vez
+> contra este entorno.
 
 **Medido el 2026-09-27.** El paso de verificación del despliegue imprimió
 
@@ -1659,6 +1701,18 @@ justo la forma de los tres hallazgos que C34, C41 y C39a han costado ya.
 **Vía de cierre:** o el informe de salud cuenta los fallos **por *feed*** y los publica todos, o el drenaje
 los purga cuando la página se reintenta con éxito. Decidir cuál exige saber si alguna de las 66 describe
 una página que hoy seguiría fallando, y eso no se ha medido.
+
+> **Medio cerrada por C43 (2026-09-27), y se deja abierta a propósito.** La **primera** vía está
+> hecha: el informe de salud publica `failed_pages_by_feed` junto al escalar de siempre —que se
+> conserva intacto para no mover la lectura de `verify.sh` ni la de la tarjeta—, y `verify.sh`
+> imprime una nota cuando otro *feed* acumula fallos. Las 66 filas **dejan de ser inalcanzables**:
+> confirmadas de nuevo el 2026-09-27 contra la base desplegada, `catalog|66`, ninguna de
+> `pos-availability`.
+>
+> **Lo que sigue abierto es la purga**, que es donde estaba la pregunta de verdad: nadie ha medido
+> aún si alguna de las 66 describe una página que hoy volvería a fallar, y hasta saberlo borrarlas
+> sería destruir la única evidencia. Publicarlas es lo que permite que alguien lo mire; era la
+> mitad barata y ya no bloquea a la otra.
 
 ---
 
