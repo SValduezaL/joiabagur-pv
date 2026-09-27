@@ -141,6 +141,24 @@ managing workloads in another is ordinary.
 > `--system-certs` (see `CLAUDE.md`). Go-based tools — Terraform, Docker — read
 > the Windows store and are unaffected. This is why `aws configure sso` is the
 > wrong way to create these profiles: it does not write `ca_bundle`.
+>
+> **AND THE BUNDLE EXPIRES, which cost the first half hour of C39a.** Norton rotates its
+> interception root, and when it does, a bundle exported months earlier no longer contains it:
+> every call dies with the same `CERTIFICATE_VERIFY_FAILED` **even with `--ca-bundle` pointing
+> explicitly at the file**, which reads like a profile problem and is not. The bundle in use was
+> from 2026-08-11 with 131 certificates; regenerating it produced 253 and everything worked
+> again. Regenerate with:
+>
+> ```python
+> import ssl, certifi, pathlib
+> parts = [pathlib.Path(certifi.where()).read_text(encoding="utf-8")]
+> for store in ("ROOT", "CA"):
+>     parts += [ssl.DER_cert_to_PEM_cert(der) for der, _, _ in ssl.enum_certificates(store)]
+> pathlib.Path(r"C:\Users\<you>\.aws\ca-bundle-norton.pem").write_text("\n".join(parts), encoding="utf-8")
+> ```
+>
+> **Do not filter by the trust flag.** Norton's root does not carry it, so filtering produces a
+> bundle that looks complete and is not — the same warning `CLAUDE.md` gives for the Python side.
 
 Then `aws sso login --profile jbg-demo`, and confirm with
 `aws sts get-caller-identity --profile jbg-demo`.
@@ -204,8 +222,10 @@ aws ssm describe-instance-information \
 
 ## 3. Parameters
 
-Terraform creates the three non-secret parameters (`DEMO_HOSTNAME`,
-`ECR_REGISTRY`, `IMAGE_TAG`). **The six secrets are created here, by hand, on
+Terraform creates the **four** non-secret parameters: `DEMO_HOSTNAME`,
+`ECR_REGISTRY`, `IMAGE_TAG` and `DEPLOYMENT_BUNDLE_URL`. *(This sentence said
+"three" and omitted the last one until C39a audited the account against
+`ssm.tf`, which declares four.)* **The secrets are created here, by hand, on
 purpose**: a value passed to Terraform is written to its state file in clear,
 which would move them out of the encrypted store and into a file.
 
@@ -221,9 +241,20 @@ put AI_SERVICE_SHARED_SECRET "$(openssl rand -base64 48 | tr -d '/+=')"
 put INDEX_FEED_SHARED_KEY    "$(openssl rand -base64 32 | tr -d '/+=')"
 put EMBEDDING_API_KEY        "sk-..."      # the provider key, pasted
 
-# OPTIONAL — the only one. Without it the sale card serves no argument (see below).
-put ASSIST_LLM_API_KEY       "sk-..."      # the key the sale argument is generated with
+# OPTIONAL — one per generation stage, three in total (C39a). Each one absent is a
+# declared state with a rollback of its own; see below.
+put ASSIST_LLM_API_KEY       "sk-..."      # the sale argument
+put ROUTER_LLM_API_KEY       "sk-..."      # the intent classifier (C31)
+put AGENT_LLM_API_KEY        "sk-..."      # the sale assistant loop (C32b, surfaced by C42)
 ```
+
+**Three parameters and not one read three times**, which is the opposite of the rule
+the two shared credentials follow, and the distinction matters. There the risk is
+**drift** between two halves that must agree literally, so one parameter is safer.
+Here the risk is **confusing three costs**: the three stages run different models —
+the classifier `gpt-4o`, the argument `gpt-4o-mini`, the loop `gpt-4o` — and a
+classification of a few output tokens and a paragraph are not the same call. **They
+may hold the same provider key**, exactly as `EMBEDDING_API_KEY` may.
 
 | Parameter | Injected as | Into |
 |---|---|---|
@@ -234,19 +265,32 @@ put ASSIST_LLM_API_KEY       "sk-..."      # the key the sale argument is genera
 | **`INDEX_FEED_SHARED_KEY`** | `JPV_INDEX_FEED_API_KEY` **and** `IndexFeed__ApiKey` | **both** |
 | `EMBEDDING_API_KEY` | `JPV_EMBEDDING_API_KEY` | AI service |
 | `ASSIST_LLM_API_KEY` *(optional)* | `JPV_ASSIST_LLM_API_KEY` | AI service |
+| `ROUTER_LLM_API_KEY` *(optional, C39a)* | `JPV_ROUTER_LLM_API_KEY` | AI service |
+| `AGENT_LLM_API_KEY` *(optional, C39a)* | `JPV_AGENT_LLM_API_KEY` | AI service |
 
 The two rows in bold are **one parameter read twice**, never two parameters. Two
 would be free to drift, and a drifted pair produces a 401 whose cause the AI
 service is specified not to disclose — a failure with no message pointing at it.
 
-**`ASSIST_LLM_API_KEY` is the only secret whose absence is a valid state** (C30b, switched
-on by C34). `deploy.sh` reads it with `|| true` and never validates it as non-empty. Without
-it no generation client is built: the sale assistance route still answers 200 with the group,
-the warnings and the citations, but no argument — `prompt_version: null`, which the card
-reports as `pitchStatus: not_generated`. Deleting the parameter and redeploying is therefore
-also the rollback of the generation. Separate from `EMBEDDING_API_KEY` on purpose, so the two
-costs can be told apart; it may hold the same provider key. **Terraform is not touched**: the
-instance role already reads the whole `/jbg-demo/` prefix.
+**The three provider credentials of the generation stages are the secrets whose absence is a
+valid state**, and `deploy.sh` reads all three with `|| true` and validates none of them as
+non-empty. Each one degrades to something declared, and **deleting the parameter and
+redeploying is that stage's rollback**:
+
+| Parameter absent | What the environment does instead |
+|---|---|
+| `ASSIST_LLM_API_KEY` (C30b, switched on by C34) | no generation client is built: the sale assistance route still answers 200 with the group, the warnings and the citations, but no argument — `prompt_version: null`, which the card reports as `pitchStatus: not_generated` |
+| `ROUTER_LLM_API_KEY` (C31, added by C39a) | the classifier is not constructed, `intent` comes back `unclassified`, and the route serves exactly what it served before C31. **Beware the quiet case**: with the argument's key present the router falls back to it and works, logging `stage=router_client … credential=assist_fallback` — which is what this environment did until C39a. It works and it is not what is declared |
+| `AGENT_LLM_API_KEY` (C32b, surfaced by C42, added by C39a) | the loop is not constructed and `POST /v1/assist/agent` answers 200 without running it. Same quiet fallback applies |
+
+Each stage logs whether its credential was picked up, never what it is:
+`stage=assist_client`, `stage=router_client`, `stage=agent_client`, with `credential=` naming
+which link of the fallback won. **A deployment meant to demonstrate the system should show
+`credential=assist`, `credential=router` and `credential=agent`** — anything ending in
+`_fallback` means one stage is running on another's key.
+
+**Terraform is not touched** for any of them: the instance role already reads the whole
+`/jbg-demo/` prefix.
 
 What is **not** here, and must not be added: the embedding model, the retrieval
 distance threshold, and stub mode. Those are versioned literals in
@@ -474,21 +518,37 @@ administrator dashboard card shows, and what `verify.sh` checks:
 docker exec -i jbg-demo-ai python -c "import json,urllib.request; print(json.dumps(json.load(urllib.request.urlopen('http://127.0.0.1:8000/health'))['projection'], indent=2))"
 ```
 
-**The knowledge corpus.** `ai.knowledge_chunk` starts empty because **the corpus does not ship in the
-AI image**: `CORPUS_DIR` is `<repo>/data/knowledge` and the Dockerfile copies only `src`, `migrations`
-and `prompts`. With it empty, the sale card's argument is withheld in the piece-only mode and
-questions answer `knowledge_not_covered` with no citations. The corpus **does** travel in the
-deployment bundle, so:
+**The knowledge corpus. ~~Does not ship in the AI image~~ — CLOSED BY C39a, and the step below is
+kept only as the record of what used to be needed.** The corpus now travels inside the image, and
+the path the service reads it from was fixed rather than worked around:
 
 ```bash
-DEST=$(docker exec -i jbg-demo-ai python -c "from jbg_ai.knowledge.constants import CORPUS_DIR; print(CORPUS_DIR)")
-docker exec -u root -i jbg-demo-ai mkdir -p "$(dirname "$DEST")"
-docker cp /opt/jbg-demo/data/knowledge "jbg-demo-ai:$(dirname "$DEST")/"
-docker exec -i jbg-demo-ai python -m jbg_ai.indexing sync-knowledge --full
+# Read-only check. Should print a real directory with the documents in it.
+docker exec -i jbg-demo-ai python -c "from jbg_ai.knowledge.constants import CORPUS_DIR; import pathlib; p=pathlib.Path(CORPUS_DIR); print(p, p.is_dir(), len(list(p.glob('*.md'))))"
+docker exec -i jbg-demo-postgres psql -U postgres -d joiabagur_pv -At -c 'select count(*) from ai.knowledge_chunk'
 ```
 
-> This one is lost on every new image until the corpus ships inside it — tracked in
-> `openspec/DEFERRED_TASKS.md`.
+`verify.sh` fails the deployment when that count is zero, which it did not do before C39a, and
+that was how this stayed invisible: with the fragments already indexed, an image with no corpus
+answers everything correctly until somebody needs to re-index.
+
+> **What it used to require, and why it kept working anyway.** `CORPUS_DIR` was derived by counting
+> parent directories from the module file, which is right in a checkout and lands inside the
+> virtual environment once the package is installed — measured here as
+> `/app/.venv/lib/data/knowledge`. So the corpus had to be copied onto that path by hand after
+> every new image:
+>
+> ```bash
+> # HISTORICAL. Not needed since C39a; kept because it explains five weeks of silence.
+> DEST=$(docker exec -i jbg-demo-ai python -c "from jbg_ai.knowledge.constants import CORPUS_DIR; print(CORPUS_DIR)")
+> docker exec -u root -i jbg-demo-ai mkdir -p "$(dirname "$DEST")"
+> docker cp /opt/jbg-demo/data/knowledge "jbg-demo-ai:$(dirname "$DEST")/"
+> docker exec -i jbg-demo-ai python -m jbg_ai.indexing sync-knowledge --full
+> ```
+>
+> **It survived five weeks unnoticed** because the indexed fragments live in `jbg-demo-pgdata` and a
+> redeployment does not touch that volume: the environment served 161 fragments from the database
+> while its image could not have produced a single one.
 
 ### 5.6 End-to-end check
 
@@ -526,6 +586,31 @@ none of which needs the console or a key:
 3. **The container still fits.** `docker stats --no-stream jbg-demo-ai` against its 512 MiB
    limit (232.5 MiB before generation was switched on), and a handful of requests in a row
    to see whether the organisation's tokens-per-minute quota is what gives first.
+
+### 5.6c The other two AI surfaces (C40, C42) — added by C39a
+
+The environment served only the two surfaces above until C39a brought the branch up to date.
+The other two have switches of their own, and **a missing switch is the failure this file has
+now recorded three times** — C17 for search, C40_FIX for the free query, C39a for the agent:
+
+| Surface | Switch | How to read it |
+|---|---|---|
+| **Free-query panel (M1)**, C40 | `AiFreeQuerySearch__EnabledByDefault: "true"` | the toggle in «Buscar con Ayuda» is reachable, a query with no piece is answered, and a query that is not about jewellery gets a **polite refusal** rather than an empty result |
+| **Agent panel**, C42 | `AiAgentAssist__EnabledByDefault: "true"` | the **fourth card** of the hub is present, and a conversation paints the **loop trace**: tools per turn, iterations, stop reason |
+
+Two things about the agent that are declared behaviour and not faults:
+
+1. **Name the piece by its REFERENCE, not by its product name.** `buscar_catalogo` returns
+   position, SKU, materials, variant and reasons — never the product name — so a name reaches
+   `consultar_disponibilidad` as an unknown reference, the loop recovers by searching, and it
+   cannot tell which of the candidates the customer meant. It then checks another piece and
+   **correctly does not pivot**. Measured in C42's manual check; three fix options are recorded
+   in `openspec/DEFERRED_TASKS.md`. Naming the reference is realistic at a counter, where the
+   piece has its label in front of you.
+2. **`stop_reason` is part of the answer.** `aclaracion` is the loop asking a question,
+   `rechazado` the router refusing, and `sin_cliente` or `fallo_proveedor` a declared
+   degradation — none of them is an error, and `verify.sh` is written not to fail on the last
+   two.
 
 ## 5.7 Two ways to leave the demo quietly broken
 

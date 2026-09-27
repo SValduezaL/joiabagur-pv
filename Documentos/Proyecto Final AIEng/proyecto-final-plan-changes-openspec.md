@@ -14,6 +14,179 @@
 
 Este documento se escribió antes de implementar. Cuando una sesión de diseño de un change concreto altera lo que su ficha decía, el cambio se registra aquí con fecha y motivo, y la ficha afectada se corrige en el sitio.
 
+### 2026-09-27 — C39a se implementa, se parte otra vez, y refuta tres cosas propias
+
+Implementado el mismo día que se escribió. **Se parte en C39a y C39a-bis durante su propio apply**, y el
+motivo es de orden: sus tareas de verificación exigían un entorno desplegado, y **el despliegue ocurre al
+mergear el change a la rama `demo`**. Un change que sólo se puede archivar después de archivarse no es un
+change. C39a queda con todo lo previo; **C39a-bis** (`verify-demo-redeployment`) recorre el entorno
+resultante y toca **sólo** ficheros que el `paths-ignore` de `deploy-demo.yml` ignora —`openspec/**`,
+`Documentos/**`, `**/README.md`, `CLAUDE.md`, `AGENTS.md`, `terraform/**`—, así que **verificar no cuesta
+un redespliegue**. Informe en
+[c39a-implementation-measurements.md](informes/c39a-implementation-measurements.md).
+
+#### Las tres refutaciones, que son el valor de la pasada
+
+| Refutado | Qué se creía | Qué se midió |
+|---|---|---|
+| **El corpus estaba vacío** | `ai.knowledge_chunk` a cero, con M2 y M3 roscados en la demo | **161 fragmentos y 32 documentos**. El corpus se indexa en la base y la base vive en `jbg-demo-pgdata`, cuya persistencia es requisito vivo. El hueco impide **reindexar**; no vacía nada. Urgencia rebajada, cierre igual |
+| **D5: mover el contexto de *build* a la raíz** | la imagen quedaría autosuficiente | **habría roto el desarrollo local**: `backend/docker-compose.yml` construye el mismo `Dockerfile` con `context: ../ai-service`. Sustituido por un **contexto adicional con nombre**, que además **falla en voz alta** si se omite — comprobado, código 1 |
+| **El corpus sólo faltaba en la imagen** | una línea `COPY` y listo | **la ruta que el servicio lee estaba mal calculada**: `CORPUS_DIR` resolvía a `/app/.venv/lib/data/knowledge`, dentro del árbol de dependencias. Copiar sin arreglarlo habría tapado el defecto |
+
+**Y el arreglo de la tercera amplía la zona del change a `ai-service/src`**, decidido sobre una medición y
+no por ensanchar alcance: `CORPUS_DIR` pasa a resolverse por **la misma búsqueda de tres candidatos que
+`load_prompt_file`**, cuyo *docstring* describe este problema literalmente —*«a second copy of this search
+would be a second place for a container layout to diverge from a developer checkout»*—. Ésa es la razón de
+que los prompts sí funcionaran y el corpus no: `PROMPTS_DIR` **tampoco existe** en el contenedor, y da
+igual porque nadie lo usa. Cierra la tarea diferida de C34 **con dos arreglos y no uno**.
+
+#### El interruptor del agente es la TERCERA vez que el mismo defecto llega al mismo fichero
+
+Y eso lo descubre la implementación al buscar dónde ponerlo, porque el comentario del hueco de al lado ya
+lo cuenta: **C17** lo encontró para la búsqueda asistida —200 con resultados de la ruta léxica y la IA
+nunca llamada—, **C40_FIX** para la consulta libre —el panel generativo entero apagado para todas las
+tiendas—, y **C39a** para el agente. Los cuatro interruptores son `bool` sin inicializador con lista de
+puntos de venta vacía, así que **omitir uno no es un valor por defecto neutro**: apaga la ruta. Es el
+argumento del escenario que la delta añade a `demo-deployment`.
+
+#### Dos cosas más que la pasada deja medidas
+
+**La proyección está a unas 120 veces el techo de rancidez** —último drenaje incremental el 22 de
+septiembre contra un techo de 3.600 s—, y **`verify.sh` no lo habría visto**: su quinta condición cuenta
+filas ausentes, nunca antigüedad. Se cura sola con el *fast-forward*, porque el drenaje de C41 corre al
+arrancar; medirlo es de C39a-bis. Cuando C41 se justificó midió **14,4 veces**.
+
+**Y un desvío que no estaba en el ticket y bloqueaba todo:** el bundle de CA de la máquina de desarrollo
+**caduca**. Norton rota su raíz de interceptación, y el fichero de agosto ya no la contenía: toda llamada a
+AWS moría con `CERTIFICATE_VERIFY_FAILED` **incluso apuntando al bundle explícitamente**, que se lee como
+un problema de perfil y no lo es. Regenerado, de 131 certificados a 253. Va al §1.3 del *runbook* como nota
+de caducidad, que es lo que no decía.
+
+### 2026-09-27 — C39 se parte en C39a y C39b, y el despliegue deja de ser documentación
+
+Misma sesión que retira C38, una vez decidido que la cola quedaba en un solo change. Al mirar **qué
+tendría que contener ese change** aparece que su propia ficha se equivoca en una palabra: dice
+**`Zona. docs`**, y el redespliegue de la demo en AWS no es documentación.
+
+#### Por qué se parte, y el orden no es indiferente
+
+**No se documenta un recorrido que no se ha recorrido.** El README tiene que decirle al evaluador que
+entre con unas credenciales y pruebe cuatro pantallas; escribirlo antes de haber comprobado que esas
+cuatro pantallas responden en el entorno desplegado es escribir una hipótesis. Es exactamente el
+patrón que este proyecto ya ha pagado cuatro veces: **C40, C41, C42 y `C40_FIX` nacieron de
+comprobaciones manuales**, no de ninguna ola, y los cuatro destaparon cosas que las tres suites verdes
+no veían — el panel sirviendo por su ruta degradada, los filtros descartándose en silencio, el ámbito
+global inalcanzable, el pivote inalcanzable por nombre.
+
+| | |
+|---|---|
+| **C39a** `redeploy-and-audit-demo-environment` | El entorno desplegado, **accesible desde internet** y verificado recorrido a recorrido, con la auditoría de `compose.demo.yaml` contra los ajustes que declaran los tres servicios |
+| **C39b** `finalize-pf-readme-and-evidence` | README de entrega, vídeo, tag, evidencias y las tres tareas que sobreviven a C38 |
+
+#### Cuatro huecos ya medidos, y ninguno es una conjetura
+
+La exploración auditó `compose.demo.yaml` contra las opciones que declaran los tres servicios, y el
+resultado es que **redesplegar hoy tal cual dejaría el pilar de agentes invisible**:
+
+| Hueco | Consecuencia |
+|---|---|
+| **`AiAgentAssist__EnabledByDefault` ausente** | `public bool` sin inicializador, o sea **`false`**. La cuarta tarjeta de C42 **no se sirve** y el panel del agente no aparece: el único pilar que no se puede enseñar de otra forma |
+| `JPV_AGENT_LLM_API_KEY` ausente | la ruta del agente degrada por falta de credencial — uno de los dos estados de pantalla que C42 declara **nunca observados en producción** |
+| `JPV_ROUTER_LLM_API_KEY` ausente | el enrutador repliega a la clave de assist (`credential=assist_fallback`, ya observado en el log de C34). Funciona y **no es lo declarado** |
+| **el corpus de conocimiento no viaja en la imagen** | tarea diferida de C34, **sorteada a mano y no resuelta**: `CORPUS_DIR` apunta a `data/knowledge` y el `Dockerfile` copia sólo `src`, `migrations` y `prompts`. Con `ai.knowledge_chunk` a cero, **M2 retira el argumentario y M3 responde `knowledge_not_covered`** — y parece un fallo del card |
+
+#### Y el hallazgo mayor, que la auditoría encontró después: **la rama `demo` está en C34**
+
+El despliegue se dispara por `push` sobre la rama **`demo`**, y medido el mismo día: `origin/demo` está
+**84 commits por detrás** de `ai-eng` y **cero por delante** —es un ancestro estricto—, con su último
+commit en el QA de C34, del 22 de septiembre. Lo desplegado **no contiene C36, C40, C40_FIX, C41 ni
+C42**: la ficha de venta, el panel de consulta libre con su ámbito global, el drenaje de la proyección y
+el panel del agente. **Cuatro de las cinco superficies más visibles del PF no están desplegadas**, así
+que el «redespliegue» es ante todo un *fast-forward*.
+
+Con él aparecen **dos cosas más** que entran en C39a: **`verify.sh` no cubre la ruta del agente ni el
+recuento de fragmentos** —los dos fallos silenciosos, misma familia que la proyección vacía que C41 ya
+cerró— y **la CI no se ha ejecutado nunca, ni una vez**: `test-backend.yml` y `test-frontend.yml`
+disparan sobre `branches: [main, develop]` y **ninguna de esas dos ramas existe**. Entra como
+**informativa y no como puerta**, porque con 53 fallos preexistentes en backend y 113 en frontend *«una
+puerta sobre una suite roja no es una puerta»*. Y el defecto hermano —que producción se redespliega ante
+cualquier cambio— **sigue siendo de otro change**, porque la spec de C17 exige que ese flujo quede
+inalterado.
+
+**Tres correcciones de la propia auditoría, para que no se hereden mal.** `AiGatewayOptions.AgentTimeoutMs
+= 18_000` **ya existe**, así que la tarea diferida de C32b sobre el *timeout* de la ruta del agente está
+casi cerrada. El corpus **no es una línea `COPY` que falte**: el *build* usa contexto `ai-service` y el
+corpus vive en la raíz, **fuera del contexto**, así que hay que mover el contexto como ya hace el *build*
+de la API. Y la contraseña de `admin` **ya es estable** —constantes `admin` / `Admin123!` en
+`DatabaseSeeder`—: lo que falta es escribirla, no fijarla.
+
+**Lo que la auditoría también establece, y evita trabajo:** los dos *stacks* de Terraform —14 variables
+en `terraform/`, 10 en `terraform/demo/`— **no tienen una sola variable de IA, y es correcto**. La
+configuración de IA vive en `compose.demo.yaml` como literal versionado y en SSM bajo `/jbg-demo/`
+como secreto creado a mano, deliberadamente fuera del *state*. Así que **C39a no añade variables de
+Terraform**: audita el compose y la lista de secretos del runbook.
+
+#### Y las credenciales del evaluador ya existen, con sus diferencias diseñadas
+
+No hay que crear usuarios. `admin` lo siembra `DatabaseSeeder`; los tres operadores vienen del mundo
+sintético de C10 con `Operator123!`, y sus perfiles **ya contrastan** por diseño: `op-ciutadella`
+(*flagship*, máximo stock) enseña el camino feliz; `op-fornells` (mínimo stock retail, estacionalidad
+extrema) enseña abstención, sustitutos y avisos de agotado; `op-aeroport` es la *persona* del PF y el
+punto con más agotados —411 candidatos de 3.774, y 13 de 48 consultas con una pieza agotada en el
+top-5—, que es donde **el pivote del agente se demuestra**. Lo único que hay que cerrar es que la
+contraseña de `admin` sea **estable y escrita**, porque hoy el seeder la deja con la nota de
+cambiarla al primer acceso.
+
+### 2026-09-27 — C38 se retira entero, y lo decide que sus datos ya están medidos
+
+Sesión abierta para explorar **la implementación** de C38 y cerrada retirándolo. Es el segundo corte
+sobre la misma ficha en dos días —el 26 perdió RAGAS— y esta vez cae lo que quedaba. **Se decide por
+valor marginal y sobre mediciones tomadas en la propia sesión**, no por plazo, y con la prórroga
+abierta desde el 31 de agosto no hay ninguna fecha que lo empuje.
+
+#### Pieza por pieza, y ninguna sobrevive por el mismo motivo
+
+| Pieza | Qué encontró la exploración |
+|---|---|
+| **Validador determinista** | Su mitad .NET es **un espejo**: la regla que aplicaría —ninguna cifra pegada a una marca de moneda o de existencias— es **la misma** que la puerta numérica de Python ya aplica **al mismo texto**, así que todo lo que .NET rechazaría Python lo rechazó antes y la cifra esperada es **cero**. Sigue siendo un seguro defendible, porque de los tres caminos **sólo la ficha de venta comprueba algo en .NET** —`FreeQuerySearchService` y `AgentAssistService` hacen `Pitch = ai.Pitch` y `grep "{{\|Resolve"` sobre los dos devuelve **cero líneas**—, pero es un seguro y no un arreglo: `placeholder_in_free_query` es **causa dura** desde C40 y C42 midió **0 marcadores de 102** |
+| **Escenarios del agente** | **Los datos ya existen y están committed.** Los 20 escenarios de `evals/agent/calibration.yaml` se han corrido **dos veces contra el proveedor real** —C32b con dos brazos, C42 con `gpt-4o` y `assist/v6`— y cada fila trae ya el veredicto por escenario y los campos de estado terminal. No falta una pasada: falta **una definición de éxito** y un párrafo |
+| **Adversarios** | La única que arranca de verdad en cero. Lo que hay son **dos** tests y los dos son estructurales —que el mensaje de sistema no cambie, `test_prompt.py:269` y `test_transcript.py:74`—; ninguno mide si un modelo obedece una inyección. Es la pieza con más trabajo nuevo y menos apoyo existente |
+
+#### Las dos mediciones que lo deciden
+
+Tomadas **sobre artefactos committed**, sin llamar al proveedor, y por eso reproducibles por
+cualquiera con `--rescore`:
+
+1. **17 de 20 escenarios cumplen su expectativa**, sobre la pasada de C42 —`c32b-agent-sweep-17fbdd15a18c.json`, 102 peticiones, `gpt-4o`, `assist/v6`—. Los tres fallos son **C14** (elíptico, no llamó a `buscar_catalogo`), **C17** (guardarraíl) y **C19** (abstención, y su discrepancia **ya estaba declarada** en el propio conjunto).
+2. **El ruido entre pasadas es 2 de 20, un 10 %.** Puntuando el brazo `gpt-4o` de C32b y el de C42 contra el fichero de escenarios de hoy, el veredicto coincide en **17 de 20**; de los tres que discrepan, **C05 cambia porque el escenario se corrigió** tras la primera pasada y está documentado en la cabecera del fichero, así que los vuelcos reales son **C14 y C17**.
+
+**La segunda cifra es la que cambia qué se puede publicar.** Con un 10 % de ruido, una *«tasa de éxito
+del 85 %»* sería una precisión fingida. Lo publicable es **«17 de 20, y éstos son los tres que fallan
+y por qué»** — que además es más informativo, y es lo que ya hizo el informe de C32b.
+
+#### Y la objeción que remata: el agregado no necesita pantalla, porque el comportamiento ya la tiene
+
+El panel de C42 **pinta la traza del bucle** —herramientas por vuelta, iteraciones, motivo de
+parada—, así que el pivote a sustitutos se enseña **en vivo** en el vídeo. El agregado, en cambio, es
+una fila de la sección de evidencias del README, exactamente como el golden set, la tabla de
+ablations, la matriz de confusión de C31, el 20,9 % de C28, el ×3,0 de C32b y las cinco cifras de
+C40: **ninguna de ellas tiene pantalla, y nadie la espera**. Un número de evaluación en una pantalla
+de mostrador sería lo raro.
+
+#### Lo que esto tiene en contra, dicho antes de que lo diga el lector
+
+**Se pasa por encima del §6**, que lista *«Nunca se recortan: … el validador de C38 y C39»*. Es la
+primera vez que un elemento de esa lista se retira, y queda escrito aquí en vez de descubrirse al
+comparar el README con el plan. El argumento que lo sostiene es el mismo que retiró RAGAS el día
+anterior —*«evals reales, no sólo pruebas manuales»* ya está demostrado— y ahora con **ocho** fuentes:
+C24, C25, C28, C30b, C31, C32b, C40 y C42.
+
+**Lo que sobrevive son tres tareas dentro de C39**, no una rama: definir el éxito de tarea, emitir la
+tabla con `--rescore`, y escribir la limitación del validador .NET no implementado con su vía de
+cierre. Con ello **la cola pendiente del Proyecto Final queda en un solo change, C39** — que la misma
+sesión parte acto seguido en **C39a** y **C39b**, por el motivo que la entrada de arriba explica. Las
+tres tareas supervivientes caen en **C39b**.
+
 ### 2026-09-26 — Nace C42, C38 se reduce y RAGAS se retira
 
 Una sola sesión, abierta para decidir qué hacer con la cola pendiente —C38 y C39— y **si merecía la
@@ -962,8 +1135,10 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 | ~~**C35**~~ | ~~`add-inventory-agent-proposals`~~ | Python | C26, C29, C32, C33 | ⛔ | **rev. dec. 6** · **anulado el 31 ago** |
 | **C36** | `add-frontend-assist-card-and-family-disambiguation` | Frontend | C16, C34 | ✅ **archivado 2026-09-24** | — · **hereda de C31 tres filas más en la tabla de copy** —los dos rechazos, que son **dos textos distintos** y no uno, más «el corpus no cubre esta pregunta»— y **una excepción razonada**: `clarification_question` viaja **como prosa ya resuelta** y no como código, porque el contrato la tipa así; el frontend la pinta tal cual. **Pintar el rechazo igual que `abstained` borraría la distinción** que las dos cifras publicadas existen para sostener |
 | ~~**C37**~~ | ~~`add-frontend-inventory-review-and-print`~~ | Frontend | C29, C35 | ⛔ | **rev. dec. 6** · **anulado el 31 ago** |
-| **C38** | `add-generation-and-agent-evals` | Python + .NET | C24, **C30b**, **C32b**, C34, **C42** | 🔴 | **Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero** (§0 · *C38 se reduce y RAGAS se retira*). Lo que queda: **validador determinista consolidado + su equivalente .NET, escenarios de venta puntuados y casos adversarios**. Se dispara el corte que el propio change llevaba **pre-escrito** —*«orden obligatorio si hay que partirlo: validador → escenarios de venta → adversarios → RAGAS; RAGAS es lo primero que se cae»*—, y se dispara por valor marginal y no por plazo: *«evals reales»* ya está demostrado por C24, C25, C28, C30b, C31, C32b y C40, mientras que RAGAS arrastra dependencia pesada, juez LLM, cuota y el MITM de esta máquina. La *alucinación con coartada* **pasa a limitación declarada con su vía de cierre**, que es lo que el §16 premia · **gana a C42 de prerrequisito**: sube la tarea del agente a `assist/v5`, así que unas cifras de generación del agente tomadas antes describirían un prompt sustituido · *sin escenarios de inventario* · **la excepción de persistencia del arnés la declara C30b** · **de C31 hereda el conjunto de enrutado ya cableado** (119 casos, seis clases, carga que falla si los recuentos no cuadran) y **una cifra que contradice lo esperado**: la puerta numérica de la consulta libre rechaza **0 por cifras** con una lista blanca de ~13 numerales, así que el riesgo que quedaba abierto ahí **no era el numérico** sino `dangling_citation`. Los casos adversarios y de inyección sistemáticos siguen siendo suyos · **y de C32b hereda cinco cosas escritas**: (1) el **golden set está intacto y comprobado** — dos tests cruzan sus 72 consultas contra los dos conjuntos del agente en las dos direcciones, así que puede arbitrar la ablación sin reservas; (2) `evals/agent/calibration.yaml` está declarado **`calibration-only`** y contra él se iteraron DOS prompts, así que C38 escribe los suyos aparte y comprueba el no solape, que es la razón de que la etiqueta exista; (3) la ablación ya tiene una de sus dos filas medida — **×3,0 el agente contra el pipeline, 0,0274 frente a ~0,0092 USD/petición, cada etapa tarifada con su propio modelo** *(corregido el 21 sep: la primera cifra, ×7,6, tarifaba el clasificador con un coste sin fuente)* — y la fila del brazo barato **descartada por comportamiento y no por precio**; (4) el hallazgo abierto que C38 tiene que medir sobre el golden set: **se retira el 13,1 % de los argumentarios del agente en `gpt-4o` —9,5 puntos por `dangling_citation`— contra el 2,2 % de la ruta determinista**, seis veces más, con `assist/v4` ya mejorado una vez y sin cerrar; y (5) **dos cosas que la verificación independiente le deja por medir**: si el argumento menciona disponibilidad —nada lo impide, y el arnés ya lo cuenta por fila (`pitch_availability_terms`)— y la calidad del argumento tras un pivote, cuyo *payload* cambió (la pieza abandonada ya no llega como coincidencia) sin que la pasada lo midiera; `agent_sweep --rescore` recalcula cualquier artefacto sin proveedor. Y un aviso operativo: la cuota de **tokens por minuto de la organización** fija el reloj de cualquier pasada — 204 peticiones costaron 3,4 h a 25.000 TPM |
-| **C39** | `finalize-pf-readme-and-evidence` | Docs | todos los vivos | 🔴 | — |
+| ~~**C38**~~ | ~~`add-generation-and-agent-evals`~~ | ~~Python + .NET~~ | C24, **C30b**, **C32b**, C34, **C42** | ⛔ | **RETIRADO ENTERO el 2026-09-27** (§0 · *C38 se retira entero*), un día después de perder RAGAS. Lo deciden dos mediciones sobre artefactos committed: **17 de 20** escenarios cumplen su expectativa en la pasada de C42 con `v6`, y el **ruido entre pasadas es 2 de 20** —el tercer desacuerdo es una corrección documentada del escenario C05—. Los datos de la tabla del agente **ya existen y están corridos dos veces contra el proveedor**; el validador .NET resultó ser **un espejo** de la regla que Python ya aplica al mismo texto, con cifra esperada cero; y los adversarios eran la única pieza que arrancaba de verdad en cero. Sobreviven **tres tareas dentro de C39**. Se pasa por encima del §6, que protegía «el validador de C38», y queda escrito. Lo que sigue es el registro previo · ~~**Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero**~~ (§0 · *C38 se reduce y RAGAS se retira*). Lo que queda: **validador determinista consolidado + su equivalente .NET, escenarios de venta puntuados y casos adversarios**. Se dispara el corte que el propio change llevaba **pre-escrito** —*«orden obligatorio si hay que partirlo: validador → escenarios de venta → adversarios → RAGAS; RAGAS es lo primero que se cae»*—, y se dispara por valor marginal y no por plazo: *«evals reales»* ya está demostrado por C24, C25, C28, C30b, C31, C32b y C40, mientras que RAGAS arrastra dependencia pesada, juez LLM, cuota y el MITM de esta máquina. La *alucinación con coartada* **pasa a limitación declarada con su vía de cierre**, que es lo que el §16 premia · **gana a C42 de prerrequisito**: sube la tarea del agente a `assist/v5`, así que unas cifras de generación del agente tomadas antes describirían un prompt sustituido · *sin escenarios de inventario* · **la excepción de persistencia del arnés la declara C30b** · **de C31 hereda el conjunto de enrutado ya cableado** (119 casos, seis clases, carga que falla si los recuentos no cuadran) y **una cifra que contradice lo esperado**: la puerta numérica de la consulta libre rechaza **0 por cifras** con una lista blanca de ~13 numerales, así que el riesgo que quedaba abierto ahí **no era el numérico** sino `dangling_citation`. Los casos adversarios y de inyección sistemáticos siguen siendo suyos · **y de C32b hereda cinco cosas escritas**: (1) el **golden set está intacto y comprobado** — dos tests cruzan sus 72 consultas contra los dos conjuntos del agente en las dos direcciones, así que puede arbitrar la ablación sin reservas; (2) `evals/agent/calibration.yaml` está declarado **`calibration-only`** y contra él se iteraron DOS prompts, así que C38 escribe los suyos aparte y comprueba el no solape, que es la razón de que la etiqueta exista; (3) la ablación ya tiene una de sus dos filas medida — **×3,0 el agente contra el pipeline, 0,0274 frente a ~0,0092 USD/petición, cada etapa tarifada con su propio modelo** *(corregido el 21 sep: la primera cifra, ×7,6, tarifaba el clasificador con un coste sin fuente)* — y la fila del brazo barato **descartada por comportamiento y no por precio**; (4) el hallazgo abierto que C38 tiene que medir sobre el golden set: **se retira el 13,1 % de los argumentarios del agente en `gpt-4o` —9,5 puntos por `dangling_citation`— contra el 2,2 % de la ruta determinista**, seis veces más, con `assist/v4` ya mejorado una vez y sin cerrar; y (5) **dos cosas que la verificación independiente le deja por medir**: si el argumento menciona disponibilidad —nada lo impide, y el arnés ya lo cuenta por fila (`pitch_availability_terms`)— y la calidad del argumento tras un pivote, cuyo *payload* cambió (la pieza abandonada ya no llega como coincidencia) sin que la pasada lo midiera; `agent_sweep --rescore` recalcula cualquier artefacto sin proveedor. Y un aviso operativo: la cuota de **tokens por minuto de la organización** fija el reloj de cualquier pasada — 204 peticiones costaron 3,4 h a 25.000 TPM |
+| **C39a** | `redeploy-and-audit-demo-environment` | Deploy + Python + .NET | todos los vivos | 🔴 | **nace el 2026-09-27 al partir C39** (§0). Redespliegue de la demo en AWS **verificado y accesible desde internet**, con la **auditoría completa de `compose.demo.yaml` contra los ajustes que declaran los tres servicios**. Cuatro huecos ya medidos en la exploración: `AiAgentAssist__EnabledByDefault` **ausente** y `bool` sin inicializador, o sea el panel del agente de C42 **no se sirve**; `JPV_AGENT_LLM_API_KEY` y `JPV_ROUTER_LLM_API_KEY` ausentes; y el **corpus de conocimiento sigue sin viajar en la imagen** —tarea diferida de C34, sorteada a mano—, con lo que M2 retira el argumentario y M3 responde `knowledge_not_covered`. **Va antes de C39b** y el motivo no es de tamaño: no se documenta un recorrido que no se ha recorrido |
+| **C39a-bis** | `verify-demo-redeployment` | Docs | **C39a desplegado** | 🔴 | **nace el 2026-09-27, durante el apply de C39a**, y por una razón de orden: la verificación exigía un entorno que sólo existe **al mergear C39a a `demo`**. Recorre el entorno resultante —siete condiciones, tres credenciales propias, la predicción de la proyección, y el recorrido del evaluador con los cuatro usuarios sobre las cuatro superficies de IA— y **toca sólo ficheros del `paths-ignore` de `deploy-demo.yml`**, así que mergearlo no dispara despliegue. Lleva **una adición a `demo-deployment`**: el entorno debe declarar sus cuentas de demostración y **qué ejercita cada una**, porque las tres tiendas tienen surtidos deliberadamente distintos y hay comportamientos alcanzables desde una sola. **No toca código por diseño**: si el recorrido destapa un defecto, se anota o se abre otro change |
+| **C39b** | `finalize-pf-readme-and-evidence` | Docs | **C39a-bis** | 🔴 | **queda con el alcance original de C39** menos el despliegue, más tres cosas que la sesión del 27 sep añade: la **frontera contable** entre lo que ya existía y lo que es del PF (32 changes del MVP antes del 2026-08-03 · 41 del PF después, verificable contra `openspec/changes/archive/`), el **resumen de fases** incluidos los cuatro changes que nacieron de comprobaciones manuales y no de ninguna ola, y la **taxonomía explícita de métodos de búsqueda** —léxico, CAG, vectorial, fusión RRF por rama, señales, M1/M2/M3 y agéntico—, cada fila con su cifra ya medida. Hereda de C38 sus **tres tareas supervivientes** |
 | **C40** | `add-frontend-free-query-panel` | Python + .NET + Frontend | C16, C31, C34, **C36** | 🔴 | **nace el 24 sep**, durante la comprobación en demo de C36 (tarea 8.5) y **no estaba en el plan**: la sesión destapó que el panel de búsqueda asistida llevaba todo el proyecto sirviendo por su ruta degradada, con los filtros **descartándose en silencio**. Explorado en dos pasadas ([informe](informes/c40-exploration-decisions.md) · [tabla de estados](informes/c40-m1-panel-states.md)): **once hallazgos, diecisiete decisiones y una regla transversal de completitud**. Saca a pantalla **M1**, la pregunta libre sin pieza, convirtiendo el panel de C16 en su superficie, y **cierra tres limitaciones del §15** —la 12, la 13 y la 3 de C34—. **Mueve `openapi.json`** (`filters` en `AssistRequest`, adición pura) y **toca `retrieval-abstention`, spec viva con tres consumidores**. **Va antes de C38**: sube el prompt a `assist/v5` y mueve la fase de la abstención, así que unas cifras tomadas antes describirían un prompt sustituido. **El hallazgo que gobierna su línea de corte:** `AiGatewayClient` **rechaza M1 hoy por construcción** —`PitchPlaceholderResolver` retira el argumentario siempre que no hay ancla, y `v3` ordena escribir los marcadores de precio y stock también en las tareas de consulta libre, medido en **147 de 213**—, así que sin el tramo 2 completo entregaría **un panel asistido sin prosa** |
 | **C41** | `add-pos-projection-scheduled-drain` | **ai-service** (+ despliegue y un retoque .NET/Frontend) *(corregido el 26 sep: decía «.NET + Frontend»)* | **C22**, **C17** *(corregido el 26 sep: decía C40, y la lectura previa de C40 deja de usarse)* | 🔴 | **nace el 25 sep**, durante las pruebas manuales posteriores al cierre de C40, y **no estaba en el plan**. Al levantar el entorno **ninguna de las once tiendas activas tenía la proyección fresca**: el *checkpoint* de `pos-availability` venía del 5 de septiembre —veinte días contra un umbral de 3 600 s— y hubo que drenarla a mano para que las pruebas midieran el sistema y no su desconfiguración. **Es la tercera vez** *(corregido el 26 sep: esta fila decía «la segunda»)*: el §8 del informe de C40 declara la misma causa con 19,7 días —y su arreglo **se aplicó a la columna equivocada**, ver la ficha—, y antes **C34 encontró la proyección vacía en la demo**, que es otro modo de fallo (`count_scope = 0` → **503 en toda recuperación**) y sigue abierto en `DEFERRED_TASKS.md`. Eso es lo que lo convierte en ficha: **el planificador existe y vive en prosa** —`ai-service/README.md` lleva desde C22 una receta de cron que empieza por `cd /srv/jbg-ai`, una ruta de host, y `jbg-ai` es un contenedor—, así que `sync-pos` es sólo CLI y alguien tiene que acordarse. **No es una fuga** —la frontera es `Carried()` en .NET y ningún operario ve una pieza que su tienda no lleva—: lo que causa es que **la página llegue corta**, que es exactamente la avería que C22 midió (ocho de once tiendas por debajo de una página en seis de cada veinte búsquedas, peor caso **un solo producto**). Núcleo *(reescrito el 26 sep)*: una tarea de `lifespan` en **`jbg-ai`** —no un `BackgroundService` de .NET, que sería **una segunda implementación del protocolo del keyset** sobre la misma fila de checkpoint— que drena **al arrancar y cada 600 s**, con `pg_try_advisory_lock` **dentro del drenaje** para que cubra al CLI, porque `ai.sync_checkpoint` es **una fila por feed** y dos drenajes entrelazados **se saltan filas en silencio**. Tramo aditivo: la **edad en `GET /health`** —no en `GET /api/ai/search/availability`, que tiene un `MUST` de spec viva prohibiéndole llamar a la IA— más el **quinto fallo de `verify.sh`** que caza la proyección vacía. **Cortado en el diseño:** el drenaje manual, **también el del administrador** — el argumento que mata el botón del operario mata el suyo |
 | **C42** | `add-frontend-agent-panel` | Python + .NET + Frontend | C32b, C34, C36, **C40** | ✅ **archivado 2026-09-27** | **Nace el 2026-09-26**, al valorar la cola pendiente del PF, y **no estaba en el plan**. Explorado contra el código en [informe](informes/c42-exploration-decisions.md): **ocho hallazgos y doce decisiones**. Da superficie al **único de los cinco pilares del PF que no la tiene** —CAG, RAG, **agentes**, evaluación, despliegue—: `POST /v1/assist/agent` está entregado y medido desde C32b y **nadie lo llama**, así que no puede aparecer ni en la URL pública ni en el vídeo. **El hallazgo que gobierna su línea de corte es una regresión latente que C40 introdujo sin tocar el agente**: la tarea del agente vive en `assist/v4`, cuyo *Sistema* ordena escribir `{{price}}` y `{{stock}}` **siempre**; su payload es un `FreeQueryPayload` con `is_anchored = False`; y C40 metió `placeholder_in_free_query` en `HARD_VIOLATION_CAUSES`. Los tres eslabones son correctos por separado y juntos **retiran el argumentario del agente por construcción**. Ejecuta además la política de *timeout* y circuito que `DEFERRED_TASKS.md` dejó **diseñada y no hecha** desde C32b, y **el agente no se sirve por defecto**: ruta propia y demostración de ablación, porque su única cifra comparativa hoy dice ×3,0 de coste y 13,1 % de retirada contra 2,2 % · **Archivado el 2026-09-27 con 75/75 tareas y trece refutaciones medidas**, de las que cuatro gobiernan. **El orden de ejecución no fue el del ticket**: el v1 pedía medir antes de la primera tarea y eso **no era ejecutable**, porque el arnés no contaba marcadores ni registraba la antigüedad de la proyección — de ahí un tramo 0 de instrumentos antes de cualquier tarea funcional, que es lo que impide que una pasada más larga que el techo de 3.600 s se lea como fresca, la contaminación que ya estropeó sin arreglo parte de las cifras de recuperación de C32b. **La caída del argumentario retirado del 13,1 % al 1,2 % NO es atribuible a `assist/v6`** y el informe nombra los confundidores: era lo esperado, porque la frase que ordena escribir marcadores es idéntica palabra por palabra en `v3` y `v4` y C40 ya había medido ahí 3 de 90 — el arreglo del prompt es real y **su urgencia era pequeña**, tal como el propio ticket anticipaba. **Las piezas por respuesta siguen saturando en `MAX_AGENT_PIECES`**, así que el tope sigue mordiendo. **La tabla de herramientas del informe de exploración mezcla los dos arms**: 115 de las 125 invocaciones de `buscar_sustitutos` pertenecen al arm descartado, así que la cifra que justificaba rotular la procedencia era correcta en la conclusión y no en la magnitud. Y **nada ejercitaba la ruta del agente sobre HTTP**: el contenedor servía código anterior al change, lo que sólo apareció al montar la comprobación manual. El contrato congelado se movió **por adición pura** (`origin` en subclase, sin ensanchar `AssistGroup`) y el fixture pasó a `openapi-c42-baseline.json`; `SearchOrigin` gana un quinto valor **sin migración**; la entrada de C32b en `DEFERRED_TASKS.md` se cierra **por refutación y no por ejecución**, con la aritmética escrita —~13.000 tokens contra 25.000 TPM es una petición por minuto, así que 204 peticiones cuestan 2 h 44 min—. **La comprobación manual encontró dos cosas que ningún test vio**: la tira de estado afirmaba un motivo de parada cuando la pasarela no había contestado, ya corregido; y **el pivote es inalcanzable si el operario nombra la pieza por su nombre**, porque `buscar_catalogo` no devuelve el nombre del producto — establecido con un experimento HTTP (por SKU pivota, por nombre no), **fuera del alcance de C42** y abierto en `DEFERRED_TASKS.md`. Informe [`c42-implementation-measurements.md`](informes/c42-implementation-measurements.md) y guion de comprobación manual [`c42-manual-check-runbook.md`](informes/c42-manual-check-runbook.md) |
@@ -973,6 +1148,18 @@ Dos marcas de la v3 quedaron sin objeto el 2026-08-31 y ya no se usan: **👥** 
 **⛔ Anulados el 2026-08-31 (5):** C19, C29, C33, C35 y C37 — la rama del agente de inventario. Motivo y consecuencias en el §0. Las fichas se conservan como registro y llevan el sello en el sitio.
 
 **⛔ Cortado el 2026-09-12 (1):** **C27**, complementarios — el corte nº 1 del §6, disparado **con medición y no por juicio de plazo**. Sus dos señales están vacías (co-ocurrencia: 98,6 % de los pares vistos **una sola vez** y ninguno tres veces, sobre un generador que **diversifica las cestas a propósito**; etiquetas de color/estilo: **1 de 404** productos reales con estilo) y el proyecto nunca le reservó categoría en el golden set. Ficha conservada con el sello y la condición de reactivación; detalle en el §0 y en [`c27-cut-measurements.md`](informes/c27-cut-measurements.md).
+
+> **Recuento puesto al día el 2026-09-27, dos veces el mismo día.** Se archiva **C42**, se **retira C38
+> entero**, **C39 se parte en C39a y C39b** y, al implementar C39a, **éste se parte a su vez en C39a y
+> C39a-bis** (§0). Pendientes: **3 — C39a, C39a-bis y C39b, en ese orden**, y el orden lo fija el
+> despliegue: C39a lo dispara al mergearse a `demo`, C39a-bis lo verifica sin volver a dispararlo, y C39b
+> documenta lo verificado.
+>
+> **La frase de abajo es del primer recuento del día** y decía «2 pendientes: C39a y C39b». Contra `openspec/changes/archive/`, que es la única base fiable: **41
+> fichas del Proyecto Final archivadas** —de 74 archivadas en total; las otras 32 son del MVP, todas
+> anteriores al 2026-08-03—, **1 retirada** —C38, que se suma a los cinco anulados de la rama de C19 y
+> al cortado C27— y **2 pendientes: C39a y C39b, en ese orden**. La frase siguiente es el recuento
+> anterior y se conserva como registro.
 
 **Vivos: 42** (40 numerados más `FIX1` y `C25bis`) *(C32 partido en **C32a** y **C32b** el 2026-09-20, §0; **C40 añadido el 2026-09-24**, nacido durante la comprobación en demo de C36; **C41 añadido el 2026-09-25**, nacido durante las pruebas manuales posteriores al cierre de C40 — **C42 añadido el 2026-09-26**, nacido al valorar la cola pendiente del PF — ninguno de los tres previsto en ninguna ola)*. Archivados **40** (C01–C18b, C20, C21, C22, C23, C24, C25, `FIX1`, `C25bis`, **C26**, **C28**, **C30a**, **C30b**, **C31**, **C32a**, **C32b**, **C34**, **C36**, **C40**, **C40_FIX** y **C41**). Pendientes **3**: **C42**, C38 y C39 — **en ese orden**, y la cadena de prompts es la que lo fija: C40 subió a `assist/v5` y movió la fase de la abstención, **C42 sube la tarea del agente a esa misma versión**, y sólo entonces las cifras de generación de C38 describen el prompt que se sirve. *(Recuento puesto al día el 2026-09-26, al rebasar C42 sobre `ai-eng` tras archivar C41: la frase anterior arrastraba «Pendientes 3: C38, C39 y C41» y era de antes de su archivo — el commit que lo archivó sincronizó las specs y no tocó este recuento, exactamente el mismo desfase que ya se corrigió al archivar C40. Contado contra `openspec/changes/archive/`, que es la única base fiable: **40 fichas del Proyecto Final archivadas** —las 41 posteriores al 2026-08-03 menos `barcode-qr-scanning`, que es del MVP—, más las 3 pendientes, dan las 42 vivas más `C40_FIX`, que está archivado y fuera de la numeración.)* *(Recuento puesto al día el 2026-09-26, al archivar C40_FIX: entra en las archivadas y **no** en las fichas numeradas, igual que `FIX1` y `C25bis`, porque corrige a C40 en vez de salir de la descomposición original.)* *(Recuento puesto al día el 2026-09-25, al archivar C40: la frase anterior arrastraba «37 · 3 con C40 pendiente» y era de antes de su archivo.)* El orden que ataba C40 antes de C38 **ya está cumplido**: C40 subió el prompt a `assist/v5` y movió la fase de la abstención, así que las cifras de C38 se tomarán sobre el prompt vigente. **C41 no compitió con ninguno de los dos** —no tocaba prompt, ni fase, ni contrato congelado— y se archivó el 2026-09-26. *(Recuento puesto al día el 2026-09-24, al archivar C36: arrastraba el 35 · 4 desde el archivo de C32b, porque ni C34 ni C36 lo movieron en su momento. Contado contra `openspec/changes/archive/`, que es la única base fiable.)* **C23 se archivó el 2026-09-06** y su corte pre-autorizado —bajar a 15 documentos— se refutó por su propia unidad de medida: el diseño fija el tamaño en fragmentos y quince documentos dan la mitad del mínimo, con lo que la abstención dejaba de poder demostrarse. **C21 se archivó el 2026-09-02**, y con él caen los prerrequisitos de C24 y C30, o sea las dos mitades del proyecto que estaban esperando a la fusión. **C22 y `FIX1` se archivaron el 2026-09-05**, con lo que la ventana que `FIX1` tenía que respetar —entrar antes de que C24 etiquete su línea base— queda cumplida. **C24 se archivó el 2026-09-11 y C25 el 2026-09-12**, con lo que la cadena crítica `C21 → C24 → C25 → C26 → C34 → C36` arranca ahora en **C26**. C25 se archiva habiendo **refutado tres puntos de su propia ficha con mediciones** — la penalización de variante ambigua, la calibración de `1-2` frente a `3+` y la rotación como criterio de orden — y habiendo corregido un defecto que no estaba en su alcance: la fusión de C21 **concatenaba en vez de fusionar**. Deja **tres brechas declaradas y no cerradas** (`Recall@5` 0,758 contra 0,85, abstención 0,150 contra 0,80, y `v3` sin batir a `v2b` por el margen) y **desbloquea C25bis** (`clean-plain-fusion`), que retira el andamio de la fusión plana. **`C25bis` y C26 se archivaron el 2026-09-12**, y con ellos la cadena crítica deja de arrancar en C26 y pasa a arrancar en ~~**C34**~~ → **C30a** *(corregido el 13 sep: C34 lleva C30 de prerrequisito, así que nunca pudo ser el eslabón de arranque; era un error de la frase y no un cambio de plan)*. C26 se archiva habiendo cerrado el **último 501 cerrable** del contrato congelado —`/v1/inventory/propose` sigue en 501, pero por una rama anulada y ya declarada como limitación— y habiendo **refutado tres puntos de su propia ficha con mediciones**: «misma familia primero» estaba invertida, la exclusión por stock no le correspondía y `style_similarity` no tiene dato sobre catálogo real. Deja **dos limitaciones medidas y declaradas**, y anotada en la ficha de C34 la exclusión por stock que sí es suya. **C28 se archivó el 2026-09-13**, entregando las dos cifras del §16 que no existían —**20,9 % ponderado** y **32,1 s de media** sobre 204 perfiles, **204 cronometrados**— y publicándolas partidas, porque los **10,4 %** de los campos sensibles y los **42,3 %** de las etiquetas comerciales no miden lo mismo: aquéllas llegaban vacías y el revisor las rellenó con su criterio. Es el **noveno change consecutivo cuya exploración refuta lo escrito antes**, y el primero que además se refuta a sí mismo **durante la revisión**: la marca «pendiente de revisión» por campo resultó constante en seis de los siete campos y se retiró enmendando la spec. Confirma media predicción —las retiradas se concentran en el estrato B, 8 de 9— y refuta la otra mitad. **Deja tres cosas declaradas sin medir** (el A/B de teclado, la tesis de ceguera del span y la comparación de versiones de prompt) y **un hallazgo que ninguna consulta podía encontrar**: `vidrio` falta en el vocabulario de `materials` y alcanza 67 productos, el 5,6 % del catálogo.
 
@@ -1941,7 +2128,34 @@ El envío de `ProductSearchEvent` **ya no consiste en construir el evento**: el 
 
 ---
 
-#### C38 · `add-generation-and-agent-evals` 🔴
+#### ~~C38 · `add-generation-and-agent-evals`~~ ⛔
+
+> **RETIRADO ENTERO el 2026-09-27.** La ficha se conserva como registro, igual que las de C19, C27,
+> C29, C33, C35 y C37. La sesión se abrió para explorar **su implementación** y la cerró retirándolo,
+> un día después de que perdiera RAGAS, y **por valor marginal sobre mediciones tomadas en la propia
+> sesión** — detalle completo en el §0, *«C38 se retira entero»*.
+>
+> **Las tres piezas que quedaban, y por qué cae cada una.** El **validador** resultó ser **un espejo**:
+> la regla que su mitad .NET aplicaría es la misma que la puerta numérica de Python ya aplica al mismo
+> texto, así que su cifra esperada es **cero**. Sigue siendo un seguro defendible —de los tres caminos
+> sólo la ficha de venta comprueba algo en .NET; `FreeQuerySearchService` y `AgentAssistService` hacen
+> `Pitch = ai.Pitch`— pero es un seguro y no un arreglo, porque `placeholder_in_free_query` es causa
+> dura desde C40 y C42 midió **0 de 102**. Los **escenarios** no necesitan pasada: los 20 de
+> `calibration.yaml` están corridos **dos veces contra el proveedor real** y sus filas ya traen
+> veredicto y estado terminal — **17 de 20** cumplen con `v6`, con **2 de 20 de ruido** entre pasadas.
+> Y los **adversarios** eran la única pieza que arrancaba de verdad en cero: dos tests, los dos
+> estructurales.
+>
+> **Sobreviven tres tareas dentro de C39b** *(en C39 cuando esto se escribió; el mismo día se partió)*: definir el éxito de tarea, emitir la tabla con
+> `agent_sweep --rescore`, y declarar el validador .NET no implementado con su vía de cierre. **No
+> sobrevive nada que necesite una rama.**
+>
+> **Y se pasa por encima del §6**, que listaba «el validador de C38» entre lo que nunca se recorta.
+> Primera vez que un elemento de esa lista cae, y queda dicho aquí en vez de aparecer como una
+> discrepancia entre el README y el plan.
+
+*Lo que sigue es el registro anterior, del día en que la ficha perdió RAGAS y conservaba las otras
+tres piezas. Se conserva porque es el razonamiento contra el que se leen las dos mediciones de arriba.*
 
 > **Reducido a su mínima expresión el 2026-09-26, y RAGAS sale entero.** Se dispara el corte que
 > esta misma ficha llevaba **pre-escrito desde el principio** —véase *Orden obligatorio* al final—,
@@ -2225,10 +2439,53 @@ checkpoint venía del mismo drenaje. **Cualquier verificación de este change le
 
 ---
 
-#### C39 · `finalize-pf-readme-and-evidence` 🔴
+#### C39a · `redeploy-and-audit-demo-environment` 🔴
+
+> **Nace el 2026-09-27, al partir C39** (§0). La ficha de C39 decía **`Zona. docs`** y el redespliegue
+> de la demo no es documentación: toca `compose.demo.yaml`, `deploy/demo/`, `ai-service/Dockerfile` y
+> las opciones de `Application/`. El orden con C39b **no es indiferente**: no se documenta un recorrido
+> que no se ha recorrido, y este proyecto ya ha pagado cuatro veces por comprobar en la demo lo que las
+> tres suites verdes no veían — C40, C41, C42 y `C40_FIX` nacieron así.
+
+**Objetivo.** Que la demo vuelva a estar **desplegada en AWS, accesible desde internet y verificada recorrido a recorrido**, y que su configuración esté auditada contra lo que el código realmente declara.
+**Prereq.** todos los vivos · **Zona.** `compose.demo.yaml`, `deploy/demo/`, `ai-service/Dockerfile`, `backend/src/JoiabagurPV.Application/Configuration/`
+**Alcance.** (0) **Puerta de entrada**: establecer si el entorno sigue en pie o se desmontó —dos recorridos muy distintos— antes de modificar nada, con su evidencia, al modo de «las tres líneas base» de C42. (0b) **La rama `demo` alcanza a `ai-eng`**: son **84 commits** y es lo que trae C36, C40, C40_FIX, C41 y C42 al entorno, comprobando que el workflow **se ejecuta** y no lo omite su `paths-ignore` de `openspec/**` y `Documentos/**`. (1) **Auditoría completa de `compose.demo.yaml`** contra los ajustes que declaran los tres servicios —`config/settings.py` de `jbg-ai`, las siete clases de opciones de .NET y el entorno del frontend—, publicada como tabla de tres columnas: ajuste declarado · valor en la demo · qué pasa si falta. (2) **Los cuatro huecos ya medidos**: `AiAgentAssist__EnabledByDefault`, `JPV_AGENT_LLM_API_KEY`, `JPV_ROUTER_LLM_API_KEY` y el **corpus de conocimiento dentro de la imagen**, que cierra una tarea diferida de C34 hoy sorteada a mano. (3) **El recorrido del evaluador comprobado a mano** con los cuatro usuarios —`admin` y los tres operadores—, pantalla a pantalla y sobre el entorno desplegado, no en local. (4) **Contraseña de `admin` estable y escrita**. (5) Puesta al día del *runbook*, incluido el §5.5c, cuyo primer drenaje **lo cerró C41** — y el *runbook* **no es pre-PF**: nació el 2026-08-30 con C17 y su último commit es de C41, así que le falta **un solo change**. (6) **`verify.sh` gana dos condiciones de fallo**: corpus vacío y ruta del agente sin respuesta, los dos silenciosos. (7) **La CI se enciende como informativa** sobre `[ai-eng, master]`: hoy `test-backend.yml` y `test-frontend.yml` **no se han ejecutado nunca** porque disparan sobre ramas que no existen. **No puede ser puerta** con 53 y 113 fallos preexistentes, y el defecto hermano de producción sigue siendo de otro change.
+**Fuera de alcance.** El README de entrega, el vídeo, el tag y las evidencias: son de C39b. Y **no se añaden variables de Terraform**: los dos *stacks* no tienen ninguna de IA y es correcto — la configuración de IA vive en el compose como literal versionado y en SSM como secreto manual, fuera del *state*.
+**Specs que mueve.** `demo-deployment` es capacidad viva con **13 requisitos**, y al menos cuatro se tocan: los secretos que llegan por entorno, los ajustes de comportamiento versionados, la verificación desde dentro del anfitrión y la reproducibilidad de las imágenes.
+**Tests.** Verificación desde dentro del anfitrión con `deploy/demo/verify.sh` ampliado a la ruta del agente y al recuento de `ai.knowledge_chunk`; y `openspec validate --all --strict` a cero fallos.
+
+> **Implementado el 2026-09-27, partido otra vez, y con tres refutaciones propias** (§0 · *C39a se
+> implementa*). Lo entregado: los cinco huecos cerrados y **un sexto que no estaba en la ficha** —la
+> resolución de `CORPUS_DIR` dentro del entorno virtual, que amplía la zona a `ai-service/src`—, la
+> auditoría de los 51 ajustes de `jbg-ai` y las 7 clases de .NET publicada, las dos condiciones nuevas de
+> verificación **probadas en los dos sentidos**, la CI encendida sobre ramas que existen, y el *runbook*
+> al día con C42 y con la caducidad del bundle de CA.
+>
+> **Medido:** `ai-service` **1.664 passed**; `test_corpus_location.py` **5 passed**; snapshot del contrato
+> **4 passed** y `openapi.json` intacto; imagen **426 MB antes y después**; contexto **388 kB → 2,78 MB**;
+> línea base de las otras dos suites **50 de 1.408** y **113 de 959**, las dos dentro de banda.
+>
+> **La verificación del entorno desplegado es de C39a-bis**, y la partición es lo que permite archivar
+> esto antes de desplegar.
+
+---
+
+#### C39b · `finalize-pf-readme-and-evidence` 🔴
+
+> **Queda con el alcance original de C39 menos el despliegue** *(27 sep, §0)*, más tres cosas que esa
+> misma sesión añade: la **frontera contable** entre lo preexistente y el PF, el **resumen de fases** y
+> la **taxonomía de métodos de búsqueda**. Y hereda las **tres tareas que sobreviven a C38**: definir
+> el éxito de tarea del agente, emitir su tabla con `agent_sweep --rescore`, y declarar el validador
+> .NET no implementado con su vía de cierre.
+>
+> **La frontera es contable, y eso vale más que la prosa:** **74** changes archivados, **32** antes del
+> 2026-08-03 que son el MVP que ya existía —POS, usuarios, catálogo, ventas, inventario, devoluciones,
+> componentes, informes, despliegue AWS, reconocimiento por *embeddings*, escaneo de códigos— y **41**
+> del 2026-08-03 en adelante que son el Proyecto Final. Verificable por cualquiera contra
+> `openspec/changes/archive/`.
 
 **Objetivo.** Empaquetar la entrega para que un evaluador externo entienda, reproduzca y pruebe el sistema.
-**Prereq.** todos los vivos · **Zona.** docs
+**Prereq.** **C39a** · **Zona.** docs
 **Alcance.** README del PF (dominio, arquitectura con la frontera .NET/Python justificada, CAG/RAG/agentes/evaluación/despliegue, arranque local, autoría, limitaciones, próximos pasos); **tabla de ablations v0→v3**; **métricas de revisión humana** (tasa de corrección y tiempo medio); sección del reranking descartado con su protocolo; progresión de prompts v1→v2 con impacto medido; **declaración explícita de lo que queda para fase posterior** (packing list, liquidación, upsell, políticas de inventario); vídeo de 2-3 min; usuario demo; `docker compose up` verificado desde cero; rama `finalproject-[INICIALES]` y tag `v1.0-final-[INICIALES]`.
 **Tres declaraciones nuevas** *(31 ago)*, que son puntos a favor si están escritas y huecos si faltan: **un solo agente**, con el diseño del de inventario (§10 del documento hermano) adjunto como próximo paso; **golden set sin acuerdo entre anotadores**, por etiquetador único; y **proyecto individual**, no en pareja.
 **Tests.** Ensayo de reproducibilidad en máquina limpia y `openspec validate --all`.
@@ -2263,31 +2520,38 @@ flowchart LR
     FIX1 --> C24
     C22 --> C25 & C26
     C23 --> C30a
-    C24 --> C25 & C38
+    C24 --> C25
     C25 --> C26 & C25bis
     C26 --> C34
     C30a --> C30b & C34
-    C30b --> C31 & C38
+    C30b --> C31
     C31 --> C32a
     C32a --> C32b
-    C32b --> C38 & C42
-    C34 --> C36 & C38 & C42
+    C32b --> C42
+    C34 --> C36 & C42
     C36 --> C40 & C42
     C31 --> C40
     C40 --> C42
-    C42 --> C38
 
     C27["C27 · complementarios<br/>CORTADO 12 sep"]
+    C38["C38 · evals de generación y agente<br/>RETIRADO 27 sep"]
 
     classDef hecho fill:#d9ead3,stroke:#38761d,color:#274e13
     classDef ahora fill:#fce5cd,stroke:#b45f06,color:#7f3f00,stroke-width:3px
     classDef corte fill:#f4cccc,stroke:#a61c00,color:#660000,stroke-dasharray:4 3
-    class C01,C02,C03,C05,C06a,C06b,C07,C08,C09,C10,C11,C12,C13,C14,C15,C16,C17,C18a,C18b,C20,C21,FIX1,C22,C23,C24,C25,C26,C28,C30a,C30b,C31,C32a,C32b,C34,C36,C40 hecho
-    class C42 ahora
-    class C27 corte
+    class C01,C02,C03,C05,C06a,C06b,C07,C08,C09,C10,C11,C12,C13,C14,C15,C16,C17,C18a,C18b,C20,C21,FIX1,C22,C23,C24,C25,C26,C28,C30a,C30b,C31,C32a,C32b,C34,C36,C40,C42 hecho
+    class C27,C38 corte
 ```
 
-🟩 archivado · 🟧 **siguiente a abrir** · 🟥 **cortado** *(C27, corte nº 1 disparado el 2026-09-12 — §0)* · sin color: pendiente
+🟩 archivado · 🟧 **siguiente a abrir** · 🟥 **cortado** *(C27 el 2026-09-12, **C38 el 2026-09-27** — §0)* · sin color: pendiente
+
+> **Puesto al día el 2026-09-27, y el grafo se queda sin nodo naranja.** Se archiva **C42**, que pasa
+> a verde, y **se retira C38**, con lo que desaparecen sus cinco aristas entrantes —`C24 → C38`,
+> `C30b → C38`, `C32b → C38`, `C34 → C38` y `C42 → C38`— y el nodo pasa a rojo punteado junto a C27.
+> **No hay naranja porque C39a y C39b están fuera del dibujo a propósito** (véase más abajo: dependen de todos
+> los vivos, así que su arista no informa). El grafo queda **enteramente consumido**: lo único
+> pendiente del Proyecto Final es **`C39a → C39b`**, y esa arista sí es real —C39b documenta el
+> entorno que C39a despliega—, pero vive fuera del dibujo como el resto de la entrega.
 
 > **La arista que justifica el corte de C30** *(13 sep)*: `C30a → C34` existe y `C30b → C34` **no**.
 > C34 y C36 necesitan la forma de la respuesta, no la prosa, así que la mitad estructurada
@@ -2326,6 +2590,11 @@ flowchart LR
 > antes describiría un prompt sustituido y una fase movida. **Y C40 no estaba en ninguna ola**: nace
 > el 24 de septiembre durante la comprobación en demo de C36, al descubrir que el panel de búsqueda
 > asistida llevaba todo el proyecto sirviendo por su ruta degradada.
+>
+> **Y consumida por completo el 2026-09-27.** Archivado C42 y **retirado C38** (§0), la cadena no es
+> `C40 → C38 → C39` sino **`C39a → C39b`**. El orden que ataba C38 al `assist/v5` de C40 y al `assist/v6` de
+> C42 **queda sin objeto**: no hay cifras de generación que tomar, porque las que hacían falta están
+> ya tomadas en los artefactos de C32b y C42 y se leen con `--rescore`.
 
 **Y el hueco que el corte de C27 deja a la vista, que conviene no perder de vista al elegir el siguiente:** `ai-service/src/jbg_ai/assist/` **no existe**. C30a, C30b, C31 y C32 están a cero, y son lo que el rubro del PF nombra por su nombre —*«escala desde un prototipo CAG hasta un sistema RAG **con agentes**»*—. Ésa, y no complementarios, es la deuda grande que queda.
 
@@ -2359,7 +2628,7 @@ Con un solo desarrollador esto deja de ser coordinación y pasa a ser disciplina
 | C21 ‖ C22 ‖ C25 ‖ **C40** | Los cuatro tocan el pipeline de ranking en `retrieval/`. **C40 mueve la fase de la abstención**, que es spec viva con tres consumidores: el panel, los sustitutos y la tool `buscar_catalogo` del agente *(añadido el 24 sep)* |
 | C13 ‖ C23 | Zona `indexing/` compartida: separados por fichero, pero no solapar si hay dudas |
 | **C30a ‖ C30b ‖ C31 ‖ C32a ‖ C32b** | *(añadido el 13 sep; ampliado el 20 sep al partir C32)* Los **cinco** son `ai-service/src/jbg_ai/assist/`, y además son **estrictamente secuenciales** por dependencia: `C30a → C30b → C31 → C32a → C32b`. No es sólo disciplina de rama, es el orden obligado |
-| **C40 ‖ C38** | *(añadido el 24 sep)* Tampoco es disciplina de rama: es **orden obligado**. C40 sube el prompt a `assist/v5` —las tareas de consulta libre dejan de pedir marcadores de precio y stock— y **mueve la fase de la abstención**, así que un C38 medido antes o en paralelo publicaría cifras de un prompt sustituido y de una fase movida. **C40 primero, y C38 mide `v5`** |
+| ~~**C40 ‖ C38**~~ | *(añadido el 24 sep; **sin objeto desde el 2026-09-27**, al retirarse C38 — §0)* Decía que era orden obligado, y lo era: C40 subió el prompt a `assist/v5` y movió la fase de la abstención, y C42 subió la tarea del agente a `assist/v6`. **El orden se cumplió y ya no hay nada que ordenar**: las cifras que C38 iba a tomar están tomadas en los artefactos de C32b y C42, sobre los prompts vigentes, y se leen sin proveedor con `--rescore` |
 
 ---
 
@@ -2369,13 +2638,22 @@ Con un solo desarrollador esto deja de ser coordinación y pasa a ser disciplina
 
 1. ~~**C27** complementarios~~ → **DISPARADO el 2026-09-12**, y no por el disparador de esta lista sino por **cinco mediciones** que vaciaron sus dos señales (§0 e [informe](informes/c27-cut-measurements.md)). Pasa a fase posterior con condición de reactivación escrita; los sustitutos (C26) ya cubren el caso de venta. **Ahorra la última migración EF Core viva**, y arrastra la retirada de la tool `buscar_complementarios` de C32 y de la ruta `.../recommendations` de C34
 2. **C23** corpus 30-45 → **15 documentos**, manteniendo las citas verificables, que es lo que el PF evalúa
-3. **RAGAS dentro de C38** → se conservan validador anti-alucinación, escenarios de venta y adversarios
+3. ~~**RAGAS dentro de C38**~~ → **DISPARADO el 2026-09-26**, y **rebasado el 2026-09-27**: no se conservó nada, porque C38 se retiró entero al día siguiente (§0). El corte estaba bien ordenado —RAGAS cayó primero, como esta lista decía— pero la exploración de la implementación encontró que las otras tres piezas o estaban ya medidas o eran un espejo de lo que ya corre
 4. **Golden set de C24** 70 → 45 consultas
 5. **C40 tiene su propia línea de corte de seis tramos** *(añadida el 24 sep)*, ordenada por **cuánto engaña hoy la pantalla** y no por coste — está en el §10.10 de su [informe](informes/c40-exploration-decisions.md) y resumida en su ficha. Los dos cortes que esa lista pre-autoriza: **«todos los puntos de venta»** (tramo 4), que es una frontera de autorización y por eso sale **antes** que el embudo de observabilidad, que no arriesga nada; y, si la latencia no cabe, **no generar argumentario en la ruta `catalog` de M1**, que ahorra cerca del 40 % de sus generaciones. Lo que **no** admite corte en C40 es el tramo 2 entero: sin él entrega un panel asistido **sin prosa**
 
 Los cortes **1 y 2 están confirmados de antemano** y se aplican desde el principio del change, no a mitad: C23 se escribe ya con 15 documentos en lugar de redactar 45 y tirar 30.
 
-**Nunca se recortan:** C01, C02, C03, C05, **C06a**, C07, C09, C11, C12, C13, C14, C15, C16, C17, **C18a**, C20, C21, C22, C24, C28, **C30a**, **C30b**, C31, **C32a**, **C32b**, C34, C36, el validador de C38 y C39.
+**Nunca se recortan:** C01, C02, C03, C05, **C06a**, C07, C09, C11, C12, C13, C14, C15, C16, C17, **C18a**, C20, C21, C22, C24, C28, **C30a**, **C30b**, C31, **C32a**, **C32b**, C34, C36, ~~el validador de C38~~ y C39.
+
+> **Corregido el 2026-09-27, y es la primera vez que esta lista pierde un elemento.** *«El validador
+> de C38»* sale al retirarse C38 entero (§0). El motivo no invalida la lista: el validador se protegía
+> por ser *«la pieza de evaluación con mejor retorno»*, y la exploración de su implementación midió que
+> su mitad .NET es **un espejo** de la regla que la puerta numérica de Python ya aplica al mismo texto,
+> con cifra esperada **cero**. Una pieza cuyo retorno medido es cero deja de ser la de mejor retorno.
+> **Queda declarada en C39b** como limitación con su vía de cierre, que es lo que el §5 de la
+> convocatoria premia en su otro epígrafe. **C39 no se recorta, y al partirse en C39a y C39b el mismo
+> día, ninguna de las dos mitades se recorta: las dos siguen en la lista.**
 
 > **Las dos mitades de C30 entran las dos, y por motivos distintos** *(13 sep)*. **C30a** porque es
 > ahora el nodo de arranque de la cadena crítica y porque mueve el contrato congelado, que sólo se
@@ -2398,9 +2676,9 @@ Tres entradas nuevas en esa lista, y conviene el porqué: **C20** porque tapona 
 | ~~Las olas 3 y 4 concentran 19 de los 39 changes~~ | **Sin objeto desde el 31 ago.** No hay olas que equilibrar: quedan 17 changes pendientes y se ordenan por desbloqueo del grafo. La concentración se resolvió anulando cinco de ellos, no repartiéndolos |
 | **C20 tapona el grafo entero y está pintado 🟢** | Es lo único que separa a C21 de arrancar, y C21 bloquea a C24 y a C30. Marcado como siguiente a abrir en su ficha y en el §4; el color de ruta ya no decide el orden. **Medido el 1 sep:** sin él la rama léxica de C21 devuelve **cero** documentos a `gargantilla dorada` y a `collares de plata` |
 | C02 se queda corto y el contrato cambia, invalidando C03/C15/C16 | `test_openapi_snapshot_is_stable`: cualquier cambio de contrato rompe el build y obliga a decidirlo, en vez de filtrarse |
-| C24 (golden set) bloquea C25 y C38 | El runner y las configs van por delante; el etiquetado tiene tope de 2 h y recorte definido a 45 consultas |
+| C24 (golden set) bloquea C25 y ~~C38~~ | El runner y las configs van por delante; el etiquetado tiene tope de 2 h y recorte definido a 45 consultas. *(C38 retirado el 2026-09-27 — §0. El riesgo se materializó a medias y en otra dirección: el golden set se etiquetó entero, 72 consultas, y lo que no llegó a arbitrar nada fue la ablación del agente, porque el change que la iba a correr no se implementó)* |
 | **El golden set lo etiqueta una sola persona** | No se finge la conciliación: *pooling* sobre la unión de configuraciones, relectura diferida de las dudosas, y la ausencia de acuerdo entre anotadores **declarada** en el README como limitación |
-| C09, C10 y C38 son sesiones largas | Punto de partición predefinido en cada ficha; se entrega primero la mitad que desbloquea |
+| C09, C10 y ~~C38~~ son sesiones largas | Punto de partición predefinido en cada ficha; se entrega primero la mitad que desbloquea. *(La mitigación funcionó tres veces y en C38 funcionó de más: su orden de partición pre-escrito —validador → escenarios → adversarios → RAGAS— se aplicó dos días seguidos y acabó dejando el change vacío. **Un punto de partición honesto puede terminar diciendo que no hay nada que partir**, y eso es un resultado de la mitigación, no un fallo suyo)* |
 | ~~C29 necesita saber cuál es el POS origen de suministro~~ | **Sin objeto:** C29 anulada. `IsSupplySource` no llega a existir en SQL, y sigue viviendo solo en el YAML de C10 |
 | ~~Seis~~ ~~Cuatro~~ ~~Cinco~~ **Cuatro** migraciones EF Core (C04, C07, C08, **C18b**) | **Sin objeto desde el 2026-09-12.** Las cuatro están archivadas: C18b abrió la suya el 31 de agosto —`FamilyReviewVerdict`, que terminó siendo tres, porque la revisión real obligó a `ReviewSeconds` y a `SubjectWasMember`— y **C27 era la última viva, cortada con medición**. **No queda ninguna migración EF Core pendiente en el plan**, así que la regla de migración única ya no tiene a qué aplicarse |
 | Artefactos OpenSpec consumen tiempo de sesión | `design.md` solo cuando hay decisión con alternativas reales (C02, C11, C21, C22, C24, **C32a**, **C32b**, y de hecho también **C17**, **C18a** y **C18b**); en el resto, `proposal` + `tasks` + spec delta |

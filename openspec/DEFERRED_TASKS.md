@@ -745,9 +745,38 @@ en `backend/.env`, que es de donde el barrido de C30b lee sus credenciales.
 
 ---
 
-## C34 · el corpus de conocimiento no viaja en la imagen de `jbg-ai`
+## ~~C34 · el corpus de conocimiento no viaja en la imagen de `jbg-ai`~~ — **CERRADA por C39a (2026-09-27)**
 
-**Estado:** identificado el 2026-09-22 al desplegar la demo, **sorteado a mano y no resuelto**.
+**Estado:** **CERRADA el 2026-09-27 por C39a, y con dos arreglos y no uno**, porque al implementarla
+apareció que el problema tenía una segunda mitad que esta entrada no había visto.
+
+> **1 · El corpus entra en la imagen, por un contexto adicional con nombre.** No por mover el contexto
+> de *build* a la raíz, que era el primer plan y habría **roto el desarrollo local**:
+> `backend/docker-compose.yml` construye el mismo `Dockerfile` con `context: ../ai-service`. Se usa
+> `--build-context corpus=./data/knowledge` con `COPY --from=corpus`, así que el contexto primario no se
+> mueve, `ai-service/.dockerignore` sigue gobernando, y **construir sin el flag falla en voz alta** —
+> `failed to resolve source metadata for docker.io/library/corpus:latest`, código 1—, que es la
+> propiedad que importa: no existe una imagen sin corpus construida en silencio.
+>
+> **2 · Y la mitad que esta entrada no había visto: la ruta que el servicio lee estaba mal calculada.**
+> `CORPUS_DIR` se derivaba con `parents[3].parent`, correcto en un *checkout* y absurdo con el paquete
+> instalado por `uv sync --no-editable`: **medido dentro del contenedor desplegado, el corpus se buscaba
+> en `/app/.venv/lib/data/knowledge`**, dentro del árbol de dependencias. Copiar el corpus sin arreglar
+> eso habría dejado el defecto en pie con una imagen más gorda. Se resuelve ahora por la **misma búsqueda
+> de tres candidatos que `load_prompt_file`**, cuyo *docstring* describe exactamente este problema — y
+> por eso los prompts sí funcionaban y el corpus no.
+>
+> **Evidencia:** en la imagen nueva `CORPUS_DIR` = `/app/data/knowledge`, **no es enlace**, 33 documentos
+> y *sidecar* presente; en la antigua no existe. Imagen **426 MB antes y después**; contexto de 388 kB a
+> 2,78 MB. `tests/knowledge/test_corpus_location.py`, **5 passed**. Suite de `ai-service` completa,
+> **1.664 passed**.
+>
+> **Y por qué esto sobrevivió cinco semanas sin que nada fallara:** los fragmentos indexados viven en
+> `jbg-demo-pgdata` y un redespliegue no toca ese volumen. El entorno servía **161 fragmentos** desde la
+> base mientras su imagen no podía haber producido ni uno. `verify.sh` gana la condición que lo habría
+> dicho.
+
+**Estado original:** identificado el 2026-09-22 al desplegar la demo, **sorteado a mano y no resuelto**.
 **Zona:** `ai-service/Dockerfile` — fuera del alcance de C34, que declara `ai-service/` intocable.
 
 `CORPUS_DIR` es `<raíz del repo>/data/knowledge` (`knowledge/constants.py`), y el `Dockerfile` del

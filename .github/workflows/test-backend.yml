@@ -1,13 +1,37 @@
 name: Backend Tests
 
+# BRANCHES CORRECTED BY C39a, AND THE OLD ONES DID NOT EXIST.
+#
+# This workflow triggered on `[main, develop]` and **neither branch exists in this
+# repository**: the real ones are `master`, `ai-eng` — where the whole AI final
+# project is integrated — and `demo`. So it was well formed, visible, and INERT:
+# `gh run list` showed it had never executed, not once. Every change of this project
+# was integrated without an automated check while a workflow file suggested
+# otherwise, which is worse than having no workflow at all.
+#
+# It is INFORMATIVE AND NOT A GATE, deliberately. The suite carries ~50 pre-existing
+# failures of ~1400 (50 measured on 2026-09-27; 50 and 51 on the same commit
+# earlier), and a handful are genuinely order-dependent, so two runs of identical
+# code disagree. A required check over that is not a gate, it is a permanent block
+# somebody will end up bypassing. Turning the suite green is its own change.
+#
+# The `paths` filter STAYS, unlike in the deployment workflows, and the asymmetry is
+# on purpose: a test that runs unnecessarily costs minutes, while a deployment that
+# fails to run leaves an environment serving old code in silence. The two filters
+# fail towards opposite sides.
+#
+# If this is ever made a required check, mind the trap: a workflow SKIPPED by a path
+# filter never reports a status, and a required check that never reports leaves a
+# pull request blocked forever. It needs a companion job that always runs and
+# publishes the same check name.
 on:
   push:
-    branches: [main, develop]
+    branches: [ai-eng, master]
     paths:
       - 'backend/**'
       - '.github/workflows/test-backend.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [ai-eng, master]
     paths:
       - 'backend/**'
       - '.github/workflows/test-backend.yml'
