@@ -1,6 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { MENU_SIDEBAR, MENU_SIDEBAR_CUSTOM } from '@/config/layout-3.config';
+import { MENU_SIDEBAR } from '@/config/layout-3.config';
 import { MenuConfig } from '@/config/types';
 import { cn } from '@/lib/utils';
 import { useMenu } from '@/hooks/use-menu';
@@ -17,19 +17,16 @@ import {
 
 export function NavbarMenu() {
   const { pathname } = useLocation();
-  let navbarMenu;
 
-  if (pathname.includes('/layout-3')) {
-    navbarMenu = MENU_SIDEBAR?.[2];
-  } else if (pathname.includes('/layout-3')) {
-    navbarMenu = MENU_SIDEBAR?.[4];
-  } else if (pathname.includes('/layout-3')) {
-    navbarMenu = MENU_SIDEBAR_CUSTOM?.[0];
-  } else if (pathname.includes('/layout-3')) {
-    navbarMenu = MENU_SIDEBAR?.[5];
-  } else {
-    navbarMenu = MENU_SIDEBAR?.[3];
-  }
+  // La cadena original traia cuatro `else if` con la condicion IDENTICA
+  // (`pathname.includes('/layout-3')`), asi que las tres ultimas eran inalcanzables: la primera
+  // gana siempre. Se colapsa sin cambiar el comportamiento — mismas dos salidas que antes, `[2]` y
+  // `[3]`. Las ramas muertas apuntaban a `MENU_SIDEBAR?.[4]`, `MENU_SIDEBAR_CUSTOM?.[0]` y
+  // `MENU_SIDEBAR?.[5]`, y no se puede saber qué ruta debía elegir cada una: la plantilla llegó ya
+  // asi en el primer commit del repositorio.
+  const navbarMenu = pathname.includes('/layout-3')
+    ? MENU_SIDEBAR?.[2]
+    : MENU_SIDEBAR?.[3];
 
   const { isActive, hasActiveChild } = useMenu(pathname);
 
