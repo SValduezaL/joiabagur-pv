@@ -1,11 +1,11 @@
 # T-AIENG-032a: Sales-assistant tool registry — six read-only tools, and the one that had no service behind it (C32a)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-031](../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md),
-> [T-AIENG-030b](../archive/2026-09-14-add-assist-pitch-generation/ticket.md) y
-> [T-AIENG-030a](../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md).
+> siguen [T-AIENG-031](../../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md),
+> [T-AIENG-030b](../../archive/2026-09-14-add-assist-pitch-generation/ticket.md) y
+> [T-AIENG-030a](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md).
 
-**HU origen:** [HU-AIENG-032a](../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md)
+**HU origen:** [HU-AIENG-032a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md)
 **Change:** `add-sales-assistant-tool-registry` (C32a) · **Épica:** EP15
 **Rama:** `c32a-add-sales-assistant-tool-registry` · **Siguiente:** C32b, el bucle
 
@@ -190,7 +190,7 @@ y el §15.8 es una de las tres declaraciones que el README entrega.
 - [x] `ai-service`: `uv run pytest` en verde **sin llamadas reales a LLM, embeddings ni RDS**; comparado **por nombres de test** contra la línea base, nunca por recuento
 - [x] `ai-service/openapi.json` **sin cambios**, verificado y no supuesto
 - [x] Nomenclatura `test_<unidad>_<escenario>_<esperado>`; fakes inyectados, ningún socket abierto
-- [x] Los nueve escenarios de [HU-AIENG-032a](../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md) trazados a test nombrado
+- [x] Los nueve escenarios de [HU-AIENG-032a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md) trazados a test nombrado
 - [x] Spec de la capability actualizada en `openspec/changes/add-sales-assistant-tool-registry/specs/` y **`openspec validate --all --strict` en verde**, no la forma de un solo change
 - [x] Documentación actualizada según la tabla *Post-Implementation Documentation Update* de `openspec/project.md`
 - [x] Informe de implementación con lo que la implementación refute de este ticket
@@ -242,14 +242,14 @@ y el §15.8 es una de las tres declaraciones que el README entrega.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-032a](../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md)
-- **Ficha del plan:** [§3 · C32a](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y la nota del **§0 del 2026-09-20**
-- **Diseño RAG:** [§6.1, §6.2, §9.1, §9.2, §15.8, §15.10](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Capability viva:** [`assist-generation`](../../specs/assist-generation/spec.md)
-- **Capabilities consumidas:** [`vector-retrieval`](../../specs/vector-retrieval/spec.md) · [`substitutes-retrieval`](../../specs/substitutes-retrieval/spec.md) · [`knowledge-corpus`](../../specs/knowledge-corpus/spec.md) · [`pos-projection`](../../specs/pos-projection/spec.md)
-- **Tickets precedentes:** [T-AIENG-031](../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) · [T-AIENG-030b](../archive/2026-09-14-add-assist-pitch-generation/ticket.md)
-- **Procedimientos:** [Tickets de trabajo](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [User Stories](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Épica:** [EP15](../../../Documentos/epicas.md)
+- **HU origen:** [HU-AIENG-032a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-032a.md)
+- **Ficha del plan:** [§3 · C32a](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y la nota del **§0 del 2026-09-20**
+- **Diseño RAG:** [§6.1, §6.2, §9.1, §9.2, §15.8, §15.10](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Capability viva:** [`assist-generation`](../../../specs/assist-generation/spec.md)
+- **Capabilities consumidas:** [`vector-retrieval`](../../../specs/vector-retrieval/spec.md) · [`substitutes-retrieval`](../../../specs/substitutes-retrieval/spec.md) · [`knowledge-corpus`](../../../specs/knowledge-corpus/spec.md) · [`pos-projection`](../../../specs/pos-projection/spec.md)
+- **Tickets precedentes:** [T-AIENG-031](../../archive/2026-09-16-add-guardrails-and-intent-router/ticket.md) · [T-AIENG-030b](../../archive/2026-09-14-add-assist-pitch-generation/ticket.md)
+- **Procedimientos:** [Tickets de trabajo](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [User Stories](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Épica:** [EP15](../../../../Documentos/epicas.md)
 
 ---
 

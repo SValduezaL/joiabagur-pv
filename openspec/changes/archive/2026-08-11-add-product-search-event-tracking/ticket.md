@@ -1,7 +1,7 @@
 # T-AIENG-004: Product search event tracking — query→selection telemetry (C04)
 
 > Ticket técnico del change OpenSpec `add-product-search-event-tracking`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG, plan de changes y especificaciones funcionales v2), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-004](../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG, plan de changes y especificaciones funcionales v2), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-004](../../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -233,7 +233,7 @@ Ninguno. No se modifica ningún contrato REST existente, ni el snapshot `ai-serv
 
 ## Criterios de Aceptación
 
-Los quince escenarios en formato BDD están en [HU-AIENG-004](../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md#criterios-de-aceptación). Traducción a nombres de test, según la convención `Método_Escenario_ResultadoEsperado`:
+Los quince escenarios en formato BDD están en [HU-AIENG-004](../../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md#criterios-de-aceptación). Traducción a nombres de test, según la convención `Método_Escenario_ResultadoEsperado`:
 
 | Escenario | Test |
 |---|---|
@@ -310,15 +310,15 @@ Las cuatro preguntas abiertas de la sesión de exploración quedaron cerradas; s
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-004](../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md)
+- **HU origen:** [HU-AIENG-004](../../../../Documentos/Historias/AI-Eng/HU-AIENG-004.md)
 - **Change OpenSpec:** `openspec/changes/add-product-search-event-tracking/`
-- **Plan de changes:** [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) — ficha C04
-- **Diseño RAG v3:** [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) — §6.2, §6.4, §7.6, §11.2, §15
-- **Especificaciones funcionales v2:** [joiabagur-ia-especificaciones-funcionales-v2.md](../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) — §5.8, §5.9, §5.11
-- **Épicas:** [epicas.md](../../../Documentos/epicas.md) — EP17
-- **Modelo de datos:** [modelo-de-datos.md](../../../Documentos/modelo-de-datos.md)
+- **Plan de changes:** [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) — ficha C04
+- **Diseño RAG v3:** [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) — §6.2, §6.4, §7.6, §11.2, §15
+- **Especificaciones funcionales v2:** [joiabagur-ia-especificaciones-funcionales-v2.md](../../../../Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md) — §5.8, §5.9, §5.11
+- **Épicas:** [epicas.md](../../../../Documentos/epicas.md) — EP17
+- **Modelo de datos:** [modelo-de-datos.md](../../../../Documentos/modelo-de-datos.md)
 - **Precedente de ticket y de prerrequisito hacia adelante:** `openspec/changes/archive/2026-08-09-add-dotnet-ai-gateway-client/`
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

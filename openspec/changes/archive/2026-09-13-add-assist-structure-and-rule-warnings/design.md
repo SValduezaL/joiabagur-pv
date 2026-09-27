@@ -1,9 +1,9 @@
 ## Context
 
 `POST /v1/assist/sale` se congeló en C02 con los otros nueve `/v1` y **nunca se implementó**:
-[`routers/assist.py`](../../../ai-service/src/jbg_ai/api/routers/assist.py) llama a
+[`routers/assist.py`](../../../../ai-service/src/jbg_ai/api/routers/assist.py) llama a
 `require_stub_mode` y responde `501` con stubs apagados. El fixture de
-[`stubs/responses.py`](../../../ai-service/src/jbg_ai/stubs/responses.py) fabrica familias
+[`stubs/responses.py`](../../../../ai-service/src/jbg_ai/stubs/responses.py) fabrica familias
 sintéticas y una frase con placeholders.
 
 Lo que sí está construido, y este change **consume sin modificar**:
@@ -33,7 +33,7 @@ familia, y `query` obligatoria contra un consumidor anclado a pieza— y hoy la 
 consumidores**. Renegociarlo ahora cuesta cero y a partir de C34 no.
 
 Cifras del árbol, medidas y citadas en
-[`c30-exploration-decisions.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md):
+[`c30-exploration-decisions.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md):
 
 | Dato | Valor | Fuente |
 |---|---|---|

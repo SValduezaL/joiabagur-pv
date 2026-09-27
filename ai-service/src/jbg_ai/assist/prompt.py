@@ -24,7 +24,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from jbg_ai.assist.constants import PROMPT_VERSION
 from jbg_ai.assist.modes import AssistMode
@@ -65,6 +65,11 @@ class PitchTask(Enum):
     FREE_QUERY_KNOWLEDGE = "free_query_knowledge"
     #: M1, route `both`. Pieces and fragments at once.
     FREE_QUERY_BOTH = "free_query_both"
+    #: M1, any route, with **zero corpus fragments after the distance threshold**. The
+    #: guardrail M3 has had since C34, finally applied to the mode C40 puts on screen: without
+    #: it a knowledge question with no fragments runs the task that says "answer using those
+    #: fragments" with no fragments, which is an explicit invitation to answer from memory.
+    FREE_QUERY_UNCOVERED = "free_query_uncovered"
 
 
 class AgentPitchTask(Enum):
@@ -92,6 +97,7 @@ TASK_SECTIONS: dict[PitchTask, str] = {
     PitchTask.FREE_QUERY_CATALOG: "Tarea · consulta libre · catálogo",
     PitchTask.FREE_QUERY_KNOWLEDGE: "Tarea · consulta libre · conocimiento",
     PitchTask.FREE_QUERY_BOTH: "Tarea · consulta libre · catálogo y conocimiento",
+    PitchTask.FREE_QUERY_UNCOVERED: "Tarea · consulta libre · conocimiento sin cobertura",
 }
 
 #: The agent loop's section, held **apart from the mapping above** for the reason its enum is
@@ -131,12 +137,23 @@ def resolve_task(
 ) -> PitchTask:
     """Which task section this call runs, from the mode plus what the request turned out to be.
 
-    `uncovered` only means anything for the anchored question, and `route` only for the free
-    query; passing either where it does not apply is ignored rather than raising, because the
-    orchestrator computes both before it knows which mode it is serving and a branch there
-    would just move this table to a worse place.
+    `route` only means anything for the free query; passing it where it does not apply is
+    ignored rather than raising, because the orchestrator computes both before it knows which
+    mode it is serving and a branch there would just move this table to a worse place.
+
+    **`uncovered` now means something in both modes**, which it did not before C40. In the
+    anchored question it selects the degraded task C34 added; in the free query it selects the
+    one C40 adds, and it is checked **before** the route table — a knowledge question with no
+    fragments must not run the task that tells the model to lean on fragments it does not have,
+    whichever route brought it here.
+
+    It is deliberately **not** consulted on the `catalog` route, where an empty corpus is the
+    normal and correct state rather than a gap: that route is answered from pieces, and its own
+    section already tells the model to return no citations.
     """
     if mode is AssistMode.QUERY_ONLY:
+        if uncovered and route in ("knowledge", "both"):
+            return PitchTask.FREE_QUERY_UNCOVERED
         task = FREE_QUERY_TASKS.get(route or "")
         if task is None:
             raise ValueError(
@@ -264,6 +281,15 @@ class PitchContext(Protocol):
 
     query: str | None
 
+    #: Whether **one** piece is anchored. It decides whether a price placeholder is what the
+    #: prompt asked for or the failure that deletes the whole argument, so the gate has to know
+    #: it and cannot infer it: both shapes may carry candidates, and only one of them names a
+    #: piece the .NET side can resolve a figure against.
+    #:
+    #: Declared here rather than derived at the call site so a third payload shape has to answer
+    #: the question instead of defaulting into the permissive branch by omission.
+    is_anchored: bool
+
     def as_data(self) -> dict[str, object]: ...
 
     def citation_ids(self) -> frozenset[str]: ...
@@ -313,6 +339,9 @@ class PitchPayload(_NumeralsFromData):
     operator actually repeats about a piece (`18 mm`, a size, a fineness) are in the payload
     already, because they are what the piece declares.
     """
+
+    #: One piece is named, so `{{price}}` and `{{stock}}` are what the prompt asks for here.
+    is_anchored: ClassVar[bool] = True
 
     sku: str
     piece_type: str | None = None
@@ -418,6 +447,10 @@ class FreeQueryPayload(_NumeralsFromData):
     `query` is not part of the admitted set here either, for the reason C30b gave: it is what to
     answer, not what is true, and it is the one surface a person outside this code controls.
     """
+
+    #: No piece is named. A placeholder here has nothing to resolve against, and .NET withholds
+    #: the whole argument when it meets one — so the gate treats it as a hard violation.
+    is_anchored: ClassVar[bool] = False
 
     groups: tuple[FreeQueryGroup, ...] = ()
     warnings: tuple[str, ...] = ()

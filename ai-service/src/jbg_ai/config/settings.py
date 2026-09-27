@@ -598,6 +598,43 @@ class Settings(BaseSettings):
         ),
     )
 
+    jpv_pos_sync_scheduler_enabled: bool = Field(
+        default=True,
+        description=(
+            "C41 scheduled drain of ai.pos_projection "
+            "(JPV_POS_SYNC_SCHEDULER_ENABLED). Optional at boot; default true; blank -> true. "
+            "Drains the pos-availability feed ONCE AT START-UP and then on an interval, "
+            "reusing the same drain the CLI invokes rather than reimplementing the keyset "
+            "protocol. Default ON, and that is deliberate: off by default would reproduce the "
+            "exact defect this change closes -- something somebody has to remember to switch "
+            "on. C22 shipped a documented cron instead and it was never installed, because "
+            "the recipe began by changing into a host directory while this service ships as "
+            "a container; the projection then ran twenty days stale across three separate "
+            "sessions. Switching it OFF restores exactly the behaviour that preceded this "
+            "setting -- the CLI as the only drain -- which makes it both the ablation and the "
+            "rollback: no deploy to undo and no migration. Not required to boot /health, and "
+            "the scheduler is not started at all under STUB_MODE or without a configured feed."
+        ),
+    )
+
+    jpv_pos_sync_interval_seconds: int = Field(
+        default=600,
+        gt=0,
+        description=(
+            "C41 interval between scheduled POS drains "
+            "(JPV_POS_SYNC_INTERVAL_SECONDS). Optional at boot; a blank export means unset "
+            "and falls back to the default. DERIVED FROM THE CEILING, NOT CHOSEN: what "
+            "matters is not the cadence but how many consecutive failed drains can elapse "
+            "before JPV_POS_PROJECTION_MAX_AGE_SECONDS degrades the scope. At the 3600 s "
+            "default ceiling, 1800 s tolerates one failure, 900 s three and 600 s five, so "
+            "the rule is ceiling / interval >= 4 and the default sits comfortably inside it. "
+            "600 s also matches the cron cadence C22 documented and the 5-10 min the design "
+            "declares, which costs nothing to agree with. Raising this above a quarter of the "
+            "ceiling means a single missed drain can degrade the scope. Not required to boot "
+            "/health."
+        ),
+    )
+
     jpv_knowledge_distance_threshold: float = Field(
         default=KNOWLEDGE_DEFAULTS["jpv_knowledge_distance_threshold"],
         gt=0,
@@ -846,6 +883,21 @@ class Settings(BaseSettings):
     def blank_projection_max_age_is_default(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
             return 3600
+        return value
+
+    @field_validator("jpv_pos_sync_scheduler_enabled", mode="before")
+    @classmethod
+    def blank_pos_sync_flag_is_default(cls, value: object) -> object:
+        """A blank export means "unset". Read as false it would silently stop draining."""
+        if isinstance(value, str) and not value.strip():
+            return True
+        return value
+
+    @field_validator("jpv_pos_sync_interval_seconds", mode="before")
+    @classmethod
+    def blank_pos_sync_interval_is_default(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return 600
         return value
 
     @field_validator(

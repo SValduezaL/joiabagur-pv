@@ -146,7 +146,17 @@ def test_real_mode_is_not_501(issue_token: Callable[..., str]) -> None:
     assert parsed.effective_pos_id == TOKEN_POS_ID
 
 
-def test_token_without_pos_id_is_401(issue_token: Callable[..., str]) -> None:
+def test_token_without_pos_id_is_served_without_the_prefilter(
+    issue_token: Callable[..., str],
+) -> None:
+    """C40 reverses the 401 this test used to assert, and the reversal is the point.
+
+    It was right when written: with `pos_id` the retriever's only hard filter, a token without
+    one had no business here. What C40 adds is a search deliberately spread over every shop,
+    which has no shop to name — and the guarantee that keeps it safe is the one asserted below:
+    the absent claim makes the prefilter **not apply**, and the response echoes the absence
+    instead of substituting a value for it.
+    """
     app = _real_app()
     token = issue_token(pos_id=None)
     with TestClient(app) as client:
@@ -156,7 +166,10 @@ def test_token_without_pos_id_is_401(issue_token: Callable[..., str]) -> None:
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 401
+    assert response.status_code == 200, response.text
+    assert response.json()["effective_pos_id"] == "", (
+        "the absence is echoed, never a substituted value"
+    )
 
 
 def test_body_pos_id_is_ignored(issue_token: Callable[..., str]) -> None:

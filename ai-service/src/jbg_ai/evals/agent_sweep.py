@@ -61,6 +61,7 @@ from uuid import UUID, uuid4
 import yaml
 
 from jbg_ai.api.auth import ServicePrincipal
+from jbg_ai.api.health_report import projection_age_seconds
 from jbg_ai.assist.agent import AgentBudgets, run_agent
 from jbg_ai.assist.agent_llm import LiteLlmAgentClient
 from jbg_ai.assist.constants import (
@@ -74,8 +75,10 @@ from jbg_ai.assist.constants import (
     DEFAULT_ROUTER_MODEL,
     MAX_AGENT_PROVIDER_CALLS,
     MAX_PITCH_PROVIDER_CALLS,
+    PRICE_PLACEHOLDER,
     PROMPT_VERSION,
     ROUTER_PROMPT_VERSION,
+    STOCK_PLACEHOLDER,
     TOOL_NAMES,
 )
 from jbg_ai.assist.llm import LiteLlmAssistClient, TokenUsage
@@ -177,6 +180,56 @@ def availability_terms_in(text: str) -> int:
     for prose, so what reaches the artefact is a number.
     """
     return len(_AVAILABILITY_PATTERN.findall(_folded(text or "")))
+
+
+def placeholders_in(outcome, marker: str) -> int:
+    """Occurrences of a placeholder in the **first** generated attempt, or 0 when none ran.
+
+    **The first attempt and not the served one**, which is the same rule `free_query_gate`
+    applies and for the same reason: what is being measured is what the prompt produced, and
+    the single repair runs after it. A count of the served argument would report zero for
+    every placeholder the repair removed and so would measure the repair instead of the prompt.
+
+    A count and never the text. The agent's task runs over an **unanchored** payload — the
+    argument speaks of several pieces, so there is nothing to resolve a placeholder against —
+    and since C40 a placeholder there is a hard violation, so this is the figure that says
+    whether the argument is being withheld for obeying its own prompt.
+    """
+    attempt = getattr(outcome, "initial_generated", None) if outcome else None
+    if attempt is None:
+        attempt = getattr(outcome, "generated", None) if outcome else None
+    return attempt.pitch.count(marker) if attempt else 0
+
+
+async def projection_freshness(
+    search: SqlAlchemyProductSearch, settings, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """The projection's age and the staleness verdict that applies to it, right now.
+
+    **Read per row and not once per run, and that is the point of it.** A pass of this harness
+    takes longer than the ceiling it is measured against — C32b's took 2 h 44 min against a
+    ceiling of 1 h — and the two paths disagree in silence: `resolve_pieces` goes through
+    `scope_buckets`, declared *read by the evaluation only* and carrying **no freshness check**,
+    while the serving path consults the checkpoint and declines to apply the point-of-sale
+    prefilter once it is stale. A run with no recorded age therefore cannot be told apart from
+    a run that was fresh throughout, which is exactly what happened to C32b's retrieval figures
+    and what could not be cleaned up afterwards.
+
+    **The age comes from the synchronisation checkpoint** — `projection_synced_at()`, one row
+    per feed — and never from `ai.pos_projection.refreshed_at`, which records when an
+    assignment last changed rather than when the drain last ran. C41 found that exact confusion
+    in C40's manipulation, so the port that reads the checkpoint is the only source here.
+    """
+    ceiling = settings.jpv_pos_projection_max_age_seconds
+    synced_at = await search.projection_synced_at()
+    age = projection_age_seconds(synced_at, now=now)
+    return {
+        "synced_at": synced_at.isoformat() if synced_at else None,
+        "age_seconds": age,
+        "ceiling_seconds": ceiling,
+        # Never drained is stale: the prefilter does not apply then either.
+        "stale": age is None or age > ceiling,
+    }
 
 
 def expectation_verdict(
@@ -456,7 +509,15 @@ def scenario_turns(item: dict, pieces: dict[str, str]) -> list[Turn] | None:
 # --- one request ------------------------------------------------------------------------------
 
 
-def _row(*, item: dict, set_id: str, arm: str, run, elapsed_ms: float) -> dict[str, Any]:
+def _row(
+    *,
+    item: dict,
+    set_id: str,
+    arm: str,
+    run,
+    elapsed_ms: float,
+    projection: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Everything one request produced, flattened for analysis. Distribution first."""
     per_iteration = [
         {
@@ -511,6 +572,18 @@ def _row(*, item: dict, set_id: str, arm: str, run, elapsed_ms: float) -> dict[s
         },
         # A count and never the text: see `availability_terms_in`.
         "pitch_availability_terms": availability_terms_in(run.pitch),
+        # **The placeholder rate of the agent's task, counted on the first attempt.** The
+        # withholding rate alone cannot tell a placeholder from a dangling citation, and those
+        # call for opposite fixes: one is the prompt, the other the corpus.
+        "price_placeholders": placeholders_in(run.pitch_outcome, PRICE_PLACEHOLDER),
+        "stock_placeholders": placeholders_in(run.pitch_outcome, STOCK_PLACEHOLDER),
+        # **The freshness this row actually ran with**, so a row served without the prefilter is
+        # identifiable afterwards instead of being averaged in with the rest. `None` for rows
+        # written before the record existed — not zero, which would be a claim.
+        "projection_age_seconds": (
+            projection.get("age_seconds") if projection else None
+        ),
+        "projection_stale": projection.get("stale") if projection else None,
         "stop_reason": run.stop_reason,
         "partial": run.partial,
         "iterations": run.iterations,
@@ -801,6 +874,44 @@ def _summarise_subset(
         "pitch_withheld": sum(1 for row in subset if row["pitch_withheld"]),
         "pitch_violation_causes": _tally(
             cause for row in subset for cause in row["pitch_initial_violations"]
+        ),
+        # **The placeholder figure this change exists to publish**, aggregated over the first
+        # attempt of every generation. `None` for a subset whose rows predate the count — not
+        # zero, which would assert that no placeholder was written.
+        "pitch_placeholders": (
+            {
+                "price_total": sum(row.get("price_placeholders", 0) for row in subset),
+                "stock_total": sum(row.get("stock_placeholders", 0) for row in subset),
+                "generations_with_a_price_placeholder": sum(
+                    1 for row in subset if row.get("price_placeholders", 0)
+                ),
+                "generations_with_a_stock_placeholder": sum(
+                    1 for row in subset if row.get("stock_placeholders", 0)
+                ),
+            }
+            if any("price_placeholders" in row for row in subset)
+            else None
+        ),
+        # **The audit of the run, not a quality figure.** A subset whose rows disagree on
+        # staleness was served two different ways, so its retrieval aggregates describe neither.
+        "projection_freshness": (
+            {
+                "rows_recorded": sum(
+                    1 for row in subset if row.get("projection_stale") is not None
+                ),
+                "rows_stale": sum(
+                    1 for row in subset if row.get("projection_stale") is True
+                ),
+                "age_seconds": _percentiles(
+                    [
+                        float(row["projection_age_seconds"])
+                        for row in subset
+                        if row.get("projection_age_seconds") is not None
+                    ]
+                ),
+            }
+            if any(row.get("projection_stale") is not None for row in subset)
+            else None
         ),
         # Availability terms in served arguments: nothing prevents them, so they are counted.
         # `None` for rows written before the count existed — not zero, which would be a claim.
@@ -1171,6 +1282,12 @@ async def run(args: argparse.Namespace) -> int:
             model_version_key=embed.model_version_key, model_id=embed.model_id
         )
         provenance["assortment_size"] = await search.count_scope(MAO_AIR)
+        # **The age at the start, and the rows carry their own.** This one answers «was the
+        # projection fresh when the pass began»; the per-row figure answers «was it still fresh
+        # when THIS row ran», which is the question a pass longer than the ceiling makes real.
+        provenance["projection_freshness_at_start"] = await projection_freshness(
+            search, settings
+        )
         print(json.dumps(
             {"resolved_pieces": pieces,
              "index": provenance["index_compatible_documents"],
@@ -1230,8 +1347,17 @@ async def run(args: argparse.Namespace) -> int:
                         budgets=budgets,
                     )
                     elapsed = (time.perf_counter() - started) * 1000.0
+                    # Read **after** the request and never before: the age that matters is the
+                    # one the retrieval guard would have seen, and the request is what took the
+                    # time. One checkpoint read per row, outside the clock being measured.
+                    freshness = await projection_freshness(search, settings)
                     row = _row(
-                        item=item, set_id=set_name, arm=arm, run=result, elapsed_ms=elapsed
+                        item=item,
+                        set_id=set_name,
+                        arm=arm,
+                        run=result,
+                        elapsed_ms=elapsed,
+                        projection=freshness,
                     )
                     rows.append(row)
                     append_record(partial, {"row": row})
@@ -1248,7 +1374,10 @@ async def run(args: argparse.Namespace) -> int:
                         f"  {arm:<20} {set_name:<12} {item['id']:>5} "
                         f"{row['stop_reason']:<24} it={row['iterations']} "
                         f"tools={row['tool_calls_used']} "
-                        f"tok={row['total_tokens']:>6} {row['elapsed_ms']:>7.0f} ms",
+                        f"tok={row['total_tokens']:>6} {row['elapsed_ms']:>7.0f} ms"
+                        # Visible while the pass runs, because the moment to react to a stale
+                        # projection is before the remaining rows are paid for.
+                        + (" RANCIA" if freshness["stale"] else ""),
                         flush=True,
                     )
     finally:

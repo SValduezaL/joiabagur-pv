@@ -62,6 +62,19 @@ public class AiGatewayClient : IAiGatewayClient
     /// </remarks>
     public const string AssistClientName = "ai-assist";
 
+    /// <summary>
+    /// Named client for the sale agent (C42), with its own budget and its own breaker state.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="AssistClientName"/> and not only from retrieval, which is the new
+    /// part: the agent's <em>median</em> latency is of the order of the <em>total</em> the
+    /// generative route declares as its ceiling, so a client carrying the generative budget would
+    /// cut a large share of agent requests. Its budget sits above the wall-clock ceiling the
+    /// service gives one agent request, plus the network, and it retries only a connection that
+    /// never opened.
+    /// </remarks>
+    public const string AgentClientName = "ai-agent";
+
     /// <summary>Correlation header, the only thing that ties a rejected request to its origin.</summary>
     public const string TraceHeaderName = "X-Trace-Id";
 
@@ -71,7 +84,21 @@ public class AiGatewayClient : IAiGatewayClient
     private const string FamilySuggestPath = "/v1/families/suggest";
     private const string FamilyAuditPath = "/v1/families/audit";
     private const string AssistSalePath = "/v1/assist/sale";
+    private const string AssistAgentPath = "/v1/assist/agent";
     private const string SubstitutesPath = "/v1/retrieval/substitutes";
+
+    /// <summary>
+    /// The stop reasons that mean the service degraded internally while answering 200.
+    /// </summary>
+    /// <remarks>
+    /// <strong>Instrumented and deliberately not counted by the breaker.</strong> The breaker sees a
+    /// transport result and not a body, but the decision does not rest on that: what it protects
+    /// against is the service not answering, and these are answers. Recording them as a metric is
+    /// what keeps their rate observable without a breaker opening over a route that works as
+    /// designed — and at one request per minute a sample-threshold breaker over this condition could
+    /// not reach its threshold before its window expired anyway.
+    /// </remarks>
+    private static readonly string[] InBandDegradations = ["fallo_proveedor", "sin_cliente"];
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAiServiceTokenFactory _tokenFactory;
@@ -106,11 +133,16 @@ public class AiGatewayClient : IAiGatewayClient
         // claim is the retriever's only hard filter, so a catalog scope reaching this route
         // would be a cross-POS leak. jbg-ai refuses it too; neither side is trusted to be the
         // only one that remembers.
-        if (scope.Kind != AiCallScopeKind.PointOfSale)
+        // Two kinds are admissible here and the third is not, which is the whole point of the
+        // kinds existing: `AllPointsOfSale` also carries no `pos_id`, but it means «no shop was
+        // chosen» rather than «this route belongs to no shop», and the service treats the absent
+        // claim as «do not apply the prefilter» rather than as «match everything».
+        if (scope.Kind is not (AiCallScopeKind.PointOfSale or AiCallScopeKind.AllPointsOfSale))
         {
             throw new ArgumentException(
-                "Retrieval requires a point-of-sale scope. A catalog scope carries no pos_id, "
-                + "which the retriever uses as its only hard filter between points of sale.",
+                "Retrieval requires a point-of-sale scope or the every-point-of-sale scope. A "
+                + "catalog scope belongs to enrichment, and using it here would search on behalf "
+                + "of a route that has nothing to do with a shop.",
                 nameof(scope));
         }
 
@@ -657,22 +689,34 @@ public class AiGatewayClient : IAiGatewayClient
 
         // Same closure as SearchAsync: the anchored assistance reads the point of sale from the
         // token, and a catalog scope carries none.
-        if (scope.Kind != AiCallScopeKind.PointOfSale)
+        // The anchored modes always arrive with a concrete shop, because a card reports that
+        // shop's stock; the free query need not, and that is the case this admits. The catalog
+        // scope stays refused: it is enrichment's, and it would not mean the same thing.
+        if (scope.Kind is not (AiCallScopeKind.PointOfSale or AiCallScopeKind.AllPointsOfSale))
         {
             throw new ArgumentException(
-                "Sale assistance requires a point-of-sale scope. A catalog scope carries no pos_id, "
-                + "which the service uses to scope the piece and its family.",
+                "Sale assistance requires a point-of-sale scope or the every-point-of-sale scope. "
+                + "A catalog scope belongs to enrichment and says nothing about where a sale is "
+                + "being made.",
                 nameof(scope));
         }
 
-        // The contract also serves a free query with no product. This client refuses it: the
+        // The contract requires **at least** one anchor, not exactly one, and since C40 this
+        // client matches it: a product, a query, or both.
+        //
+        // It used to refuse the free query, and the reason was sound while it held — the
         // placeholders of the generated argument name no product, so with several pieces on the
-        // table there is nothing to resolve them against.
-        if (string.IsNullOrWhiteSpace(request.ProductId))
+        // table there was nothing to resolve them against, and `PitchPlaceholderResolver`
+        // withholds the whole argument rather than guess. What changed is the other end:
+        // `assist/v5` stops asking for placeholders in the free-query tasks, and the hard cause
+        // `placeholder_in_free_query` in the service's integrity gate makes that a guarantee
+        // instead of a request. With no placeholder to resolve, the refusal protects nothing and
+        // only costs the operator the one mode of the three they could not reach.
+        if (string.IsNullOrWhiteSpace(request.ProductId) && string.IsNullOrWhiteSpace(request.Query))
         {
             throw new ArgumentException(
-                "Sale assistance requires an anchored product. Without one the price and stock "
-                + "placeholders of the argument cannot be resolved.",
+                "Sale assistance requires at least one anchor: a product identifier, a query, or "
+                + "both. A request carrying neither anchors nothing.",
                 nameof(request));
         }
 
@@ -789,6 +833,171 @@ public class AiGatewayClient : IAiGatewayClient
     }
 
     /// <inheritdoc/>
+    public async Task<AiAssistAgentResponse> AssistAgentAsync(
+        AiAssistAgentRequest request,
+        AiCallScope scope,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(scope);
+
+        // The free query's closure, not the anchored one: the agent answers about one shop or about
+        // every shop, and the catalog scope stays refused because it is enrichment's and would not
+        // mean the same thing here.
+        if (scope.Kind is not (AiCallScopeKind.PointOfSale or AiCallScopeKind.AllPointsOfSale))
+        {
+            throw new ArgumentException(
+                "The sale agent requires a point-of-sale scope or the every-point-of-sale scope. "
+                + "A catalog scope belongs to enrichment and says nothing about where a sale is "
+                + "being made.",
+                nameof(scope));
+        }
+
+        // A transcript with no turn anchors nothing. The three caps are validated by the
+        // application service before this point, so reaching here with an over-long transcript is a
+        // programming error rather than a caller's mistake — and the service would answer 422.
+        if (request.Turns.Count == 0)
+        {
+            throw new ArgumentException(
+                "The sale agent requires at least one turn: a transcript carrying none asks nothing.",
+                nameof(request));
+        }
+
+        var traceId = _traceContextAccessor.CurrentTraceId;
+
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["trace_id"] = traceId,
+            ["endpoint"] = AssistAgentPath
+        });
+
+        // **The transcript itself is never logged, at any level.** It is what a customer said at a
+        // counter as the operator typed it, and the no-persistence rule this system holds covers a
+        // log as much as a table. Its shape is diagnostic without being content.
+        _logger.LogInformation(
+            "ai_gateway_agent_started {PosId} {Role} {Turns} {TranscriptChars}",
+            scope.PointOfSaleId,
+            scope.Role,
+            request.Turns.Count,
+            request.Turns.Sum(turn => turn.Text.Length));
+
+        var stopwatch = Stopwatch.StartNew();
+        AiGatewayAttemptTracker.Begin();
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient(AgentClientName);
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, AssistAgentPath)
+            {
+                Content = JsonContent.Create(request, options: AiGatewaySerialization.Options)
+            };
+
+            httpRequest.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", _tokenFactory.Create(scope, traceId));
+            httpRequest.Headers.TryAddWithoutValidation(TraceHeaderName, traceId);
+
+            using var response = await client.SendAsync(httpRequest, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw TranslateAnchoredStatus(response.StatusCode, stopwatch, AssistAgentPath);
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<AiAssistAgentResponse>(
+                AiGatewaySerialization.Options,
+                cancellationToken);
+
+            if (payload is null)
+            {
+                throw Fail(AiGatewayOutcome.ServerError, stopwatch,
+                    new AiUnavailableException("The AI service returned an empty sale agent body."));
+            }
+
+            stopwatch.Stop();
+
+            // **The degradation the breaker deliberately does not count, recorded here instead.**
+            // A 200 carrying `fallo_proveedor` or `sin_cliente` is a successful response reporting
+            // an internal degradation, and the breaker protects against the service not answering
+            // rather than against the answers it gives. Without this line the rate would be
+            // invisible, which is the one real cost of that decision — so it is paid here, as a
+            // warning with the reason on it, and the deferred entry asking for a breaker over this
+            // condition is closed by refutation: at ~13 000 tokens per request against 25 000
+            // tokens per minute the system admits about one request per minute, so a sampling
+            // window expires before any throughput threshold accumulates.
+            if (InBandDegradations.Contains(payload.StopReason))
+            {
+                _logger.LogWarning(
+                    "ai_gateway_agent_degraded {StopReason} {LatencyMs} {Iterations} {ToolCallsUsed} {Partial}",
+                    payload.StopReason,
+                    stopwatch.ElapsedMilliseconds,
+                    payload.Iterations,
+                    payload.ToolCallsUsed,
+                    payload.Partial);
+            }
+
+            // The argument is NOT in here, at any level, and neither is the transcript. The
+            // counters, the stop reason and both prompt versions are what a cost review needs.
+            _logger.LogInformation(
+                "ai_gateway_agent_completed {StatusCode} {LatencyMs} {Attempts} {Intent} {Groups} "
+                + "{Citations} {Warnings} {PitchLength} {StopReason} {Partial} {Iterations} "
+                + "{ToolCallsUsed} {AgentPromptVersion} {PromptVersion} {Model} {TotalTokens} {Calls}",
+                (int)response.StatusCode,
+                stopwatch.ElapsedMilliseconds,
+                AiGatewayAttemptTracker.Attempts,
+                payload.Intent,
+                payload.Groups.Count,
+                payload.Citations.Count,
+                payload.Warnings.Count,
+                payload.Pitch.Length,
+                payload.StopReason,
+                payload.Partial,
+                payload.Iterations,
+                payload.ToolCallsUsed,
+                payload.AgentPromptVersion,
+                payload.PromptVersion,
+                payload.Usage.Model,
+                payload.Usage.TotalTokens,
+                payload.Usage.Calls);
+
+            return payload;
+        }
+        catch (AiGatewayException)
+        {
+            throw;
+        }
+        catch (BrokenCircuitException ex)
+        {
+            throw Fail(AiGatewayOutcome.CircuitOpen, stopwatch,
+                new AiUnavailableException("The AI sale agent circuit is open; no request was issued.", ex));
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            throw Fail(AiGatewayOutcome.Timeout, stopwatch,
+                new AiUnavailableException("The AI service did not answer within the sale agent time budget.", ex));
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw Fail(AiGatewayOutcome.Timeout, stopwatch,
+                new AiUnavailableException("The AI service did not answer within the sale agent time budget.", ex));
+        }
+        catch (HttpRequestException ex)
+        {
+            throw Fail(AiGatewayOutcome.Transport, stopwatch,
+                new AiUnavailableException("The AI service could not be reached.", ex));
+        }
+        catch (JsonException ex)
+        {
+            throw Fail(AiGatewayOutcome.ServerError, stopwatch,
+                new AiUnavailableException("The AI service returned a sale agent body that does not match the contract.", ex));
+        }
+        finally
+        {
+            AiGatewayAttemptTracker.End();
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<AiSubstitutesResponse> SubstitutesAsync(
         AiSubstitutesRequest request,
         AiCallScope scope,
@@ -797,11 +1006,15 @@ public class AiGatewayClient : IAiGatewayClient
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(scope);
 
+        // **No exception for the every-point-of-sale scope here.** Substitutes rank by what a
+        // shop can actually hand over; with no shop the ranking has nothing to read, and
+        // serving an unranked list would answer a different question from the one asked.
         if (scope.Kind != AiCallScopeKind.PointOfSale)
         {
             throw new ArgumentException(
-                "Substitutes require a point-of-sale scope. A catalog scope carries no pos_id, "
-                + "which the service reads as the availability signal of its ranking.",
+                "Substitutes require a point-of-sale scope. Neither a catalog scope nor the "
+                + "every-point-of-sale scope carries a pos_id, which the service reads as the "
+                + "availability signal of its ranking.",
                 nameof(scope));
         }
 

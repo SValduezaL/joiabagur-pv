@@ -9,6 +9,7 @@ would have been chosen over a candidate set the live fusion no longer produces.
 
 from __future__ import annotations
 
+import json
 import socket
 from dataclasses import replace
 
@@ -17,7 +18,7 @@ import pytest
 from jbg_ai.evals.configs import load_config
 from jbg_ai.evals.errors import ConfigurationError
 from jbg_ai.config.settings import Settings
-from jbg_ai.evals.golden import load_golden_set
+from jbg_ai.evals.golden import OUT_OF_DOMAIN, load_golden_set
 from jbg_ai.evals.sweep import (
     CAPTURE_VERSION,
     Capture,
@@ -29,6 +30,7 @@ from jbg_ai.evals.sweep import (
     rescore,
     rescore_window,
 )
+from jbg_ai.retrieval.abstention import AbstentionRule
 from jbg_ai.retrieval.filters import BusinessWeights
 
 
@@ -357,3 +359,159 @@ def test_the_capture_phase_runs_end_to_end_against_the_ports() -> None:
     # And the window is the FUSION's output: captured with the business weights pinned to zero,
     # so a re-score applies the whole ordering key from scratch.
     assert not any("business" in name for name in result.fusion.__dataclass_fields__)
+
+
+# --------------------------------------------- C40 · the profile the decision actually read
+
+
+#: Flat: twenty candidates inside the band, which is what the live rule reads as "the
+#: catalogue has nothing for this query".
+FLAT_PROBE = tuple(0.500 + 0.0005 * index for index in range(20))
+#: Peaked: one candidate stands out, so the query IS answerable.
+PEAKED_PROBE = (0.21,) + tuple(0.44 + 0.01 * index for index in range(19))
+
+LIVE_RULE = AbstentionRule(enabled=True, band_alpha=0.03, min_candidates=15)
+
+
+def _out_of_domain_query(golden):
+    """The category `abstention_rate` is reported over."""
+    return next(
+        query
+        for query in golden.retrieval_queries
+        if query.category == OUT_OF_DOMAIN
+    )
+
+
+def _abstention_rate(readings) -> float:
+    return readings[f"category:{OUT_OF_DOMAIN}"].values["abstention_rate"]
+
+
+def test_rescore_recomputes_the_decision_from_the_persisted_probe() -> None:
+    """A filtered pass decided over a profile the persisted window does not contain.
+
+    Without the probe in the file the re-score could only read `low_confidence`, which is the
+    absence of cross-branch consensus and **not** the abstention: it would report a decision
+    the run never took. Both windows below carry `low_confidence=False`; only the profile
+    separates them, and the re-score must separate them too.
+    """
+    golden = load_golden_set()
+    # An out-of-domain query, because `abstention_rate` is reported over that category: it
+    # is the population the rule was calibrated against, and the one where declining is the
+    # right answer.
+    query = _out_of_domain_query(golden)
+    judged = golden.judgements_for(query.id)
+    candidates = tuple(_candidate(item.product_id) for item in judged[:10])
+
+    def _capture_with(probe):
+        window = CapturedWindow(
+            query_id=query.id,
+            query_text=query.text,
+            low_confidence=False,
+            candidates=candidates,
+            probe_distances=probe,
+        )
+        return Capture(
+            version=CAPTURE_VERSION,
+            golden_set_version="1:test",
+            fusion=_fingerprint(),
+            windows=(window,),
+            abstention=LIVE_RULE,
+        )
+
+    weights = BusinessWeights(availability=0.0)
+    flat = rescore(_capture_with(FLAT_PROBE), golden, weights)
+    peaked = rescore(_capture_with(PEAKED_PROBE), golden, weights)
+
+    # The rate is the reading the abstention feeds, and it moves with the profile alone.
+    assert _abstention_rate(flat) == 1.0
+    assert _abstention_rate(peaked) == 0.0
+
+
+def test_a_window_without_a_probe_is_scored_exactly_as_before() -> None:
+    """No probe means the rule read the served candidates, which is every capture until C40.
+
+    Asserted so the change cannot move a published figure: the golden set is unfiltered from
+    end to end, so no window in it carries a probe and every reading must be untouched.
+    """
+    golden = load_golden_set()
+    query = _out_of_domain_query(golden)
+    judged = golden.judgements_for(query.id)
+    window = CapturedWindow(
+        query_id=query.id,
+        query_text=query.text,
+        low_confidence=True,
+        candidates=tuple(_candidate(item.product_id) for item in judged[:10]),
+    )
+
+    readings = rescore(_capture(window), golden, BusinessWeights(availability=0.0))
+
+    assert window.probe_distances is None
+    assert _abstention_rate(readings) == 1.0, (
+        "with no probe the decision is read off the window, exactly as before C40"
+    )
+
+
+def test_a_persisted_probe_with_no_rule_is_refused_rather_than_guessed() -> None:
+    """Guessing is precisely what persisting the profile exists to avoid, so it raises."""
+    golden = load_golden_set()
+    query = _out_of_domain_query(golden)
+    judged = golden.judgements_for(query.id)
+    capture = Capture(
+        version=CAPTURE_VERSION,
+        golden_set_version="1:test",
+        fusion=_fingerprint(),
+        windows=(
+            CapturedWindow(
+                query_id=query.id,
+                query_text=query.text,
+                low_confidence=False,
+                candidates=tuple(_candidate(item.product_id) for item in judged[:10]),
+                probe_distances=FLAT_PROBE,
+            ),
+        ),
+    )
+
+    with pytest.raises(ConfigurationError, match="probe"):
+        rescore(capture, golden, BusinessWeights(availability=0.0))
+
+
+def test_the_probe_and_its_rule_survive_a_round_trip_through_the_file() -> None:
+    """Persisted means recoverable: a tuple of floats and three numbers, read back as they were."""
+    capture = Capture(
+        version=CAPTURE_VERSION,
+        golden_set_version="1:test",
+        fusion=_fingerprint(),
+        windows=(
+            CapturedWindow(
+                query_id="q01",
+                query_text="anillo de plata",
+                low_confidence=False,
+                candidates=(_candidate("00000000-0000-0000-0000-000000000001"),),
+                probe_distances=PEAKED_PROBE,
+            ),
+        ),
+        abstention=LIVE_RULE,
+    )
+
+    restored = Capture.from_json(capture.to_json())
+
+    assert restored.windows[0].probe_distances == PEAKED_PROBE
+    assert restored.abstention == LIVE_RULE
+
+
+def test_a_capture_written_before_the_probe_still_loads() -> None:
+    """The candidate set did not change, so those windows stay valid and must not be refused.
+
+    That is why `CAPTURE_VERSION` did not move: the rule reads a different profile, it does not
+    alter which candidates are retrieved, and the spec refuses a re-score only for the latter.
+    """
+    payload = _capture(_window(_candidate("00000000-0000-0000-0000-000000000001"))).to_json()
+    stripped = json.loads(payload)
+    del stripped["abstention"]
+    for window in stripped["windows"]:
+        del window["probe_distances"]
+
+    restored = Capture.from_json(json.dumps(stripped))
+
+    assert restored.windows[0].probe_distances is None
+    assert restored.abstention is None

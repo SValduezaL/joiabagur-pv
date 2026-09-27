@@ -40,6 +40,7 @@ taken under, so a re-score against a different one is refused instead of silentl
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field, replace
 from itertools import product
 from pathlib import Path
@@ -49,11 +50,18 @@ from jbg_ai.config.settings import FUSION_DEFAULTS, Settings
 from jbg_ai.evals.configs import EvalConfig
 from jbg_ai.evals.errors import ConfigurationError
 from jbg_ai.evals.golden import OUT_OF_DOMAIN, GoldenSet
-from jbg_ai.evals.metrics import Aggregate, aggregate, score_case
+from jbg_ai.evals.metrics import (
+    Aggregate,
+    CaseMetrics,
+    abstention_rate,
+    aggregate,
+    score_case,
+)
 from jbg_ai.evals.pricing import PriceList
 from jbg_ai.evals.provenance import Provenance
 from jbg_ai.evals.runner import ConfigReport, run_config
 from jbg_ai.indexing.embeddings import EmbeddingClient
+from jbg_ai.retrieval.abstention import AbstentionRule, should_abstain
 from jbg_ai.retrieval.filters import BusinessWeights, demote, extract_filters
 from jbg_ai.retrieval.ports import ProductSearchPort
 from jbg_ai.retrieval.synonyms import expand_query
@@ -394,6 +402,14 @@ class CapturedWindow:
     query_text: str
     low_confidence: bool
     candidates: tuple[CapturedCandidate, ...]
+    #: The distances the abstention rule actually read, when that is **not** the profile of
+    #: the candidates above. C40's probe: a filtered request decides over the unfiltered
+    #: profile, so the window persisted here is the filtered one and the decision is not
+    #: recoverable from it. `None` means the rule read the served candidates, which is the
+    #: case for every capture taken before C40 and for every unfiltered query — the whole
+    #: golden set today. That is why `CAPTURE_VERSION` does not move: the candidate set is
+    #: unchanged, so those captures stay valid and a re-score of them is not refused.
+    probe_distances: tuple[float, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -410,6 +426,11 @@ class Capture:
     #: the ones a configuration retrieved. Reading it in phase C would mean opening a pool,
     #: and that is exactly what phase C promises not to do.
     buckets: dict[str, str] = field(default_factory=dict)
+    #: The abstention rule the windows were captured under, so a re-score that has to
+    #: recompute a decision from a persisted probe can do it without reading settings — phase
+    #: C opens nothing, and `Settings()` needs an environment. `None` in a capture where no
+    #: window carries a probe, which is every capture taken before C40.
+    abstention: AbstentionRule | None = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False, indent=2)
@@ -432,6 +453,11 @@ class Capture:
                     query_id=item["query_id"],
                     query_text=item["query_text"],
                     low_confidence=item["low_confidence"],
+                    probe_distances=(
+                        None
+                        if item.get("probe_distances") is None
+                        else tuple(item["probe_distances"])
+                    ),
                     candidates=tuple(
                         CapturedCandidate(
                             **{
@@ -446,6 +472,11 @@ class Capture:
                 for item in data["windows"]
             ),
             buckets=dict(data.get("buckets") or {}),
+            abstention=(
+                None
+                if data.get("abstention") is None
+                else AbstentionRule(**data["abstention"])
+            ),
         )
 
 
@@ -508,6 +539,45 @@ def rescore_window(
     return ids if depth is None else ids[:depth]
 
 
+def _reading(cases: Sequence[CaseMetrics]) -> Aggregate:
+    """An aggregate that also carries the abstention, which `aggregate` does not average.
+
+    **A decision nobody can read is not a decision recomputed.** The re-score has always
+    passed an `abstained` flag into `score_case` and then dropped it: `AVERAGED` does not
+    include it, so nothing it produced ever surfaced. C40 needs it to surface, because the
+    requirement it implements is that a re-score **recompute** the decision from a persisted
+    probe rather than guess it, and that is only checkable if the result comes out.
+
+    Additive: every existing key keeps its value, and the metric the sweep decides on is not
+    this one.
+    """
+    base = aggregate(cases)
+    return Aggregate(
+        queries=base.queries,
+        values={**base.values, "abstention_rate": abstention_rate(cases)},
+    )
+
+
+def _abstained_of(window: CapturedWindow, rule: AbstentionRule | None) -> bool:
+    """Recomputed from the persisted probe, or read off the window when there is none.
+
+    **Two different things, and the file says which applies.** With no probe the rule read
+    the served candidates, and `low_confidence` is what this sweep has always captured for
+    the abstention rate — unchanged, so no published figure moves. With a probe the rule read
+    a profile the window does not contain, and guessing from `low_confidence` would report a
+    decision the run never took.
+    """
+    if window.probe_distances is None:
+        return window.low_confidence
+    if rule is None:
+        raise ConfigurationError(
+            f"window {window.query_id!r} persisted an abstention probe and the capture "
+            "carries no rule to recompute it with: guessing the decision from "
+            "low_confidence is exactly what persisting the profile exists to avoid"
+        )
+    return should_abstain(window.probe_distances, rule)
+
+
 def rescore(
     capture: Capture,
     golden: GoldenSet,
@@ -515,6 +585,7 @@ def rescore(
     *,
     buckets: dict[str, str] | None = None,
     depth: int | None = None,
+    abstention: AbstentionRule | None = None,
 ) -> dict[str, Aggregate]:
     """Score every window under one weight configuration. No provider, no database.
 
@@ -523,6 +594,7 @@ def rescore(
     stable sort over it, and nothing in the path can vary.
     """
     by_query = {query.id: query for query in golden.retrieval_queries}
+    rule = abstention or capture.abstention
     cases = []
     for window in capture.windows:
         if window.query_id not in by_query:
@@ -533,7 +605,7 @@ def rescore(
                 golden,
                 window.query_id,
                 ranked,
-                abstained=window.low_confidence,
+                abstained=_abstained_of(window, rule),
                 buckets=buckets,
             )
         )
@@ -547,7 +619,7 @@ def rescore(
         if query.category != OUT_OF_DOMAIN
     }
     scored = [case for case in cases if case.query_id in answerable]
-    readings = {"global": aggregate(scored)}
+    readings = {"global": _reading(scored)}
     for name, wanted in (
         (DIAGNOSTIC_READING, True),
         (DECIDING_READING, False),
@@ -557,7 +629,7 @@ def rescore(
             for query in golden.retrieval_queries
             if bool(query.in_tuning_set) is wanted
         }
-        readings[name] = aggregate(
+        readings[name] = _reading(
             [case for case in scored if case.query_id in members]
         )
     for category in sorted({query.category for query in golden.retrieval_queries}):
@@ -566,7 +638,7 @@ def rescore(
             for query in golden.retrieval_queries
             if query.category == category
         }
-        readings[f"category:{category}"] = aggregate(
+        readings[f"category:{category}"] = _reading(
             [case for case in cases if case.query_id in members]
         )
     return readings
@@ -611,6 +683,10 @@ async def capture(
 
     for query in golden.retrieval_queries:
         seen: list[CapturedCandidate] = []
+        # Filled only when the rule read something other than the window below it, which on
+        # today's golden set — every query unfiltered — is never. It is collected anyway so
+        # that a filtered set captured later needs no change here.
+        probe: list[tuple[float, ...]] = []
 
         def sink(candidates, _seen=seen) -> None:
             _seen.clear()
@@ -650,6 +726,7 @@ async def capture(
             signal_pos_id=UUID(config.signal_pos_id) if config.signal_pos_id else None,
             business_weight_availability=0.0,
             on_fused_candidates=sink,
+            on_abstention_profile=probe.append,
         )
         windows.append(
             CapturedWindow(
@@ -657,6 +734,7 @@ async def capture(
                 query_text=query.text,
                 low_confidence=response.low_confidence,
                 candidates=tuple(seen),
+                probe_distances=probe[-1] if probe else None,
             )
         )
 
@@ -669,6 +747,15 @@ async def capture(
             await search.scope_buckets(UUID(config.signal_pos_id))
             if config.signal_pos_id
             else {}
+        ),
+        # Recorded whether or not any window needed it. It costs three numbers and it states
+        # the regime the capture was taken in, which is the same argument that put the fusion
+        # fingerprint here: a reader of the file should not have to reconstruct the rule from
+        # an environment that has moved on.
+        abstention=AbstentionRule(
+            enabled=settings.jpv_abstention_enabled,
+            band_alpha=settings.jpv_abstention_band_alpha,
+            min_candidates=settings.jpv_abstention_band_min_candidates,
         ),
     )
 

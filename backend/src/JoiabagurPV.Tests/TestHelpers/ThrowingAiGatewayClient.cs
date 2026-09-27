@@ -47,4 +47,8 @@ public abstract class ThrowingAiGatewayClient : IAiGatewayClient
     public virtual Task<AiSubstitutesResponse> SubstitutesAsync(
         AiSubstitutesRequest request, AiCallScope scope, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException(nameof(SubstitutesAsync));
+
+    public virtual Task<AiAssistAgentResponse> AssistAgentAsync(
+        AiAssistAgentRequest request, AiCallScope scope, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException(nameof(AssistAgentAsync));
 }

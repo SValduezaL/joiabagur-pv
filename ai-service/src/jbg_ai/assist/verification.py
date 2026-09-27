@@ -32,10 +32,13 @@ from jbg_ai.assist.constants import (
     CAUSE_DECIMAL_FORM,
     CAUSE_ENUMERATION_FORMAT,
     CAUSE_FIGURE_NOT_IN_CONTEXT,
+    CAUSE_PLACEHOLDER_IN_FREE_QUERY,
     CAUSE_STOCK_ADJACENT,
     CURRENCY_MARKERS,
     HARD_VIOLATION_CAUSES,
+    PRICE_PLACEHOLDER,
     STOCK_MARKERS,
+    STOCK_PLACEHOLDER,
 )
 from jbg_ai.assist.prompt import (
     ENUMERATION,
@@ -231,17 +234,53 @@ def check_numeric_gate(pitch: str, payload: PitchContext) -> tuple[Violation, ..
     return tuple(violations)
 
 
-def verify(generated: AssistPitch, payload: PitchContext) -> tuple[Violation, ...]:
-    """The three checks, cheapest first, with every violation collected rather than the first.
+def check_free_query_placeholders(
+    pitch: str, payload: PitchContext
+) -> tuple[Violation, ...]:
+    """A price or stock placeholder written where no piece is anchored. C40.
 
-    All of them are returned because all of them travel in **one** repair: the two gates fail
+    **Checked only when nothing is anchored**, and the asymmetry is the whole rule. With one
+    piece named, a placeholder is not a fault but exactly what the prompt asks for: the .NET side
+    substitutes the real figure, which is what keeps this service from ever writing a price.
+
+    Without an anchor there is nothing to substitute it against, and
+    `PitchPlaceholderResolver` withholds the **entire** argument the moment it meets one — by
+    design, and with a test on the other side fixing it. So this is not a stylistic slip that
+    degrades the prose: it deletes it. `assist/v5` asks the model not to write them; this is what
+    makes the asking a guarantee, and what makes the frequency readable **partitioned by cause**
+    rather than surfacing as an unexplained drop in delivered arguments.
+
+    One violation per marker present, not one per occurrence: the repair message needs to name
+    which marker to remove, and naming it twice adds nothing.
+    """
+    if payload.is_anchored:
+        return ()
+
+    return tuple(
+        Violation(
+            cause=CAUSE_PLACEHOLDER_IN_FREE_QUERY,
+            detail=(
+                f"«{marker}» no puede aparecer en una consulta sin pieza anclada: no hay nada "
+                "contra lo que resolverlo. Habla de la pieza sin nombrar precio ni existencias."
+            ),
+        )
+        for marker in (PRICE_PLACEHOLDER, STOCK_PLACEHOLDER)
+        if marker in pitch
+    )
+
+
+def verify(generated: AssistPitch, payload: PitchContext) -> tuple[Violation, ...]:
+    """The four checks, cheapest first, with every violation collected rather than the first.
+
+    All of them are returned because all of them travel in **one** repair: the gates fail
     for the same underlying reason — a model that invents a price is the one that hangs a
-    citation — so they are not two independent faults deserving two attempts.
+    citation — so they are not independent faults deserving separate attempts.
     """
     return (
         check_resolution(generated.used, payload)
         + check_correspondence(generated.used, generated.pitch)
         + check_numeric_gate(generated.pitch, payload)
+        + check_free_query_placeholders(generated.pitch, payload)
     )
 
 

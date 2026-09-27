@@ -1,12 +1,12 @@
 # T-AIENG-025bis: Retire the flat fusion, the per-list weights and the knobs left without a reader (C25bis)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-024](../archive/2026-09-11-add-eval-harness-golden-set-and-baselines/ticket.md) y
-> [T-AIENG-025](../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md).
+> siguen [T-AIENG-024](../../archive/2026-09-11-add-eval-harness-golden-set-and-baselines/ticket.md) y
+> [T-AIENG-025](../../archive/2026-09-12-recalibrate-ranking-and-abstention/ticket.md).
 
-**HU origen:** [HU-AIENG-025bis](../../../Documentos/Historias/AI-Eng/HU-AIENG-025bis.md)
+**HU origen:** [HU-AIENG-025bis](../../../../Documentos/Historias/AI-Eng/HU-AIENG-025bis.md)
 **Change:** `clean-plain-fusion` (C25bis) · **Épica:** EP14 (la cierra) · **Rama:** `c25bis-clean-plain-fusion`
-**Decisiones y evidencias:** [c25bis-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md)
+**Decisiones y evidencias:** [c25bis-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md)
 
 ---
 
@@ -43,19 +43,19 @@ es la única que la ruta viva ejecuta hoy.
 
 | Pieza | Estado hoy | Qué hace C25bis |
 |---|---|---|
-| [`retrieval/orchestrator.py`](../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | `_fuse_branches` con **dos modos**; `fusion_mode` gobierna la traza de `stage=coverage` y la de `stage=fuse` | Retira la rama plana, el parámetro `fusion`, los tres `weight_*` y la ramificación del log |
+| [`retrieval/orchestrator.py`](../../../../ai-service/src/jbg_ai/retrieval/orchestrator.py) | `_fuse_branches` con **dos modos**; `fusion_mode` gobierna la traza de `stage=coverage` y la de `stage=fuse` | Retira la rama plana, el parámetro `fusion`, los tres `weight_*` y la ramificación del log |
 | `_fuse_two_stage` (líneas 775-800) | Recibe `internal_weights=(w_typed, w_expanded)` **desde los ajustes** | Pesos iguales declarados en el módulo. Orden **bit-idéntico**: de la etapa 1 sólo se reenvía el orden |
-| [`config/settings.py`](../../../ai-service/src/jbg_ai/config/settings.py) | `FUSION_DEFAULTS` con `jpv_fusion_mode` y los tres pesos por lista; `FUSION_MODE_*`; validador `known_fusion_mode`; entradas en el fallback de blancos y en `canonical_openapi_settings()` | Los retira todos. `jpv_rrf_k`, `jpv_branch_depth` y los pesos por rama **se quedan** |
+| [`config/settings.py`](../../../../ai-service/src/jbg_ai/config/settings.py) | `FUSION_DEFAULTS` con `jpv_fusion_mode` y los tres pesos por lista; `FUSION_MODE_*`; validador `known_fusion_mode`; entradas en el fallback de blancos y en `canonical_openapi_settings()` | Los retira todos. `jpv_rrf_k`, `jpv_branch_depth` y los pesos por rama **se quedan** |
 | `Settings.model_config` | `extra="ignore"` | **Sin cambios** (D-G) |
-| [`evals/configs.py`](../../../ai-service/src/jbg_ai/evals/configs.py) | `EvalConfig` con `fusion`, `weight_typed`, `weight_expanded`, `weight_vector`; `v2-hibrido` en `ABLATION_ORDER` y `POOLED`; `load_all()` hace `glob("*.yaml")` **no recursivo** y ya rechaza claves desconocidas (127-131) | Retira los cuatro campos y las dos entradas. La guarda de claves desconocidas **se conserva y pasa a ser el mecanismo del escenario de fallo ruidoso** |
-| [`evals/sweep.py`](../../../ai-service/src/jbg_ai/evals/sweep.py) | `FusionFingerprint` con `mode` y los tres `weight_*`, persistida en el fichero de captura | Retira esos cuatro campos. Las capturas anteriores dejan de ser legibles: declarado, no versionadas |
-| [`evals/runner.py`](../../../ai-service/src/jbg_ai/evals/runner.py) `_fusion_mode_of` | Resuelve `config.fusion or settings.jpv_fusion_mode` | Resuelve desde constante: la composición viva, o `NO_FUSION` para las filas que no fusionan |
-| [`evals/provenance.py`](../../../ai-service/src/jbg_ai/evals/provenance.py) | Tupla de **seis** elementos; el docstring justifica el sexto por la existencia del modo plano | **Conserva el campo**; reescribe la justificación. El requisito vivo que lo mandataba desaparece, así que pasa a mandatarlo `retrieval-evaluation` |
-| [`evals/report.py`](../../../ai-service/src/jbg_ai/evals/report.py) | Columna `fusión` por fila | **Sin cambios**: sigue distinguiendo las filas que fusionan de las que no |
-| [`evals/configs/v2-hibrido.yaml`](../../../ai-service/evals/configs/v2-hibrido.yaml) | Fija `fusion: flat`, los tres pesos y `abstain: false` | Se mueve a `evals/configs/retired/` con cabecera de histórico |
+| [`evals/configs.py`](../../../../ai-service/src/jbg_ai/evals/configs.py) | `EvalConfig` con `fusion`, `weight_typed`, `weight_expanded`, `weight_vector`; `v2-hibrido` en `ABLATION_ORDER` y `POOLED`; `load_all()` hace `glob("*.yaml")` **no recursivo** y ya rechaza claves desconocidas (127-131) | Retira los cuatro campos y las dos entradas. La guarda de claves desconocidas **se conserva y pasa a ser el mecanismo del escenario de fallo ruidoso** |
+| [`evals/sweep.py`](../../../../ai-service/src/jbg_ai/evals/sweep.py) | `FusionFingerprint` con `mode` y los tres `weight_*`, persistida en el fichero de captura | Retira esos cuatro campos. Las capturas anteriores dejan de ser legibles: declarado, no versionadas |
+| [`evals/runner.py`](../../../../ai-service/src/jbg_ai/evals/runner.py) `_fusion_mode_of` | Resuelve `config.fusion or settings.jpv_fusion_mode` | Resuelve desde constante: la composición viva, o `NO_FUSION` para las filas que no fusionan |
+| [`evals/provenance.py`](../../../../ai-service/src/jbg_ai/evals/provenance.py) | Tupla de **seis** elementos; el docstring justifica el sexto por la existencia del modo plano | **Conserva el campo**; reescribe la justificación. El requisito vivo que lo mandataba desaparece, así que pasa a mandatarlo `retrieval-evaluation` |
+| [`evals/report.py`](../../../../ai-service/src/jbg_ai/evals/report.py) | Columna `fusión` por fila | **Sin cambios**: sigue distinguiendo las filas que fusionan de las que no |
+| [`evals/configs/v2-hibrido.yaml`](../../../../ai-service/evals/configs/retired/v2-hibrido.yaml) | Fija `fusion: flat`, los tres pesos y `abstain: false` | Se mueve a `evals/configs/retired/` con cabecera de histórico |
 | `COVERAGE_RULES` | `("continuous", "none")`; la forma binaria se implementó y se retiró **dentro de C25** | **Sin cambios.** La pata se declara cumplida y se comprueba |
-| `coverage_rule` | No es campo de `Settings`; el router no lo pasa ([`retrieval.py`](../../../ai-service/src/jbg_ai/api/routers/retrieval.py) 118-124) | **Sin cambios** en código; se corrige la cláusula de la spec que promete un rollback de despliegue inexistente |
-| [`ai-service/openapi.json`](../../../ai-service/openapi.json) | Congelado; no menciona la fusión | **No se mueve** |
+| `coverage_rule` | No es campo de `Settings`; el router no lo pasa ([`retrieval.py`](../../../../ai-service/src/jbg_ai/api/routers/retrieval.py) 118-124) | **Sin cambios** en código; se corrige la cláusula de la spec que promete un rollback de despliegue inexistente |
+| [`ai-service/openapi.json`](../../../../ai-service/openapi.json) | Congelado; no menciona la fusión | **No se mueve** |
 | Configuración de despliegue | **No existe** `.env.example`, ni `JPV_` en `terraform/`, ni compose de ai-service | Sólo se comprueba; se espera vacío |
 
 ### Las tres refutaciones de la propia ficha
@@ -242,7 +242,7 @@ de ser fila.
 - **Frontera intacta:** Python sigue haciendo sólo vectorial y LLM. No hay lógica de negocio, ni
   contrato, ni esquema tocados.
 - **Decisiones previas que gobiernan:** las de
-  [C25](../archive/2026-09-12-recalibrate-ranking-and-abstention/design.md) —la fusión en dos etapas,
+  [C25](../../archive/2026-09-12-recalibrate-ranking-and-abstention/design.md) —la fusión en dos etapas,
   la regla adaptativa sin parámetro, la señal que lee sin restringir— **no se revisan**. C25bis las
   da por firmes y retira únicamente lo que existía para demostrarlas.
 - **Breaking change interno y declarado:** `v2-hibrido` deja de ser ejecutable. No hay breaking
@@ -323,14 +323,14 @@ de ser fila.
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-025bis](../../../Documentos/Historias/AI-Eng/HU-AIENG-025bis.md)
-- **Decisiones de exploración:** [c25bis-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md)
-- **Change origen del andamio:** [C25 · recalibrate-ranking-and-abstention](../archive/2026-09-12-recalibrate-ranking-and-abstention/)
-- **Specs vivas:** [`hybrid-fusion`](../../specs/hybrid-fusion/spec.md) · [`retrieval-evaluation`](../../specs/retrieval-evaluation/spec.md)
-- **Tabla publicada:** [c25-baselines-2026-09-11.md](../../../ai-service/evals/results/c25-baselines-2026-09-11.md)
-- **Mediciones de C25:** [c25-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-implementation-measurements.md)
-- **Plan de changes:** [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C25bis
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **HU origen:** [HU-AIENG-025bis](../../../../Documentos/Historias/AI-Eng/HU-AIENG-025bis.md)
+- **Decisiones de exploración:** [c25bis-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25bis-exploration-decisions.md)
+- **Change origen del andamio:** [C25 · recalibrate-ranking-and-abstention](../../archive/2026-09-12-recalibrate-ranking-and-abstention/)
+- **Specs vivas:** [`hybrid-fusion`](../../../specs/hybrid-fusion/spec.md) · [`retrieval-evaluation`](../../../specs/retrieval-evaluation/spec.md)
+- **Tabla publicada:** [c25-baselines-2026-09-11.md](../../../../ai-service/evals/results/c25-baselines-2026-09-11.md)
+- **Mediciones de C25:** [c25-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c25-implementation-measurements.md)
+- **Plan de changes:** [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), ficha C25bis
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
 
 ---
 

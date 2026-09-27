@@ -332,6 +332,19 @@ def veto_violations(
 
 
 def git_sha() -> str:
+    """The revision this measurement ran at, or `unknown` — never a guess.
+
+    **`GIT_SHA` wins over the subprocess, and that is not a convenience.** A measurement taken
+    from inside the container has no `.git` around it, so the subprocess fails and the artifact
+    records `unknown` — which is honest but useless, and it happened to the two artifacts that
+    carry the figure deciding whether M1 has prose at all. Every real measurement against the
+    provider runs in the container, so the path that has no sha is the normal path, not the
+    exceptional one. Passing it in (`-e GIT_SHA=$(git rev-parse --short HEAD)`) is what makes
+    those runs comparable; the subprocess stays for a run taken from the host.
+    """
+    from_env = os.environ.get("GIT_SHA", "").strip()
+    if from_env:
+        return from_env
     try:
         return subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],

@@ -142,13 +142,29 @@ def query_block(user_message: str) -> str:
 
 
 def data_block(user_message: str) -> dict[str, Any]:
-    """The JSON object of a user message, parsed back. Used to read what was handed over."""
-    opening = user_message.index("{")
-    depth = 0
-    for offset, char in enumerate(user_message[opening:], start=opening):
-        depth += (char == "{") - (char == "}")
-        if depth == 0:
-            return json.loads(user_message[opening : offset + 1])
+    """The JSON object of a user message, parsed back. Used to read what was handed over.
+
+    **The first `{` is not necessarily the one that opens it**, which was true by accident
+    until `assist/v5`. The task sections of the free query now name the placeholders they
+    forbid — «no escribas `{{price}}` ni `{{stock}}`» — and a task section is part of the user
+    message, so a walk anchored on the first brace lands inside `{{price}}`, balances there and
+    hands `json.loads` something that is not JSON.
+
+    Each candidate opening is therefore tried in turn and the first one that parses wins. The
+    production side never does this — it builds the message and never reads it back — so the
+    fragility was only ever the helper's.
+    """
+    for opening, char in enumerate(user_message):
+        if char != "{":
+            continue
+        depth = 0
+        for offset, inner in enumerate(user_message[opening:], start=opening):
+            depth += (inner == "{") - (inner == "}")
+            if depth == 0:
+                try:
+                    return json.loads(user_message[opening : offset + 1])
+                except json.JSONDecodeError:
+                    break
     raise AssertionError("the user message carries no complete JSON object")
 
 

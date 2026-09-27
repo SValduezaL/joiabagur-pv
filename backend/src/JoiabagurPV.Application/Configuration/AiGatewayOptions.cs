@@ -88,6 +88,51 @@ public class AiGatewayOptions
     public int AssistTimeoutMs { get; set; } = 10_000;
 
     /// <summary>
+    /// Floor of <see cref="AgentTimeoutMs"/>, validated at start-up.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>The service's own wall-clock ceiling for one agent request</strong>:
+    /// <c>AGENT_DEADLINE_SECONDS = 15 s</c>
+    /// (<c>ai-service/src/jbg_ai/assist/constants.py</c>). Exceeding that deadline is, on the
+    /// Python side, a <em>degradation and not a failure</em> — the evidence gathered so far is
+    /// served and the response says the clock stopped it — so an outer budget below it would throw
+    /// away an answer the service was about to deliver, and replace something useful with nothing.
+    /// </para>
+    /// <para>
+    /// If the constant moves on the Python side, this one moves with it.
+    /// </para>
+    /// </remarks>
+    public const int MinimumAgentTimeoutMs = 15_000;
+
+    /// <summary>
+    /// Time budget for a sale agent call on the <c>ai-agent</c> client, in milliseconds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>Above the service's ceiling plus network margin, and deliberately not fitted to the
+    /// maximum observed.</strong> 18 s: the 15 s the service allows itself plus 3 s for the hop. The
+    /// maximum measured over 204 requests against the real provider was 11 917 ms on the model that
+    /// is served — so 15 s would already look generous — and that is precisely the reasoning to
+    /// resist. Cutting at the observed maximum has an expensive failure mode: it aborts a request
+    /// <strong>Python has already paid for in full</strong>, provider calls included, and hands the
+    /// counter nothing for the money.
+    /// </para>
+    /// <para>
+    /// <strong>Not <see cref="AssistTimeoutMs"/>, and that is the point of a client of its own.</strong>
+    /// The agent's median latency, 5 311 ms, is of the order of the <em>total</em> the generative
+    /// route declares as its ceiling; a client carrying the 10 s generative budget would cut a large
+    /// share of agent requests. And the budgets are per feature rather than per request, so sharing
+    /// one would also share a circuit: a slow conversation would open the breaker of a route that is
+    /// answering correctly.
+    /// </para>
+    /// <para>
+    /// It may be lowered, never below <see cref="MinimumAgentTimeoutMs"/>, which start-up refuses.
+    /// </para>
+    /// </remarks>
+    public int AgentTimeoutMs { get; set; } = 18_000;
+
+    /// <summary>
     /// Time budget for a catalog enrichment batch, in milliseconds.
     /// </summary>
     /// <remarks>

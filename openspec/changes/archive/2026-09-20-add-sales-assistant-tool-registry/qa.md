@@ -172,7 +172,7 @@ una prueba nueva que repitiera eso habría sido duplicar cobertura, no añadirla
 ## 4. Los nueve escenarios de la HU
 
 La tabla completa, escenario a escenario, está en el **§6 del
-[informe de implementación](../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md)**
+[informe de implementación](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md)**
 (tarea 7.6). Resumen de cobertura:
 
 | Escenario de la HU | Tests | Estado |
@@ -200,7 +200,7 @@ La tabla completa, escenario a escenario, está en el **§6 del
 | **5** Las seis tools | las seis sobre su servicio, `top_k` acotado, observaciones acotadas | ✅ §3 filas 1-22 |
 | **6** Los invariantes | conjunto congelado, solo-lectura por introspección, falla al registrar, sin proveedor, sin id interno, forma de los esquemas | ✅ §6 |
 | **7** Trazabilidad | los cinco tests nombrados más los nueve escenarios | ✅ §3, §4 |
-| **8** Cierre | contrato, suite por nombres, validate, enlaces, informe, docs, C32b y `DEFERRED_TASKS` | ✅ §1, §7 · [informe](../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md) · [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) |
+| **8** Cierre | contrato, suite por nombres, validate, enlaces, informe, docs, C32b y `DEFERRED_TASKS` | ✅ §1, §7 · [informe](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c32a-implementation-measurements.md) · [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) |
 
 **44/44 tareas marcadas, y ninguna a medias.**
 
@@ -494,7 +494,7 @@ tres sitios acaba pareciendo el correcto.
    las dos llegan en rojo de fábrica; no se midió su línea base porque no se tocó ni un fichero de
    ninguna de las dos.
 6. **El endpoint .NET de disponibilidad puntual.** Identificado, acotado y **no hecho**, con su
-   motivo en [`DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md). Con una advertencia heredada: **un
+   motivo en [`DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md). Con una advertencia heredada: **un
    cliente HTTP de propósito general no pasará el tercer eje del invariante**, porque expone `post`,
    `put`, `patch` y `delete`.
 
@@ -553,7 +553,7 @@ tabla (`ProductConfiguration`: `HasIndex(p => p.SKU).IsUnique()`), no este esque
 
 **Y no es un descuido de aquella migración: es una decisión registrada.** El ticket del change que
 creó la tabla plantea la pregunta y la responde —
-[`2026-08-15-add-pgvector-schema-foundation`](../archive/2026-08-15-add-pgvector-schema-foundation/ticket.md),
+[`2026-08-15-add-pgvector-schema-foundation`](../../archive/2026-08-15-add-pgvector-schema-foundation/ticket.md),
 pregunta abierta 2: *«¿Índice único sobre `sku` en `product_document`? … **No se crea.** La unicidad
 es del corpus, y C13 hace upsert por `product_id`»*. Así que el comentario no sólo afirmaba algo
 falso del árbol: **contradecía una decisión tomada y archivada**, y lo hacía para justificar el

@@ -12,6 +12,7 @@ from jbg_ai.api.health_report import (
     SqlAlchemyHealthProbe,
     cached_health_report,
 )
+from jbg_ai.api.lifespan import build_lifespan
 from jbg_ai.api.middleware import TraceIdMiddleware
 from jbg_ai.api.routers import DOMAIN_ROUTERS, evals
 from jbg_ai.config import Settings, get_settings
@@ -52,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=resolved.service_version,
         docs_url=None,
         redoc_url=None,
+        lifespan=build_lifespan(resolved),
     )
     app.state.settings = resolved
     app.add_middleware(TraceIdMiddleware)

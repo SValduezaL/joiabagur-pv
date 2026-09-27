@@ -23,6 +23,18 @@ public class AiSearchResponse
     /// </summary>
     public bool LowConfidence { get; set; }
 
+    /// <summary>
+    /// Codes of the closed vocabulary that describe the QUERY rather than a piece. Today
+    /// only <c>filters_too_narrow</c>: the query is answerable and the caller's own
+    /// catalog-side filters are what left almost nothing.
+    /// </summary>
+    /// <remarks>
+    /// Decided by retrieval and not by the assistance layer, because it needs the unfiltered
+    /// abstention probe and the probe lives there. Carried here rather than recomputed so the
+    /// semantic route and the assisted one cannot say different things about one search.
+    /// </remarks>
+    public List<string> Warnings { get; set; } = [];
+
     /// <summary>Correlation identifier echoed by the service.</summary>
     public string TraceId { get; set; } = string.Empty;
 

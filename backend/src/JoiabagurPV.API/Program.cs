@@ -43,6 +43,11 @@ builder.Services.AddAssistedSearch(builder.Configuration);
 // Sale card routes (C34): sale assistance and substitutes. Same reasoning as assisted search —
 // the per-point-of-sale switch reloads through IOptionsMonitor without a redeploy.
 builder.Services.AddSalesAssist(builder.Configuration);
+builder.Services.AddFreeQuerySearch(builder.Configuration);
+
+// The sale agent (C42). Its own section, its own switch and its own allowance: the binding
+// constraint is the tokens-per-minute quota, which admits about one request per minute.
+builder.Services.AddAgentAssist(builder.Configuration);
 
 // Add API services
 builder.Services.AddApiServices(builder.Configuration);

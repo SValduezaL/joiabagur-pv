@@ -94,8 +94,13 @@ def test_stub_mode_still_serves_the_fixture(issue_token: Callable[..., str]) -> 
         )
 
     assert response.status_code == 200
-    # The fixture keeps its placeholders; the real path emits an empty pitch.
-    assert "{{price}}" in response.json()["pitch"]
+    # The fixture still serves prose where the real path would emit an empty pitch, which is
+    # what this test is about. It no longer carries placeholders: C40 took them out of the
+    # free-query branch of the double, because .NET withholds the whole argument when one
+    # reaches it with no anchor to resolve against, so writing them here would have taught
+    # every stub-backed client a contract the real pipeline refuses.
+    assert response.json()["pitch"]
+    assert "{{price}}" not in response.json()["pitch"]
 
 
 def test_the_delivering_change_constant_is_gone_from_the_module() -> None:

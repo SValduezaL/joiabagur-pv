@@ -7,6 +7,7 @@ No database, no embedding provider, no network. The probe is injected on
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -191,3 +192,127 @@ def test_health_keeps_the_fields_earlier_changes_promised(field: str) -> None:
         body = client.get("/health").json()
 
     assert field in body
+
+
+# ----------------------------------------------------- the projection section (C41)
+
+
+def test_health_reports_projection_freshness_from_the_checkpoint() -> None:
+    """The age is the drain's, taken from the checkpoint and never from the rows.
+
+    The feed is incremental by keyset, so `ai.pos_projection.refreshed_at` records when an
+    assignment last changed, not when the projection was last looked at. The probe supplies
+    only the checkpoint instant, which is what makes the wrong source unreachable from here.
+    """
+    synced = datetime.now(tz=UTC) - timedelta(minutes=4)
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=synced,
+        projection_full_synced_at=synced,
+        projection_points_of_sale=11,
+        projection_scoped_points_of_sale=11,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    projection = body["projection"]
+    assert projection["status"] == "ok"
+    assert projection["stale"] is False
+    assert 0 <= projection["age_seconds"] < 3600
+    assert projection["synced_at"] == synced.isoformat()
+    assert projection["ceiling_seconds"] == 3600
+    assert projection["shops_without_scope"] == 0
+
+
+def test_health_reports_a_stale_projection_without_degrading_the_service() -> None:
+    """Staleness widens the candidate window; it does not break the service.
+
+    Letting it move the top-level status would couple the container health check to a cron,
+    and would paint an environment serving correct results as broken.
+    """
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC) - timedelta(days=20),
+        projection_points_of_sale=11,
+        projection_scoped_points_of_sale=11,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["status"] == "OK"
+    assert body["projection"]["status"] == "stale"
+    assert body["projection"]["stale"] is True
+    assert body["projection"]["age_seconds"] > 3600
+
+
+def test_health_reports_a_point_of_sale_left_without_any_assortment() -> None:
+    """The failure C34 hit: 503 on every scoped retrieval while the deployment looks healthy."""
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC),
+        projection_points_of_sale=12,
+        projection_scoped_points_of_sale=11,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    assert body["projection"]["points_of_sale"] == 12
+    assert body["projection"]["shops_without_scope"] == 1
+
+
+def test_health_distinguishes_a_projection_never_drained_from_a_stale_one() -> None:
+    """Different causes, different fixes, and only this section can tell them apart."""
+    probe = FakeHealthProbe(documents=1, models=(DEFAULT_EMBEDDING_MODEL,))
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["projection"]["status"] == "never_drained"
+    assert body["projection"]["age_seconds"] is None
+    assert body["projection"]["synced_at"] is None
+
+
+def test_health_reports_failed_pages_rather_than_swallowing_them() -> None:
+    """Nothing else reads `ai.sync_failure`, so a page that failed is otherwise invisible."""
+    probe = FakeHealthProbe(
+        documents=1,
+        models=(DEFAULT_EMBEDDING_MODEL,),
+        projection_synced_at=datetime.now(tz=UTC),
+        projection_failed_pages=3,
+    )
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    assert body["projection"]["failed_pages"] == 3
+
+
+def test_health_still_carries_the_projection_when_the_database_is_unreachable() -> None:
+    """Absent and unknown are different, and the consumer must not have to guess.
+
+    An omitted section is indistinguishable from an older service that predates it.
+    """
+    probe = FakeHealthProbe(database_reachable=False)
+    app = _app(probe)
+
+    with TestClient(app) as client:
+        body = client.get("/health").json()
+
+    assert body["projection"]["status"] == "unavailable"
+    assert body["projection"]["stale"] is None
+    assert body["projection"]["shops_without_scope"] is None

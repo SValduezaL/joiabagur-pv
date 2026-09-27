@@ -53,6 +53,8 @@ public static class AiSearchServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddSingleton<IAssistedSearchCandidateCache, AssistedSearchCandidateCache>();
+        // Shared with the free-query search of C40, which projects the same row shape.
+        services.AddScoped<IAssistedSearchResultProjector, AssistedSearchResultProjector>();
         services.AddScoped<IAssistedSearchService, AssistedSearchService>();
 
         return services;

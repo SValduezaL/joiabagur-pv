@@ -20,6 +20,20 @@ POS_CLAIM = "pos_id"
 #: Retrieval, sale assistance and inventory: the caller is always somewhere.
 REQUIRED_CLAIMS = (*BASE_CLAIMS, POS_CLAIM)
 
+#: Catalog retrieval and sale assistance, for a search the operator deliberately spread over
+#: every shop. C40.
+#:
+#: **The same tuple as `CATALOG_CLAIMS`, and a different name on purpose.** What it admits is
+#: the *absence* of `pos_id`, which makes the availability prefilter **not apply** — it does
+#: not make the claim match everything, and no wildcard becomes possible. Sharing the constant
+#: would make the two intents indistinguishable at the call site, and the next person to widen
+#: one would widen the other; sharing the *value* is fine, because both mean «the base claims
+#: and nothing else».
+#:
+#: `AiCallScope` on the .NET side draws exactly the same distinction, for the same reason, with
+#: `Catalog` and `AllPointsOfSale` holding identical fields and different kinds.
+UNSCOPED_CLAIMS = BASE_CLAIMS
+
 #: Enrichment and index synchronization: the catalog belongs to no point of sale,
 #: so demanding one would force the caller to invent a value — and a wildcard
 #: `pos_id` is exactly what must never exist, because from the soft-prefilter
@@ -64,9 +78,17 @@ def decode_service_token(
 
     # Carried when present even if not required, so a point-of-sale token used on
     # a catalog route still reports the scope it was issued with.
-    if POS_CLAIM not in claims:
+    #
+    # **A present-but-empty claim is rejected, never read as absence.** Until C40 that
+    # distinction cost nothing: `pos_id` was required wherever it mattered, so a blank one
+    # failed the loop above. Once retrieval and sale assistance accept its *omission*, dropping
+    # a blank value here would silently promote a shop-scoped token to «every shop» — the
+    # wildcard-by-accident that the whole design of this claim exists to prevent. Absence is the
+    # key not being there; anything else is a value, and a value has to be usable.
+    if POS_CLAIM not in claims and POS_CLAIM in payload:
         optional = payload.get(POS_CLAIM)
-        if optional is not None and str(optional).strip():
-            claims[POS_CLAIM] = str(optional)
+        if optional is None or not str(optional).strip():
+            raise InvalidServiceToken
+        claims[POS_CLAIM] = str(optional)
 
     return ServicePrincipal(**claims)

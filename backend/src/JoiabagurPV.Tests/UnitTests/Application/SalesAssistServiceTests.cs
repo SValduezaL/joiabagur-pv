@@ -450,6 +450,27 @@ public class SalesAssistServiceTests
         (await AssistAsync()).Response!.PitchStatus.Should().Be(PitchStatus.WithheldByAi);
     }
 
+    /// <summary>
+    /// The only pair of the design's order (D6) the rest of this class leaves undecided: rule 4,
+    /// the sold-out anchor, comes before rule 5, the placeholder that would not resolve. Both
+    /// withhold the argument, so only the state told apart distinguishes them — and the state is
+    /// what C36 paints. Added by the independent verification, which swapped the two rules and
+    /// watched all forty-two tests here stay green.
+    /// </summary>
+    [Fact]
+    public async Task SalesAssist_OutOfStockAnchor_WinsOverAnUnresolvedPlaceholder()
+    {
+        _carried.Clear();
+        Carry(Anchor, "ERIZO-M", quantity: 0);
+        GatewayReturns(Ai([Member(Anchor, "ERIZO-M")], pitch: "Por {{precio}} la tienes hoy."));
+
+        var response = (await AssistAsync()).Response!;
+
+        response.PitchStatus.Should().Be(PitchStatus.WithheldOutOfStock,
+            "rule 4 precedes rule 5, and the first that applies wins");
+        response.Pitch.Should().BeNull();
+    }
+
     [Fact]
     public async Task SalesAssist_WithQuestion_ReturnsCitationsCarryingClaimScope()
     {
@@ -553,6 +574,70 @@ public class SalesAssistServiceTests
         new AiGatewayConfigurationException("401"),
         new AiRequestRejectedException(422, "422")
     };
+
+    // ---------------------------------------------------------------- the reason reaches the body
+
+    [Fact]
+    public async Task SalesAssist_WhenProductNotIndexed_ReportsThatReason()
+    {
+        GatewayThrows(new AiRequestRejectedException(422, "not indexed"));
+
+        var response = (await AssistAsync()).Response!;
+
+        response.DegradedReason.Should().Be("product_not_indexed");
+        response.DegradedReason.Should().NotBe("ai_unavailable",
+            "a piece added after the last index synchronisation is a state that fixes itself, and "
+            + "reading it as an outage is what sent people looking for a fault that was not there");
+    }
+
+    [Fact]
+    public async Task SalesAssist_WhenSwitchedOff_ReportsThatReason()
+    {
+        _options.EnabledByDefault = false;
+
+        var response = (await AssistAsync()).Response!;
+
+        response.DegradedReason.Should().Be("switched_off");
+        VerifyNoAiCall();
+    }
+
+    [Fact]
+    public async Task SalesAssist_WhenCredentialRejected_ReportsThatReason()
+    {
+        GatewayThrows(new AiGatewayConfigurationException("401"));
+
+        (await AssistAsync()).Response!.DegradedReason.Should().Be("credential_rejected");
+    }
+
+    [Fact]
+    public async Task SalesAssist_WhenHealthy_ReportsNoReason()
+    {
+        GatewayReturns(Ai(Member(Anchor, "ERIZO-M")));
+
+        var response = (await AssistAsync()).Response!;
+
+        response.AiAvailable.Should().BeTrue();
+        response.DegradedReason.Should().BeNull("nothing degraded, so there is nothing to explain");
+    }
+
+    /// <remarks>
+    /// The requirement is that the screen and the log cannot disagree for one trace. This asserts
+    /// it across every reason rather than one, because the failure it guards against is a later
+    /// change updating one of the two and not the other.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(GatewayFailures))]
+    public async Task SalesAssist_WhenDegraded_ReasonMatchesTheLogLineForTheSameTrace(AiGatewayException failure)
+    {
+        GatewayThrows(failure);
+
+        var response = (await AssistAsync()).Response!;
+        var stage = StageLine();
+
+        response.DegradedReason.Should().NotBeNull();
+        stage.Property("DegradedReason").Should().Be(response.DegradedReason);
+        stage.Property("TraceId").Should().Be(response.TraceId);
+    }
 
     [Fact]
     public async Task SalesAssist_WhenSwitchedOff_DoesNotCallAi()

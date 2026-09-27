@@ -43,6 +43,13 @@ public class AssistedSearchServiceTests
         MaxPageSize = 50
     };
 
+    /// <summary>The card's switch, which is the one the availability route reports as the generative path.</summary>
+    private readonly AiSalesAssistOptions _assistOptions = new() { EnabledByDefault = true };
+
+    /// <summary>The free-query endpoint's own switch; both must be on for the assisted route.</summary>
+    private readonly AiFreeQuerySearchOptions _freeQueryOptions = new() { EnabledByDefault = true };
+    private readonly AiAgentAssistOptions _agentOptions = new() { EnabledByDefault = true };
+
     private readonly List<RecordSearchRequest> _recorded = [];
 
     public AssistedSearchServiceTests()
@@ -296,6 +303,7 @@ public class AssistedSearchServiceTests
                     terms.Count > 1
                     && terms.Contains("anillo") && terms.Contains("plata") && terms.Contains("regalar")),
                 PointOfSaleId,
+                It.IsAny<AssistedSearchFilters>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -320,6 +328,7 @@ public class AssistedSearchServiceTests
             r => r.SearchLexicalAsync(
                 It.Is<IReadOnlyList<string>>(terms => !terms.Contains("a") && !terms.Contains("o")),
                 PointOfSaleId,
+                It.IsAny<AssistedSearchFilters>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -340,9 +349,180 @@ public class AssistedSearchServiceTests
             r => r.SearchLexicalAsync(
                 It.IsAny<IReadOnlyList<string>>(),
                 PointOfSaleId,
+                It.IsAny<AssistedSearchFilters>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ---------------------------------------------------------------- filters on the degraded path
+
+    [Fact]
+    public async Task SearchAsync_WhenDegradedAndFilterSelected_AppliesTheFilter()
+    {
+        GatewayUnavailable();
+        LexicalReturns(Row(Guid.NewGuid()));
+
+        var request = Request();
+        request.Category = "pendientes";
+        request.Materials = ["plata"];
+
+        var result = await CreateService().SearchAsync(request, UserId, "Operator", isAdmin: false);
+
+        result.Response!.AiAvailable.Should().BeFalse("the gateway failed, so this is the degraded path");
+
+        // The defect that opened this change: the chips stayed pressed and the degraded searcher
+        // never saw them, so the results ignored a filter the operator had selected and nothing
+        // on screen said so.
+        _repository.Verify(
+            r => r.SearchLexicalAsync(
+                It.IsAny<IReadOnlyList<string>>(),
+                PointOfSaleId,
+                It.Is<AssistedSearchFilters>(filters =>
+                    filters.Category == "pendientes"
+                    && filters.Materials.Contains("plata")),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WhenDegradedAndNothingSelected_PassesNoFilter()
+    {
+        GatewayUnavailable();
+        LexicalReturns(Row(Guid.NewGuid()));
+
+        await CreateService().SearchAsync(Request(), UserId, "Operator", isAdmin: false);
+
+        _repository.Verify(
+            r => r.SearchLexicalAsync(
+                It.IsAny<IReadOnlyList<string>>(),
+                PointOfSaleId,
+                It.Is<AssistedSearchFilters>(filters => filters.IsEmpty),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <remarks>
+    /// This is the other half of the declaration requirement, and it asserts a negative on
+    /// purpose. Both filters the panel can send — category and materials — are now applied on the
+    /// degraded path, so neither may be declared unapplied: a piece whose enriched profile lacks
+    /// the field fails the filter, and a filter that excludes is a filter working, not failing.
+    /// Declaring it would put a warning on screen under results that are in fact correctly
+    /// filtered, which is the same class of lie as the silence this change removes.
+    ///
+    /// The declaration channel itself stays exercised by
+    /// <see cref="SearchAsync_WhenAssisted_DeclaresNoUnappliedFilter"/> and is dormant by
+    /// construction: see the remarks on the response property for why it is kept.
+    /// </remarks>
+    [Fact]
+    public async Task SearchAsync_WhenDegradedAndFilterIsApplicable_DoesNotDeclareItUnapplied()
+    {
+        GatewayUnavailable();
+        LexicalReturns(Row(Guid.NewGuid()));
+
+        var request = Request();
+        request.Category = "pendientes";
+        request.Materials = ["plata"];
+
+        var result = await CreateService().SearchAsync(request, UserId, "Operator", isAdmin: false);
+
+        result.Response!.AiAvailable.Should().BeFalse();
+        result.Response.UnappliedFilters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WhenAssisted_DeclaresNoUnappliedFilter()
+    {
+        var productId = Guid.NewGuid();
+        GatewayReturns(Candidate(productId));
+        HydrationReturns(Row(productId));
+
+        var request = Request();
+        request.Category = "pendientes";
+        request.Materials = ["plata"];
+
+        var result = await CreateService().SearchAsync(request, UserId, "Operator", isAdmin: false);
+
+        result.Response!.AiAvailable.Should().BeTrue();
+        result.Response.UnappliedFilters.Should().BeEmpty(
+            "the retriever honours every filter the request carries");
+    }
+
+    // ---------------------------------------------------------------- availability, before searching
+
+    [Fact]
+    public void Availability_WhenCalled_MakesNoAiCall()
+    {
+        var availability = CreateService().GetAvailability(PointOfSaleId);
+
+        availability.PointOfSaleId.Should().Be(PointOfSaleId);
+        _gateway.VerifyNoOtherCalls();
+        _repository.Verify(
+            r => r.SearchLexicalAsync(
+                It.IsAny<IReadOnlyList<string>>(), It.IsAny<Guid?>(),
+                It.IsAny<AssistedSearchFilters>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <remarks>
+    /// The quota is enforced by the endpoint's rate-limiting policy rather than by this service,
+    /// so what is asserted here is the property that makes exemption safe: repeated calls do no
+    /// work that could be rationed. If this ever starts calling the gateway, disabling the limit
+    /// on the route would become a way to spend the quota without being counted.
+    /// </remarks>
+    [Fact]
+    public void Availability_WhenCalledRepeatedly_ConsumesNoQuota()
+    {
+        var service = CreateService();
+
+        for (var i = 0; i < 50; i++)
+        {
+            service.GetAvailability(PointOfSaleId);
+        }
+
+        _gateway.VerifyNoOtherCalls();
+        _telemetry.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void Availability_WhenAssistedAnswerIsSwitchedOff_ReportsItWithItsReason()
+    {
+        _assistOptions.EnabledByDefault = false;
+
+        var availability = CreateService().GetAvailability(PointOfSaleId);
+
+        availability.AssistedAnswerAvailable.Should().BeFalse();
+        availability.AssistedAnswerUnavailableReason.Should().Be("switched_off",
+            "the toggle disables the option with a reason instead of failing when pressed");
+    }
+
+    [Fact]
+    public void Availability_WhenBothAreOn_ReportsNoReason()
+    {
+        var availability = CreateService().GetAvailability(PointOfSaleId);
+
+        availability.SemanticSearchAvailable.Should().BeTrue();
+        availability.AssistedAnswerAvailable.Should().BeTrue();
+        availability.AssistedAnswerUnavailableReason.Should().BeNull();
+    }
+
+    /// <remarks>
+    /// The odd quadrant of the four, and reachable: the two switches are independent, so semantic
+    /// search can be off while the generative path is on. It is asserted because a screen that
+    /// collapsed the two into one badge would render this state wrongly.
+    /// </remarks>
+    [Fact]
+    public void Availability_WhenSemanticIsOffAndAssistedIsOn_ReportsThemSeparately()
+    {
+        _options.EnabledByDefault = false;
+        _options.EnabledPointOfSaleIds = [OtherPointOfSaleId];
+
+        var availability = CreateService().GetAvailability(PointOfSaleId);
+
+        availability.SemanticSearchAvailable.Should().BeFalse();
+        availability.AssistedAnswerAvailable.Should().BeTrue();
     }
 
     // ---------------------------------------------------------------- feature switch
@@ -575,6 +755,7 @@ public class AssistedSearchServiceTests
             r => r.SearchLexicalAsync(
                 It.IsAny<IReadOnlyList<string>>(),
                 PointOfSaleId,
+                It.IsAny<AssistedSearchFilters>(),
                 AiSearchRequest.OverRetrievalCap,
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -752,8 +933,35 @@ public class AssistedSearchServiceTests
             _fileStorage.Object,
             _traceContext.Object,
             OptionsMonitor(),
+            new AssistedSearchResultProjector(
+                _fileStorage.Object, _traceContext.Object,
+                factory.CreateLogger<AssistedSearchResultProjector>()),
+            AssistOptionsMonitor(),
+            FreeQueryOptionsMonitor(),
+            AgentOptionsMonitor(),
             _timeProvider,
             factory.CreateLogger<AssistedSearchService>());
+    }
+
+    private IOptionsMonitor<AiFreeQuerySearchOptions> FreeQueryOptionsMonitor()
+    {
+        var monitor = new Mock<IOptionsMonitor<AiFreeQuerySearchOptions>>();
+        monitor.SetupGet(m => m.CurrentValue).Returns(_freeQueryOptions);
+        return monitor.Object;
+    }
+
+    private IOptionsMonitor<AiAgentAssistOptions> AgentOptionsMonitor()
+    {
+        var monitor = new Mock<IOptionsMonitor<AiAgentAssistOptions>>();
+        monitor.SetupGet(m => m.CurrentValue).Returns(_agentOptions);
+        return monitor.Object;
+    }
+
+    private IOptionsMonitor<AiSalesAssistOptions> AssistOptionsMonitor()
+    {
+        var monitor = new Mock<IOptionsMonitor<AiSalesAssistOptions>>();
+        monitor.SetupGet(m => m.CurrentValue).Returns(_assistOptions);
+        return monitor.Object;
     }
 
     private IOptionsMonitor<AiSearchOptions> OptionsMonitor()
@@ -768,6 +976,12 @@ public class AssistedSearchServiceTests
         Query = "anillo de plata",
         PointOfSaleId = PointOfSaleId
     };
+
+    /// <summary>Makes the gateway fail, which is what puts the search on the degraded path.</summary>
+    private void GatewayUnavailable() =>
+        _gateway
+            .Setup(g => g.SearchAsync(It.IsAny<AiSearchRequest>(), It.IsAny<AiCallScope>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AiUnavailableException("circuit open"));
 
     private void GatewayReturns(params AiSearchResult[] candidates) =>
         _gateway
@@ -789,7 +1003,7 @@ public class AssistedSearchServiceTests
     private void LexicalReturns(params AssistedSearchRow[] rows) =>
         _repository
             .Setup(r => r.SearchLexicalAsync(
-                It.IsAny<IReadOnlyList<string>>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                It.IsAny<IReadOnlyList<string>>(), It.IsAny<Guid?>(), It.IsAny<AssistedSearchFilters>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(rows);
 
     private static AiSearchResult Candidate(Guid productId, string sku = "SKU-1", double score = 0.8) => new()
@@ -833,5 +1047,102 @@ public class AssistedSearchServiceTests
         public void Set(string key, AiSearchResponse candidates)
         {
         }
+    }
+
+    // ------------------------------------------- availability of the every-point-of-sale scope (C40_FIX)
+
+    /// <remarks>
+    /// C40 built the every-shop scope in full and left the probe answering for a named shop only,
+    /// so a screen offering the scope had nothing to read: the generative path came out disabled
+    /// with no reason to show, which is the shape of failure this route was created to remove.
+    /// </remarks>
+    [Fact]
+    public void GetAvailability_WithoutPointOfSale_ReportsTheDefaultScope()
+    {
+        var availability = CreateService().GetAvailability(null);
+
+        availability.PointOfSaleId.Should().BeNull(
+            "an absent point of sale is the wider scope, and it must not come back as a blank one");
+        availability.SemanticSearchAvailable.Should().BeTrue();
+        availability.AssistedAnswerAvailable.Should().BeTrue();
+        availability.AssistedAnswerUnavailableReason.Should().BeNull();
+    }
+
+    /// <remarks>
+    /// The narrow reading, and the safe one: a deployment that enables the feature shop by shop has
+    /// not enabled it for «all of them». Reading it the other way would spend a generative budget
+    /// on behalf of shops whose owner deliberately switched the feature off.
+    /// </remarks>
+    [Fact]
+    public void GetAvailability_WithoutPointOfSale_IgnoresThePerShopAllowlist()
+    {
+        _freeQueryOptions.EnabledByDefault = false;
+        _freeQueryOptions.EnabledPointOfSaleIds = [PointOfSaleId];
+
+        var availability = CreateService().GetAvailability(null);
+
+        availability.AssistedAnswerAvailable.Should().BeFalse(
+            "an allowlisted shop does not switch the feature on for the scope that covers them all");
+        availability.AssistedAnswerUnavailableReason.Should().Be("switched_off");
+
+        // And the same configuration still reports the named shop as available, so what is being
+        // asserted is the scope rule and not a switch that happens to be off.
+        CreateService().GetAvailability(PointOfSaleId).AssistedAnswerAvailable.Should().BeTrue();
+    }
+
+    /// <remarks>
+    /// <strong>The guard against the probe and the route drifting apart.</strong> They are computed
+    /// in different services, and when they disagree the screen presents a capability that is off as
+    /// though it were on — which is the defect C40 was opened to remove. Both now read the same
+    /// extension method, and this asserts the verdict rather than the call site.
+    /// </remarks>
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public void GetAvailability_WithoutPointOfSale_MatchesTheRoutePredicate(
+        bool freeQueryDefault,
+        bool assistDefault)
+    {
+        _freeQueryOptions.EnabledByDefault = freeQueryDefault;
+        _freeQueryOptions.EnabledPointOfSaleIds = [PointOfSaleId];
+        _assistOptions.EnabledByDefault = assistDefault;
+        _assistOptions.EnabledPointOfSaleIds = [PointOfSaleId];
+
+        var probe = CreateService().GetAvailability(null);
+
+        // What the free-query route itself would enforce for the very same scope.
+        var routeWouldServe = _freeQueryOptions.IsEnabledForScope(null);
+
+        probe.AssistedAnswerAvailable.Should().Be(routeWouldServe && _assistOptions.IsEnabledForScope(null),
+            "the probe must report the predicate the route applies, never one of its own");
+    }
+
+    /// <remarks>
+    /// The probe describes <em>switches</em>; the panel describes <em>reachability</em>. The fast
+    /// route does not accept this scope, but saying so here by answering false would state that
+    /// semantic search is switched off — a different fact, and a false one.
+    /// </remarks>
+    [Fact]
+    public void GetAvailability_WithoutPointOfSale_StillReportsTheSemanticSwitchOnItsOwnTerms()
+    {
+        _options.EnabledByDefault = true;
+
+        CreateService().GetAvailability(null).SemanticSearchAvailable.Should().BeTrue();
+
+        _options.EnabledByDefault = false;
+        _options.EnabledPointOfSaleIds = [PointOfSaleId];
+
+        CreateService().GetAvailability(null).SemanticSearchAvailable.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetAvailability_WithoutPointOfSale_MakesNoAiCall()
+    {
+        CreateService().GetAvailability(null);
+
+        _gateway.VerifyNoOtherCalls();
+        _telemetry.VerifyNoOtherCalls();
     }
 }

@@ -1,7 +1,7 @@
 # T-AIENG-06a: Real catalog ingestion and assisted text corpus (C06a)
 
 > Ticket técnico del change OpenSpec `add-real-catalog-ingestion-and-text-assist`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-006a](../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06a), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§8.1.1, §8.4, §8.5, §15), sesión de exploración 2026-08-22.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-006a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06a), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§8.1.1, §8.4, §8.5, §15), sesión de exploración 2026-08-22.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -214,13 +214,13 @@ Script location: scripts/catalog/
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-006a](../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md)
+- **HU origen:** [HU-AIENG-006a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md)
 - **Change OpenSpec:** `openspec/changes/add-real-catalog-ingestion-and-text-assist/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06a, §0) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Precedentes:** [HU-AIENG-005](../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md) · [ticket C05](../archive/2026-08-15-add-pgvector-schema-foundation/ticket.md)
-- **Import xlsx:** [`ExcelImportService`](../../../backend/src/JoiabagurPV.Application/Services/ExcelImportService.cs)
-- **Compose Postgres:** [`backend/docker-compose.yml`](../../../backend/docker-compose.yml)
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C06a, §0) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Precedentes:** [HU-AIENG-005](../../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md) · [ticket C05](../../archive/2026-08-15-add-pgvector-schema-foundation/ticket.md)
+- **Import xlsx:** [`ExcelImportService`](../../../../backend/src/JoiabagurPV.Application/Services/ExcelImportService.cs)
+- **Compose Postgres:** [`backend/docker-compose.yml`](../../../../backend/docker-compose.yml)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

@@ -40,10 +40,12 @@ def test_request_without_token_is_rejected(
     [
         pytest.param({"secret": "wrong-secret-0123456789abcdefghijkl"}, id="bad-signature"),
         pytest.param({"expires_in": -60}, id="expired"),
-        pytest.param({"pos_id": None}, id="missing-pos-id"),
         pytest.param({"user_id": None}, id="missing-user-id"),
         pytest.param({"role": None}, id="missing-role"),
         pytest.param({"trace_id": None}, id="missing-trace-id"),
+        # Present and empty, which is a VALUE and not an absence. C40 made the omission
+        # admissible on this route and this case must not follow it: dropping a blank claim
+        # would promote a shop-scoped token to «every shop» without anybody asking.
         pytest.param({"pos_id": "   "}, id="blank-pos-id"),
     ],
 )
@@ -212,14 +214,22 @@ def test_catalog_token_without_pos_is_accepted_on_enrich(
     assert response.status_code == 200, response.text
 
 
-def test_catalog_token_is_rejected_on_retrieval(
+def test_retrieval_accepts_a_token_without_pos_claim(
     client: TestClient, issue_token: Callable[..., str]
 ) -> None:
-    """The second of the two independent closures on this boundary.
+    """C40 reverses this, and the test it replaces was right when it was written.
 
-    The .NET client already refuses to send a catalog scope to retrieval. This
-    asserts the service refuses it too, so that relaxing one side by accident
-    does not open the door.
+    Until now the service refused a token with no `pos_id` on retrieval, and the argument was
+    sound: that claim is the retriever's only hard filter between points of sale, and the
+    .NET client refused to send a catalog scope here for the same reason. Two independent
+    closures on one boundary.
+
+    What changed is not the reasoning but the case. A search deliberately spread over every
+    shop has no shop to name, and inventing one is exactly what must never happen. So the
+    **omission** is admitted on this route and on sale assistance, and nowhere else — and
+    what it buys is that the availability prefilter does not apply, rather than matching
+    everything. The old closure survives in the two tests below it: a blank claim is still
+    refused, and every point-of-sale route still refuses the omission.
     """
     token = issue_token(pos_id=None)
 
@@ -227,6 +237,124 @@ def test_catalog_token_is_rejected_on_retrieval(
         "/v1/retrieval/products",
         json={"query": "anillo", "top_k": 1},
         headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code != 401, response.text
+
+
+def test_sale_assistance_accepts_a_token_without_pos_claim(
+    client: TestClient, issue_token: Callable[..., str]
+) -> None:
+    """The second of exactly three routes that admit it. The list is closed on purpose."""
+    token = issue_token(pos_id=None)
+
+    response = client.post(
+        "/v1/assist/sale",
+        json={"query": "un anillo de plata"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code != 401, response.text
+
+
+def test_agent_route_accepts_a_token_without_pos_claim(
+    client: TestClient, issue_token: Callable[..., str]
+) -> None:
+    """C42 adds the third, and the test it replaces was right while the route had no consumer.
+
+    The agent route used to refuse the omission, and the reasoning below it read «the agent acts
+    on the shop's behalf, so it has nothing to answer without one». That was never quite the
+    claim: the agent's loop answers perfectly well without a shop — it just cannot pivot to
+    substitutes, because with no scope the availability tool reports that no scope applies rather
+    than that the shop is out of stock. What made the refusal harmless was that **nothing called
+    the route**. C42 gives it a panel, and that panel offers the every-shop scope under the same
+    rule its sibling applies — so leaving this route stricter than the route beside it would
+    break the pair with no test failing anywhere.
+
+    What the omission buys here is what it buys on the other two: the availability prefilter does
+    not apply. Never a wildcard, which remains impossible.
+    """
+    token = issue_token(pos_id=None)
+
+    response = client.post(
+        "/v1/assist/agent",
+        json={"turns": [{"role": "operario", "text": "busco un anillo de plata"}]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code != 401, response.text
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        pytest.param(
+            "/v1/retrieval/substitutes",
+            {"product_id": "b0000000-0000-4000-8000-000000000001", "top_k": 1},
+            id="substitutes",
+        ),
+        pytest.param(
+            "/v1/inventory/propose",
+            {"top_k": 1},
+            id="inventory",
+        ),
+    ],
+)
+def test_pos_scoped_route_still_rejects_it(
+    client: TestClient,
+    issue_token: Callable[..., str],
+    path: str,
+    body: dict[str, Any],
+) -> None:
+    """The omission fails closed everywhere it matters, which is what makes it safe.
+
+    **These two work inside one shop, and the agent no longer belongs here.** Substitutes rank by
+    what that shop can hand over and inventory proposes for that shop's stock: neither has
+    anything to answer without one. The agent's case is different in kind — it can answer, it
+    just cannot pivot — and it moved to the test above when C42 gave it a consumer. Widening it
+    did not widen these: the list is closed and this is what keeps it closed.
+    """
+    token = issue_token(pos_id=None)
+
+    response = client.post(path, json=body, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401, path
+
+
+def test_rejection_does_not_reveal_the_missing_claim(
+    client: TestClient, issue_token: Callable[..., str]
+) -> None:
+    """A 401 that names the claim tells an attacker what to forge next."""
+    token = issue_token(pos_id=None)
+
+    response = client.post(
+        "/v1/inventory/propose",
+        json={"top_k": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 401
+    assert "pos_id" not in response.text
+    assert "claim" not in response.text.lower()
+
+
+def test_a_blank_pos_claim_is_never_read_as_its_absence(
+    client: TestClient, issue_token: Callable[..., str]
+) -> None:
+    """The hole C40 opened and closed in the same change, and it is worth a test of its own.
+
+    Making the claim optional on two routes meant the decoder stopped requiring it — and it
+    used to drop an unusable value silently, because until now a blank one could never get
+    past the required-claims loop. Dropped here, a blank `pos_id` would have become «every
+    shop»: a token issued for one shop, quietly widened to all of them, with nobody asking.
+
+    Absence is the key not being in the payload. Anything else is a value, and a value has to
+    be usable.
+    """
+    response = client.post(
+        "/v1/retrieval/products",
+        json={"query": "anillo", "top_k": 1},
+        headers={"Authorization": f"Bearer {issue_token(pos_id='   ')}"},
     )
 
     assert response.status_code == 401

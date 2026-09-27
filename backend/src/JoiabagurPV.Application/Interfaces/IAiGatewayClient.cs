@@ -234,4 +234,57 @@ public interface IAiGatewayClient
         AiSubstitutesRequest request,
         AiCallScope scope,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asks the sale agent to answer the last turn of a conversation. C42.
+    /// </summary>
+    /// <param name="request">The transcript so far and the page size wanted after hydration.</param>
+    /// <param name="scope">Caller identity and point-of-sale scope, already authorised.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// Everything the deterministic free-query response carries, <strong>plus</strong> whether a
+    /// budget cut the answer short, why the loop stopped, how many turns and tool calls it paid
+    /// for, the per-iteration trace and the version of the argument prompt. Each group carries the
+    /// provenance of its evidence.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// Runs on the <c>ai-agent</c> client, its own budget and its own circuit. Not the generative
+    /// route's: the agent's median latency is of the order of the total that route declares as its
+    /// ceiling, so its budget would cut a large share of these requests, and its circuit would open
+    /// over a route that is answering correctly.
+    /// </para>
+    /// <para>
+    /// <strong>A degradation the service reports inside a 200 is not a failure of this call.</strong>
+    /// The loop answers successfully when its provider falls or when no credential is configured,
+    /// saying so in a closed stop-reason vocabulary. Such a response comes back as a response,
+    /// recorded as a metric, and the circuit stays closed.
+    /// </para>
+    /// <para>
+    /// <strong>No point of sale is sent in the body.</strong> The contract accepts one and ignores
+    /// it; scope comes from the token, and on this route the token is what decides whether the
+    /// availability prefilter applies at all.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="Exceptions.AiUnavailableException">
+    /// Timeout, transport failure, open circuit, or a server error other than 501.
+    /// </exception>
+    /// <exception cref="Exceptions.AiRequestRejectedException">
+    /// HTTP 422: the service cannot process the transcript. Not an outage, and normally
+    /// unreachable — the caller validates the three caps before spending the call.
+    /// </exception>
+    /// <exception cref="Exceptions.AiNotImplementedException">
+    /// The route is contracted but has no implementation yet.
+    /// </exception>
+    /// <exception cref="Exceptions.AiGatewayConfigurationException">
+    /// The service rejected the credentials.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// The scope is neither a point-of-sale scope nor the every-point-of-sale scope, or the
+    /// transcript carries no turn.
+    /// </exception>
+    Task<AiAssistAgentResponse> AssistAgentAsync(
+        AiAssistAgentRequest request,
+        AiCallScope scope,
+        CancellationToken cancellationToken = default);
 }

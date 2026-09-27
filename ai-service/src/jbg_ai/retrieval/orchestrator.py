@@ -33,6 +33,7 @@ from jbg_ai.api.schemas.retrieval import (
     RetrievalResponse,
     RetrievalResult,
 )
+from jbg_ai.assist.constants import WARNING_FILTERS_TOO_NARROW
 from jbg_ai.config.settings import Settings
 from jbg_ai.indexing.constants import DEFAULT_EMBEDDING_MODEL
 from jbg_ai.indexing.embeddings import EmbeddingClient, EmbedResult, LiteLlmEmbeddingClient
@@ -196,6 +197,7 @@ async def retrieve_products(
     business_weight_availability: float | None = None,
     on_fused_candidates: Callable[[Sequence[object]], None] | None = None,
     on_abstention: Callable[[bool], None] | None = None,
+    on_abstention_profile: Callable[[Sequence[float]], None] | None = None,
     projection_max_age_seconds: int | None = None,
     freshness: ProjectionFreshness | None = None,
 ) -> RetrievalResponse:
@@ -325,6 +327,7 @@ async def retrieve_products(
 
     vector_hits: list[SearchHit] = []
     vector_ran = False
+    probe_distances: list[float] | None = None
     threshold = settings.jpv_retrieval_distance_threshold
     if embedded is not None and embedded.result is not None:
         vector_ran = True
@@ -340,6 +343,18 @@ async def retrieve_products(
             pos_id=scope.pos_id,
             signal_pos_id=signal_pos_id,
         )
+        # Sequentially, and only when something narrows: with no filter the served profile
+        # already is the unfiltered one, so a probe would ask the same question twice.
+        if not filters.is_empty:
+            probe_distances = await _probe_branch(
+                embedded.result,
+                principal,
+                embed=embed,
+                search=search,
+                threshold=threshold,
+                depth=depth,
+                pos_id=scope.pos_id,
+            )
     elif embedded is not None and embedded.error is not None:
         if payload.mode is RetrievalMode.VECTOR or not (typed_hits or expanded_hits):
             # A 200 with an empty list would be indistinguishable from a legitimate
@@ -445,7 +460,10 @@ async def retrieve_products(
         band_alpha=settings.jpv_abstention_band_alpha,
         min_candidates=settings.jpv_abstention_band_min_candidates,
     )
-    distances = [hit.distance for hit in vector_hits]
+    served_distances = [hit.distance for hit in vector_hits]
+    # **The decision reads the unfiltered profile when there is one.** C40: the question is
+    # whether the catalogue can answer the query, and the filter is not part of the query.
+    distances = served_distances if probe_distances is None else probe_distances
     abstained = vector_ran and should_abstain(distances, abstention)
     if vector_ran:
         log_abstention(
@@ -454,6 +472,37 @@ async def retrieve_products(
             distances=distances,
             abstained=abstained,
         )
+
+    # The other half of the same seam, and the reason the two must stay apart: a flat unfiltered
+    # profile means the description found nothing, and a peaked one with a thin filtered set
+    # means it found something the filter excluded. They end in opposite actions — describe it
+    # another way, or remove a filter — and asserting the second when the first is true claims a
+    # fit that does not exist.
+    narrow_filters = (
+        vector_ran
+        and probe_distances is not None
+        and abstention.enabled
+        and not abstained
+        and len(served_distances) < abstention.min_candidates
+    )
+    warnings: list[str] = [WARNING_FILTERS_TOO_NARROW] if narrow_filters else []
+    if probe_distances is not None:
+        logger.info(
+            "stage=abstain trace_id=%s profile=unfiltered probe_candidates=%s "
+            "served_candidates=%s min_candidates=%s filters_too_narrow=%s",
+            principal.trace_id,
+            len(probe_distances),
+            len(served_distances),
+            abstention.min_candidates,
+            narrow_filters,
+            extra={"trace_id": principal.trace_id},
+        )
+
+    # The profile the decision actually read, handed to whoever persists the candidate window.
+    # Without it a re-score of a FILTERED pass could not recompute the decision, because the
+    # window it persists is the filtered one and the rule did not read that.
+    if on_abstention_profile is not None and probe_distances is not None:
+        on_abstention_profile(tuple(probe_distances))
     # The second observability seam of this function, and it exists for the same reason as
     # `on_fused_candidates`: the decision is not recoverable from `RetrievalResponse`. An
     # empty `results` is also what a query that simply found nothing produces, and the one
@@ -501,6 +550,7 @@ async def retrieve_products(
         results=results,
         candidates_returned=len(results),
         low_confidence=low_confidence,
+        warnings=warnings,
         trace_id=principal.trace_id,
         effective_pos_id=principal.pos_id or "",
         projection_age_seconds=scope.reported_age,
@@ -629,6 +679,66 @@ async def _vector_branch(
         extra={"trace_id": principal.trace_id},
     )
     return hits
+
+
+async def _probe_branch(
+    embedded: EmbedResult,
+    principal: ServicePrincipal,
+    *,
+    embed: EmbeddingClient,
+    search: ProductSearchPort,
+    threshold: float,
+    depth: int,
+    pos_id: UUID | None,
+) -> list[float]:
+    """The same query with no body filter, for the abstention alone. C40.
+
+    **Why it exists.** The abstention asks whether the catalogue can answer the *query*, and a
+    filter is a restriction rather than a description. Read over a filtered profile the rule
+    cannot fire at all when the filter is narrow — it needs `min_candidates` inside its band and
+    a narrow filter can never supply them — so the system would serve a handful of mediocre
+    pieces and, on the generative path, write prose praising them. The rule's parameters were
+    calibrated over unfiltered queries; reading an unfiltered profile restores the regime they
+    were fitted in instead of inventing a new one.
+
+    **What it costs, and what it does not.** The vector is the one already computed for this
+    request, so the embedding provider is called exactly once however many statements run. It is
+    awaited *after* the filtered statement and never beside it: one connection of the pool at a
+    time, which is the property this orchestration maintains against a pool capped at five. And
+    it returns distances, never hits — nothing it finds can reach the response, the order or the
+    window, because there is no path from here to the candidates.
+
+    The point-of-sale scope is **kept**. It is not one of the operator's filters: it is what this
+    shop carries, and a probe that ignored it would judge the query against a catalogue the
+    counter cannot sell from.
+    """
+    started = time.perf_counter()
+    hits = await search.search(
+        embedded.vectors[0],
+        threshold=threshold,
+        depth=depth,
+        filters=SearchFilters(),
+        model_version_key=embed.model_version_key,
+        model_id=embed.model_id,
+        pos_id=pos_id,
+        signal_pos_id=None,
+    )
+    distances = sorted(hit.distance for hit in hits)[:depth]
+    # Reported apart from `stage=search` so a reader can tell a query the catalogue cannot
+    # answer from a filter that admitted almost nothing. Scalars only: this stage receives
+    # distances, and neither the vector nor the operator's query text can reach it.
+    logger.info(
+        "stage=probe trace_id=%s latency_ms=%.1f distance_min=%s candidates=%s scoped=%s "
+        "depth=%s",
+        principal.trace_id,
+        (time.perf_counter() - started) * 1000,
+        f"{distances[0]:.4f}" if distances else None,
+        len(distances),
+        pos_id is not None,
+        depth,
+        extra={"trace_id": principal.trace_id},
+    )
+    return distances
 
 
 def _fuse_branches(

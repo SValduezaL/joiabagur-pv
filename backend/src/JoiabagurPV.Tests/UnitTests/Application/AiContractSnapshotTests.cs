@@ -41,7 +41,20 @@ public class AiContractSnapshotTests
         { typeof(AiSubstitutesRequest), "SubstitutesRequest" },
         { typeof(AiSubstitutesResponse), "SubstitutesResponse" },
         { typeof(AiSubstituteResult), "SubstituteResult" },
-        { typeof(AiSimilaritySignals), "SimilaritySignals" }
+        { typeof(AiSimilaritySignals), "SimilaritySignals" },
+
+        // The sale agent (C42). **These five are the only thing that guards the wire names of a
+        // route nobody had ever called.** The client's own tests deserialize a hand-written body, so
+        // a property misspelled on both sides — `toolCallsUsed` where the contract says
+        // `tool_calls_used` — would pass them and arrive as a silent null in production, which is
+        // precisely the failure this whole class exists to move to build time.
+        { typeof(AiAgentTurn), "AgentTurn" },
+        { typeof(AiAssistAgentRequest), "AgentAssistRequest" },
+        { typeof(AiAssistAgentResponse), "AgentAssistResponse" },
+        { typeof(AiAssistAgentGroup), "AgentAssistGroup" },
+        { typeof(AiAgentUsage), "AgentUsage" },
+        { typeof(AiAgentTraceIteration), "AgentTraceIteration" },
+        { typeof(AiAgentTraceTool), "AgentTraceTool" }
     };
 
     [Theory]
@@ -99,7 +112,10 @@ public class AiContractSnapshotTests
         var names = document.RootElement.EnumerateObject().Select(p => p.Name).ToList();
 
         names.Should().NotContain("pos_id", "the scope travels in the token, never in the body");
-        names.Should().BeEquivalentTo(["product_id", "query"], "the wire names are snake_case");
+        names.Should().BeEquivalentTo(["product_id", "query", "filters"],
+            "the wire names are snake_case, and `filters` travels like it does on the "
+            + "substitutes request: declared with a default in the contract, so non-nullable "
+            + "here and always serialized rather than omitted");
     }
 
     [Fact]

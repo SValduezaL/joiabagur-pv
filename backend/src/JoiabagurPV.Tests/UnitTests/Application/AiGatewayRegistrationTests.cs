@@ -196,6 +196,90 @@ public class AiGatewayRegistrationTests
             .Should().Be(12_000);
     }
 
+    /// <summary>
+    /// The agent's floor is the service's own wall-clock ceiling, and the failure mode of going
+    /// under it is worse than the assist route's: exceeding the deadline is a <em>degradation</em>
+    /// on the Python side, so a shorter outer budget replaces a partial answer the service already
+    /// paid for in full with nothing at all.
+    /// </summary>
+    [Fact]
+    public void AddAiGateway_WhenAgentBudgetBelowTheServicesCeiling_FailsAtStartup()
+    {
+        using var provider = BuildProvider(new Dictionary<string, string?>
+        {
+            ["AiGateway:BaseUrl"] = "http://localhost:8001",
+            ["AiGateway:JwtSecret"] = ValidSecret,
+            ["AiGateway:AgentTimeoutMs"] = "12000"
+        });
+
+        ValidateStartup(provider).Should().Throw<OptionsValidationException>()
+            .WithMessage("*AgentTimeoutMs*", "the error must name the key")
+            .WithMessage("*AGENT_DEADLINE_SECONDS*",
+                "and the constant of the AI service that fixes the floor");
+    }
+
+    [Fact]
+    public void AddAiGateway_WithTheAgentBudgetAtTheFloor_Starts()
+    {
+        using var provider = BuildProvider(new Dictionary<string, string?>
+        {
+            ["AiGateway:BaseUrl"] = "http://localhost:8001",
+            ["AiGateway:JwtSecret"] = ValidSecret,
+            ["AiGateway:AgentTimeoutMs"] = AiGatewayOptions.MinimumAgentTimeoutMs.ToString()
+        });
+
+        ValidateStartup(provider).Should().NotThrow();
+    }
+
+    /// <summary>
+    /// The agent client exists under its own name so a slow conversation cannot open the generative
+    /// circuit, and its budget comes from configuration — eighteen seconds unless configured.
+    /// </summary>
+    [Fact]
+    public void AddAiGateway_RegistersTheAgentClientWithItsOwnConfiguredBudget()
+    {
+        using var defaults = BuildProvider(new Dictionary<string, string?>
+        {
+            ["AiGateway:BaseUrl"] = "http://localhost:8001",
+            ["AiGateway:JwtSecret"] = ValidSecret
+        });
+
+        ValidateStartup(defaults).Should().NotThrow();
+        defaults.GetRequiredService<IHttpClientFactory>().CreateClient(AiGatewayClient.AgentClientName)
+            .Should().NotBeNull("the agent must resolve under its own name");
+
+        var options = defaults.GetRequiredService<IOptions<AiGatewayOptions>>().Value;
+        options.AgentTimeoutMs.Should().Be(18_000);
+        options.AgentTimeoutMs.Should().NotBe(options.AssistTimeoutMs,
+            "the agent's median latency is of the order of the total the generative route declares "
+            + "as its ceiling, so sharing that budget would cut a large share of agent requests");
+
+        using var configured = BuildProvider(new Dictionary<string, string?>
+        {
+            ["AiGateway:BaseUrl"] = "http://localhost:8001",
+            ["AiGateway:JwtSecret"] = ValidSecret,
+            ["AiGateway:AgentTimeoutMs"] = "20000"
+        });
+
+        ValidateStartup(configured).Should().NotThrow();
+        configured.GetRequiredService<IOptions<AiGatewayOptions>>().Value.AgentTimeoutMs
+            .Should().Be(20_000);
+    }
+
+    [Fact]
+    public void AddAiGateway_WhenAgentBudgetIsNotPositive_FailsOnStart()
+    {
+        using var provider = BuildProvider(new Dictionary<string, string?>
+        {
+            ["AiGateway:BaseUrl"] = "http://localhost:8001",
+            ["AiGateway:JwtSecret"] = ValidSecret,
+            ["AiGateway:AgentTimeoutMs"] = "0"
+        });
+
+        ValidateStartup(provider).Should().Throw<OptionsValidationException>()
+            .WithMessage("*time budgets*");
+    }
+
     [Fact]
     public void AddAiGateway_WhenEnrichBudgetIsNotPositive_FailsOnStart()
     {

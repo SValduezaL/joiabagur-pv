@@ -18,16 +18,13 @@ import httpx
 
 from jbg_ai.config.settings import Settings, get_settings
 from jbg_ai.indexing.constants import DEFAULT_EMBEDDING_MODEL
+from jbg_ai.indexing.drain_lock import DrainLock
 from jbg_ai.indexing.embeddings import EmbeddingClient, LiteLlmEmbeddingClient
 from jbg_ai.indexing.feed import FEED_TIMEOUT_SECONDS, HttpxIndexFeedClient, IndexFeedClient
 from jbg_ai.indexing.orchestrator import CatalogSyncRequest, CatalogSyncResult, sync_catalog
-from jbg_ai.indexing.pos_orchestrator import (
-    PosSyncRequest,
-    PosSyncResult,
-    describe,
-    sync_pos_availability,
-)
-from jbg_ai.indexing.pos_projection import PosProjectionRepo, SqlAlchemyPosProjectionRepo
+from jbg_ai.indexing.pos_drain import run_pos_drain
+from jbg_ai.indexing.pos_orchestrator import PosSyncResult, describe
+from jbg_ai.indexing.pos_projection import PosProjectionRepo
 from jbg_ai.indexing.provenance import ProvenanceEntry, load_provenance_map
 from jbg_ai.indexing.repository import ProductDocumentRepo, SqlAlchemyProductDocumentRepo
 from jbg_ai.indexing.sync_errors import IndexFeedConfigError, ProvenanceMapError
@@ -114,32 +111,21 @@ async def run_cli_sync_pos(
     settings: Settings | None = None,
     feed: IndexFeedClient | None = None,
     repo: PosProjectionRepo | None = None,
+    lock: DrainLock | None = None,
 ) -> PosSyncResult:
-    """Drain the POS availability feed. Needs no embedding key: it embeds nothing."""
-    resolved = settings or get_settings()
-    if feed is not None and repo is not None:
-        return await sync_pos_availability(
-            PosSyncRequest(full=full),
-            feed=feed,
-            repo=repo,
-            time_budget_seconds=resolved.jpv_index_sync_time_budget_seconds,
-        )
-    if not resolved.jpv_index_feed_base_url:
-        raise IndexFeedConfigError("JPV_INDEX_FEED_BASE_URL")
-    if not resolved.jpv_index_feed_api_key:
-        raise IndexFeedConfigError("JPV_INDEX_FEED_API_KEY")
-    async with httpx.AsyncClient(
-        base_url=resolved.jpv_index_feed_base_url.rstrip("/"),
-        timeout=FEED_TIMEOUT_SECONDS,
-    ) as client:
-        live_feed = feed or HttpxIndexFeedClient(client, resolved.jpv_index_feed_api_key)
-        live_repo = repo or SqlAlchemyPosProjectionRepo(resolved)
-        return await sync_pos_availability(
-            PosSyncRequest(full=full),
-            feed=live_feed,
-            repo=live_repo,
-            time_budget_seconds=resolved.jpv_index_sync_time_budget_seconds,
-        )
+    """Drain the POS availability feed. Needs no embedding key: it embeds nothing.
+
+    A thin delegation to `pos_drain.run_pos_drain`, which is where the construction lives so
+    that the scheduler can reach it **without importing this module**. Importing `cli` from the
+    FastAPI application factory would drag `LiteLlmEmbeddingClient` — and through it the provider
+    SDK — into the app's import graph, which `test_main_does_not_import_indexing` forbids.
+
+    Kept as a name of its own rather than replaced, because it is what the command line and the
+    existing tests call, and renaming it would be churn with no property gained.
+    """
+    return await run_pos_drain(
+        full=full, settings=settings, feed=feed, repo=repo, lock=lock
+    )
 
 
 async def run_cli_sync_knowledge(
@@ -240,6 +226,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             sys.stderr.write(f"{exc}\n")
             return 1
         sys.stdout.write(describe(pos_result) + "\n")
+        # **Declining is not failing, and gets its own code.** Another drain held the lock, so
+        # the work is being done right now by the process that holds it; exiting 1 would put a
+        # scheduled drain overlapping a manual one on the same footing as a page nobody drained,
+        # and a cron wrapper that alerts on non-zero would page somebody for a healthy system.
+        # Exiting 0 would be worse in the other direction: a script that runs this and then
+        # measures would believe it had just refreshed the projection.
+        if pos_result.declined:
+            return 75  # EX_TEMPFAIL: try again, nothing is wrong.
         # A page that failed is a page nobody drained. Reporting success would let a
         # partially synchronised projection look like a complete one, which is the shape
         # of lie the freshness guard exists to prevent one layer up.

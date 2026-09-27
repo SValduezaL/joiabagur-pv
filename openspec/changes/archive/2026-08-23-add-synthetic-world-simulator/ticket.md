@@ -1,7 +1,7 @@
 # T-AIENG-10: Synthetic world simulator — curated POS YAML, Poisson sales, local ingest (C10)
 
 > Ticket técnico del change OpenSpec `add-synthetic-world-simulator`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-010](../../../Documentos/Historias/AI-Eng/HU-AIENG-010.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C10), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §8.2, D6–D8, §10), sesión de exploración 2026-08-23 y cierre D1–D12 + censo.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-010](../../../../Documentos/Historias/AI-Eng/HU-AIENG-010.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C10), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §8.2, D6–D8, §10), sesión de exploración 2026-08-23 y cierre D1–D12 + censo.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -131,7 +131,7 @@ Estacionalidad y matriz intención≠evolución: HU (no repetir aquí salvo que 
 | `op-aeroport` | Marta Soler | `MAO-AIR` | `Operator123!` |
 
 - `Role` literal `"Operator"` (conversión string de EF).
-- Hash BCrypt **work factor 12**, igual que [`DatabaseSeeder`](../../../backend/src/JoiabagurPV.Infrastructure/Data/DatabaseSeeder.cs).
+- Hash BCrypt **work factor 12**, igual que [`DatabaseSeeder`](../../../../backend/src/JoiabagurPV.Infrastructure/Data/DatabaseSeeder.cs).
 - Email nullable (no hace falta; el índice unique filtra `IS NOT NULL`).
 - `UserPointOfSales.IsActive=true` solo en esa POS.
 - Ventas de esas 3 POS → ese `UserId`. Resto → `admin`. Movimientos `Sale` copian el `UserId` de la venta; `Import`/`Adjustment` (stock inicial) → admin.
@@ -280,13 +280,13 @@ Ninguna bloquea el apply. Defectos si no se reabre el debate:
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-010](../../../Documentos/Historias/AI-Eng/HU-AIENG-010.md)
+- **HU origen:** [HU-AIENG-010](../../../../Documentos/Historias/AI-Eng/HU-AIENG-010.md)
 - **Change OpenSpec:** `openspec/changes/add-synthetic-world-simulator/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C10) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.3, §8.2, D6–D8, §10
-- **Precedentes CLI:** [HU-AIENG-006a](../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md) · [HU-AIENG-006b](../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md) · [ticket C06b](../archive/2026-08-23-add-synthetic-catalog-augmentation/ticket.md)
-- **Entidades:** [`PointOfSale.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/PointOfSale.cs) · [`Inventory.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/Inventory.cs) · [`Sale.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/Sale.cs) · [`InventoryMovement.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/InventoryMovement.cs) · [`User.cs`](../../../backend/src/JoiabagurPV.Domain/Entities/User.cs) · [`SalesService.cs`](../../../backend/src/JoiabagurPV.Application/Services/SalesService.cs) (chequeo operador: solo API)
-- **Compose Postgres:** [`backend/docker-compose.yml`](../../../backend/docker-compose.yml) · [`.env.example`](../../../backend/.env.example)
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C10) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) §6.3, §8.2, D6–D8, §10
+- **Precedentes CLI:** [HU-AIENG-006a](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006a.md) · [HU-AIENG-006b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-006b.md) · [ticket C06b](../../archive/2026-08-23-add-synthetic-catalog-augmentation/ticket.md)
+- **Entidades:** [`PointOfSale.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/PointOfSale.cs) · [`Inventory.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/Inventory.cs) · [`Sale.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/Sale.cs) · [`InventoryMovement.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/InventoryMovement.cs) · [`User.cs`](../../../../backend/src/JoiabagurPV.Domain/Entities/User.cs) · [`SalesService.cs`](../../../../backend/src/JoiabagurPV.Application/Services/SalesService.cs) (chequeo operador: solo API)
+- **Compose Postgres:** [`backend/docker-compose.yml`](../../../../backend/docker-compose.yml) · [`.env.example`](../../../../backend/.env.example)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

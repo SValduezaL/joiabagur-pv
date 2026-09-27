@@ -104,7 +104,7 @@ No es una afirmación de proceso: son las marcas de tiempo del sistema de ficher
 
 **Y hay un desfase aparente que conviene dejar explicado aquí, porque leído sólo sobre el golden set parece lo contrario de lo que es.** Los 3.926 juicios llevan `judged_at: 2026-09-06` y el criterio se declara escrito el 2026-09-07, de modo que sobre el dato desnudo *todos* los juicios preceden al criterio. Lo que ocurre es que las dos fechas no miden lo mismo: `judged_at` registra **la sesión de etiquetado**, que es la del 6, y el criterio lleva **la hora del reloj** del fichero, 00:22:40 — la sesión entró en la madrugada del 7. Las marcas de arriba son la prueba y ordenan los dos hechos como deben ir.
 
-No se corrige el dato, y la razón es de procedencia y no de pereza. El digest que produce `golden_set_version` cubre `criterion.md`, `queries.jsonl` y `judgements.jsonl` ([`content_version`](../../../ai-service/src/jbg_ai/evals/golden.py)), así que tocar cualquiera de los dos ficheros mueve la versión a `1:908ffd55add0` — y el informe, que dice haber corrido contra `1:1474bfc3aa3a`, pasaría a afirmar una procedencia bajo la que nunca corrió. Eso es peor defecto que el desfase de un día en un campo que **ningún cálculo lee**: `judged_at` se parsea al cargar y se reescribe al añadir juicios, y ni una métrica ni una validación lo consultan. **La corrección sale gratis en C25**, que vuelve a correr el arnés contra este mismo conjunto: ese día el `sed` no cuesta procedencia, porque la corrida nueva ya se hace contra la versión corregida.
+No se corrige el dato, y la razón es de procedencia y no de pereza. El digest que produce `golden_set_version` cubre `criterion.md`, `queries.jsonl` y `judgements.jsonl` ([`content_version`](../../../../ai-service/src/jbg_ai/evals/golden.py)), así que tocar cualquiera de los dos ficheros mueve la versión a `1:908ffd55add0` — y el informe, que dice haber corrido contra `1:1474bfc3aa3a`, pasaría a afirmar una procedencia bajo la que nunca corrió. Eso es peor defecto que el desfase de un día en un campo que **ningún cálculo lee**: `judged_at` se parsea al cargar y se reescribe al añadir juicios, y ni una métrica ni una validación lo consultan. **La corrección sale gratis en C25**, que vuelve a correr el arnés contra este mismo conjunto: ese día el `sed` no cuesta procedencia, porque la corrida nueva ya se hace contra la versión corregida.
 
 ### 2.3. El etiquetado
 
@@ -346,10 +346,10 @@ Dos detalles del mapeo, decididos y no accidentales:
 ## 8. Mediciones
 
 Todas contra el índice real y el proveedor real. El detalle completo está en
-[`c24-baselines-2026-09-07.md`](../../../ai-service/evals/results/c24-baselines-2026-09-07.md),
-[`c24-sweep.md`](../../../ai-service/evals/results/c24-sweep.md),
-[`c24-cag-measurement.json`](../../../ai-service/evals/results/c24-cag-measurement.json) y el
-[informe de implementación](../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-implementation-measurements.md).
+[`c24-baselines-2026-09-07.md`](../../../../ai-service/evals/results/c24-baselines-2026-09-07.md),
+[`c24-sweep.md`](../../../../ai-service/evals/results/c24-sweep.md),
+[`c24-cag-measurement.json`](../../../../ai-service/evals/results/c24-cag-measurement.json) y el
+[informe de implementación](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-implementation-measurements.md).
 
 ### 8.1. La decisión 12, respondida (tarea 13.1)
 

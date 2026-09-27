@@ -19,6 +19,28 @@ class SearchFilters:
     family_id: UUID | None = None
     exclude_product_ids: list[UUID] = field(default_factory=list)
 
+    @property
+    def is_empty(self) -> bool:
+        """Does this request narrow the catalogue at all?
+
+        Read by the abstention probe of C40 to decide whether a second, unfiltered statement is
+        worth issuing: when nothing narrows, the served profile already **is** the unfiltered
+        one and a probe would ask the same question twice.
+
+        All four fields count, which is the literal reading of "carries no body filter". It
+        includes `exclude_product_ids`, whose effect on a distance profile is negligible — it
+        removes a handful of identifiers — so the probe it triggers costs a scan for very
+        little. No caller of the orchestrator sets it today (substitutes composes its own
+        statement), so the narrow reading costs nothing and the literal one cannot drift from
+        the requirement.
+        """
+        return (
+            not self.materials
+            and self.category is None
+            and self.family_id is None
+            and not self.exclude_product_ids
+        )
+
 
 @dataclass(frozen=True)
 class SearchHit:

@@ -45,8 +45,49 @@ def test_assist_sale_groups_by_family(
             assert "variant_label" in member.model_dump()
             assert "match_reasons" in member.model_dump()
 
-    assert PRICE_PLACEHOLDER in parsed.pitch
-    assert STOCK_PLACEHOLDER in parsed.pitch
+    # No placeholders: this is the free-query mode. See
+    # `test_stub_free_query_carries_no_placeholder` for why the double must not write them.
+    assert PRICE_PLACEHOLDER not in parsed.pitch
+    assert STOCK_PLACEHOLDER not in parsed.pitch
+
+
+def test_stub_free_query_carries_no_placeholder(
+    client: TestClient, auth_headers: dict[str, str], forbid_network: None
+) -> None:
+    """The double must teach the contract the real pipeline enforces, not a friendlier one.
+
+    A placeholder reaching `PitchPlaceholderResolver` without an anchor makes it withhold the
+    **whole** argument — by design, and fixed by a test on the .NET side. So a stub that wrote
+    `{{price}}` for a free query would hand every client running against stubs an argument that
+    the real path suppresses, and the first time anyone ran against the real service the prose
+    would vanish with nothing in the diff to explain it.
+    """
+    body = client.post(
+        "/v1/assist/sale",
+        json={"query": "¿la plata se puede mojar?", "top_k": 2},
+        headers=auth_headers,
+    ).json()
+
+    assert body["pitch"], "the free query still gets prose; it just names no figure"
+    assert PRICE_PLACEHOLDER not in body["pitch"]
+    assert STOCK_PLACEHOLDER not in body["pitch"]
+    # And no resolved figure either, which would be the opposite mistake: Python owns neither
+    # the price nor the stock, so a number here would be invented.
+    assert not PRICE_LIKE.search(body["pitch"])
+
+
+def test_stub_anchored_mode_still_carries_the_placeholders(
+    client: TestClient, auth_headers: dict[str, str], forbid_network: None
+) -> None:
+    """The anchored modes are untouched: there the resolver has a piece to resolve against."""
+    body = client.post(
+        "/v1/assist/sale",
+        json={"product_id": "11111111-1111-1111-1111-111111111111"},
+        headers=auth_headers,
+    ).json()
+
+    assert PRICE_PLACEHOLDER in body["pitch"]
+    assert STOCK_PLACEHOLDER in body["pitch"]
 
 
 def test_assist_stub_exercises_the_absent_family(

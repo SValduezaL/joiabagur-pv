@@ -16,13 +16,20 @@ from jbg_ai.assist.constants import (
     CAUSE_DECIMAL_FORM,
     CAUSE_ENUMERATION_FORMAT,
     CAUSE_FIGURE_NOT_IN_CONTEXT,
+    CAUSE_PLACEHOLDER_IN_FREE_QUERY,
     CAUSE_STOCK_ADJACENT,
     CURRENCY_MARKERS,
     HARD_VIOLATION_CAUSES,
     PITCH_VIOLATION_CAUSES,
     STOCK_MARKERS,
 )
-from jbg_ai.assist.prompt import PitchCitation, payload_from
+from jbg_ai.assist.prompt import (
+    FreeQueryPayload,
+    PitchCitation,
+    PitchPayload,
+    payload_from,
+)
+from jbg_ai.assist.schema import AssistPitch
 from jbg_ai.assist.schema import UsedCitation
 from jbg_ai.assist.verification import (
     check_correspondence,
@@ -307,3 +314,72 @@ def test_correspondence_is_the_only_check_whose_failure_is_not_hard() -> None:
 def test_normalisation_collapses_case_and_whitespace_and_nothing_else() -> None:
     assert normalise_text("  El   ORO\nde\tley  ") == "el oro de ley"
     assert normalise_text("el oro, de ley") != normalise_text("el oro de ley")
+
+
+# --- C40 · a placeholder written where no piece is anchored ---------------------------------
+
+
+def test_placeholder_in_free_query_withholds_the_argument() -> None:
+    """The guardrail that makes `assist/v5` a guarantee instead of a request.
+
+    A placeholder with no anchor is not a stylistic slip: `PitchPlaceholderResolver` on the
+    .NET side withholds the **whole** argument the moment it meets one, so what the operator
+    would see is an empty pitch and no explanation. Catching it here names the cause.
+    """
+    payload = FreeQueryPayload(query="algo de plata")
+    generated = AssistPitch(
+        pitch="Estas piezas son sobrias y van bien a diario, y cuestan {{price}}.",
+        used=(),
+    )
+
+    violations = verify(generated, payload)
+
+    assert [violation.cause for violation in violations] == [
+        CAUSE_PLACEHOLDER_IN_FREE_QUERY
+    ]
+    assert violations[0].is_hard, "it deletes the argument downstream, so it is a hard cause"
+
+
+def test_both_placeholders_are_reported_apart() -> None:
+    payload = FreeQueryPayload(query="algo de plata")
+    generated = AssistPitch(
+        pitch="Cuesta {{price}} y quedan {{stock}} unidades.", used=()
+    )
+
+    causes = [violation.cause for violation in verify(generated, payload)]
+
+    assert causes == [CAUSE_PLACEHOLDER_IN_FREE_QUERY] * 2
+
+
+def test_anchored_mode_placeholder_is_not_a_violation() -> None:
+    """With one piece named the placeholder is what the prompt **asks** for.
+
+    The asymmetry is the whole rule: .NET resolves it against the anchored piece, which is what
+    keeps this service from ever writing a price. Flagging it here would break the two modes
+    that have worked since C30b.
+    """
+    payload = PitchPayload(sku="JBG-0001", query="¿se puede mojar?")
+    generated = AssistPitch(
+        pitch="Cuesta {{price}} y quedan {{stock}} unidades.", used=()
+    )
+
+    causes = [violation.cause for violation in verify(generated, payload)]
+
+    assert CAUSE_PLACEHOLDER_IN_FREE_QUERY not in causes
+
+
+def test_a_free_query_argument_without_placeholders_passes() -> None:
+    """The shape `assist/v5` asks for: comparative language, no figure, no marker."""
+    payload = FreeQueryPayload(query="algo de plata")
+    generated = AssistPitch(
+        pitch="De las tres, la más sobria es la de aro fino y la más vistosa la de eslabón.",
+        used=(),
+    )
+
+    assert verify(generated, payload) == ()
+
+
+def test_the_cause_is_in_both_vocabularies() -> None:
+    """It must be partitionable in the sweep **and** hard, which are two separate tuples."""
+    assert CAUSE_PLACEHOLDER_IN_FREE_QUERY in PITCH_VIOLATION_CAUSES
+    assert CAUSE_PLACEHOLDER_IN_FREE_QUERY in HARD_VIOLATION_CAUSES

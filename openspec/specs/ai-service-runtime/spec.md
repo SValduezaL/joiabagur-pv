@@ -7,11 +7,17 @@ Runnable `jbg-ai` process behavior: fail-fast settings, public health with versi
 
 The `jbg-ai` service SHALL expose `GET /health` without authentication. The response MUST be HTTP 200 when the process is running and MUST include an OK status indicator and the configured service version (`SERVICE_VERSION`).
 
-The response MUST additionally report database reachability, the state of the vector index, and whether the embedding provider credential is configured. The endpoint MUST NOT call the embedding or LLM provider: the provider field reports **configuration presence only**, never provider reachability. A third-party outage MUST NOT be able to make this endpoint fail.
+The response MUST additionally report database reachability, the state of the vector index, whether the embedding provider credential is configured, and the state of the point-of-sale availability projection. The endpoint MUST NOT call the embedding or LLM provider: the provider field reports **configuration presence only**, never provider reachability. A third-party outage MUST NOT be able to make this endpoint fail.
+
+The projection section MUST report when the feed was last drained, when it was last drained in full, the elapsed time since the last drain, whether that elapsed time exceeds the configured staleness ceiling, the ceiling itself, the number of pages recorded as failed for that feed, and the number of points of sale holding no assigned row. The failed page count MUST be read from the persisted record of failed batches rather than from the outcome of the drain that happens to have run most recently in this process, because that record survives a restart and because nothing else reads it today, so a page that failed months ago is otherwise invisible for ever. The elapsed time MUST be computed from `ai.sync_checkpoint.last_incremental_sync_at` for the `pos-availability` feed and MUST NOT be derived from `ai.pos_projection.refreshed_at` in any form, because the feed is incremental by keyset, so that column records when an assignment last changed rather than when the projection was last looked at.
+
+Reporting the elapsed time and the staleness verdict together is deliberate and is not redundancy: the elapsed time informs a reader, while the verdict states what the retrieval guard decided against the ceiling this deployment is configured with. Deriving the verdict on the consumer's side would duplicate the threshold in two places, and the ceiling travels with it so a consumer can explain the verdict without knowing the service's configuration.
+
+The reported age MUST be described as a property of the drain and never of a point of sale, because the checkpoint holds one row per feed and every scope therefore reports the same value.
 
 The reported state MUST be cached for a short window so that repeated probing does not consume the capped database connection pool.
 
-The handler's return annotation MUST remain an open mapping and no new route may be introduced by this requirement, so that the versioned OpenAPI snapshot is unaffected.
+The handler's return annotation MUST remain an open mapping and no new route may be introduced by this requirement, so that the versioned OpenAPI snapshot is unaffected. This is what allows the projection section to be added at no contract cost on either side of the boundary: the consumer's typed reading of this payload ignores fields it does not recognise rather than failing on them.
 
 #### Scenario: Health returns OK with version
 
@@ -69,6 +75,34 @@ The handler's return annotation MUST remain an open mapping and no new route may
 - **WHEN** the versioned OpenAPI snapshot is regenerated from the canonical settings profile
 - **THEN** it is byte-identical to the committed snapshot
 - **AND** the `/health` operation still declares an open object response
+
+#### Scenario: Health reports projection freshness taken from the checkpoint
+
+- **GIVEN** a projection whose rows were last written long ago and whose feed was drained moments ago
+- **WHEN** a client calls `GET /health`
+- **THEN** the body reports a small elapsed time since the last drain
+- **AND** that value derives from the `pos-availability` checkpoint and not from the age of the rows
+- **AND** the body reports the staleness verdict and the configured ceiling alongside it
+
+#### Scenario: Health reports a point of sale left without any assortment
+
+- **GIVEN** a projection in which one point of sale holds no assigned row
+- **WHEN** a client calls `GET /health`
+- **THEN** the body reports that one point of sale carries no assortment
+
+#### Scenario: The projection section does not move the frozen contract
+
+- **GIVEN** the projection section is part of the health payload
+- **WHEN** the OpenAPI snapshot test runs
+- **THEN** it passes against the committed `ai-service/openapi.json` without regenerating it
+- **AND** no route was added under `/v1`
+
+#### Scenario: Health stays 200 when the projection has never been drained
+
+- **GIVEN** no checkpoint exists for the `pos-availability` feed
+- **WHEN** a client calls `GET /health`
+- **THEN** the response status is 200
+- **AND** the projection section reports the absence rather than an elapsed time
 
 ### Requirement: Settings fail fast on missing required environment
 On startup, `jbg-ai` MUST load settings via pydantic-settings. `APP_ENV`, `SERVICE_VERSION` and `JWT_SECRET` MUST be required. If any of them is missing or empty, the process MUST fail immediately with a clear error identifying the missing setting and MUST NOT continue serving requests. `LOG_LEVEL` MAY default to `INFO`. `JWT_TTL_SECONDS` MAY default to `300`. `STUB_MODE` MAY default to `true`. `ENABLE_DEV_ENDPOINTS` MAY default from `APP_ENV`, resolving to false under a production profile. `DATABASE_URL` MUST be optional and MUST have no default; `DB_POOL_SIZE` MUST be optional and MAY default to `5`. Their absence MUST NOT prevent the process from starting or from serving the routes that do not use the database.

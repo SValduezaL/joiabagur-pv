@@ -6,8 +6,16 @@ every time it ran. They also fail differently: the catalog drain can lose one pr
 embedding provider and carry on, while this one embeds nothing and its unit of failure is a
 whole page of assignments.
 
-There is no scheduler here and no `/v1` route. Freshness is not bought with a hidden cron:
-the retrieval response reports how old the projection is, and acts on it.
+There is no `/v1` route here, and there never will be: the frozen contract enumerates that
+surface in a MUST.
+
+**There IS a scheduler now, and there did not use to be.** Until C41 this docstring said
+freshness was not bought with a hidden cron, because the retrieval response reports how old the
+projection is and acts on it. It does — and over three separate sessions that report **reached
+no screen**, so an environment ran twenty days stale and two of those sessions published
+measurements taken over a degraded scope. Reporting honestly is necessary and it was not
+sufficient. The scheduler lives in `indexing/scheduler.py`; the age now reaches `GET /health`,
+so the cron is not hidden either.
 """
 
 from __future__ import annotations
@@ -20,6 +28,7 @@ from datetime import UTC, datetime
 from typing import Callable
 from uuid import UUID
 
+from jbg_ai.indexing.drain_lock import DrainLock, log_declined
 from jbg_ai.indexing.feed import (
     IndexFeedClient,
     PosFeedItem,
@@ -70,6 +79,14 @@ class PosSyncResult:
     computed_as_of: datetime | None = None
     cursor: datetime | None = None
     cursor_id: UUID | None = None
+    #: True when another drain held the lock and this one wrote nothing.
+    #:
+    #: Kept apart from `failed_pages` on purpose, and the distinction is the whole reason it is
+    #: a field rather than a log line: a failed page means somebody has to go and look, while a
+    #: declined drain means the work is being done by the process that holds the lock. Folding
+    #: the two together would either raise a false alarm every time a manual run overlapped a
+    #: scheduled one, or teach whoever reads the counters to ignore a real one.
+    declined: bool = False
 
 
 def _now() -> datetime:
@@ -134,12 +151,63 @@ async def sync_pos_availability(
     time_budget_seconds: float = 180,
     clock: Clock | None = None,
     trace_id: str | None = None,
+    lock: DrainLock | None = None,
 ) -> PosSyncResult:
-    """Drain POS pages until `nextCursor` is null or the time budget elapses."""
+    """Drain POS pages until `nextCursor` is null or the time budget elapses.
+
+    **The lock is taken here and not in the caller**, and that placement is the requirement
+    rather than a convenience. Every entry point that drains — the scheduler, a second scheduler
+    tick, and `python -m jbg_ai.indexing sync-pos` run by hand — passes through this function,
+    so a lock held here covers all three. A lock held in the scheduler would leave the command
+    line uncovered, and the command line run by hand is how every recorded incident of a stale
+    projection was repaired: it is the overlap most likely to actually happen, not the least.
+
+    `lock=None` means no mutual exclusion and is a **test seam**, used by the unit tests of the
+    page loop, which own no database and are testing cursor arithmetic rather than concurrency.
+    Production callers construct `PostgresAdvisoryLock`, and that they do so is asserted on the
+    entry point instead of being left for a reviewer to notice.
+    """
     tick = clock or time.monotonic
     started = tick()
     trace = trace_id or new_trace_id()
 
+    if lock is not None:
+        async with lock.acquired() as granted:
+            if not granted:
+                log_declined(POS_FEED, trace)
+                return PosSyncResult(declined=True)
+            return await _drain(
+                request,
+                feed=feed,
+                repo=repo,
+                time_budget_seconds=time_budget_seconds,
+                tick=tick,
+                started=started,
+                trace=trace,
+            )
+
+    return await _drain(
+        request,
+        feed=feed,
+        repo=repo,
+        time_budget_seconds=time_budget_seconds,
+        tick=tick,
+        started=started,
+        trace=trace,
+    )
+
+
+async def _drain(
+    request: PosSyncRequest,
+    *,
+    feed: IndexFeedClient,
+    repo: PosProjectionRepo,
+    time_budget_seconds: float,
+    tick: Clock,
+    started: float,
+    trace: str,
+) -> PosSyncResult:
+    """The page loop itself, unchanged since C22 and deliberately kept that way."""
     checkpoint = await repo.get_checkpoint(POS_FEED)
     start_since, start_since_id = resolve_start_cursor(request, checkpoint)
     is_full = request.full or (start_since is None and start_since_id is None)
@@ -275,6 +343,12 @@ async def _persist_checkpoint(
 
 def describe(result: PosSyncResult) -> str:
     """One line of counters for the CLI. No row content, no identifiers."""
+    if result.declined:
+        # Said in words rather than as five zeros. A declined drain and a drain that found
+        # nothing to do print identical counters, and the two mean opposite things: one is
+        # "somebody else is doing it right now", the other is "the projection is already
+        # current". An operator who reads zeros after running this by hand needs to know which.
+        return "declined=1 another drain holds the lock; nothing was written"
     as_of = result.computed_as_of.isoformat() if result.computed_as_of else "none"
     return (
         f"upserted={result.upserted} soft_deleted={result.soft_deleted} "

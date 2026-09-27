@@ -5,11 +5,15 @@ namespace JoiabagurPV.Application.DTOs.Ai;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Only the two anchored modes are ever sent from here: a product alone (M2) or a product with
-/// the operator's question (M3). The contract also accepts a free query with no product, and
-/// this client refuses to issue one: the placeholders of the generated argument carry no
-/// reference to a product, so with several pieces on the table there is nothing to resolve
-/// them against.
+/// All three modes are sent from here since C40: a product alone (M2), a product with the
+/// operator's question (M3), and a query with no product at all (M1). The client requires
+/// **at least** one anchor, matching the contract, and refuses only a request carrying neither.
+///
+/// M1 was refused until C40, and the reason was sound while it held: the generated argument
+/// carried `{{price}}` and `{{stock}}`, which name no product, so with several pieces on the
+/// table there was nothing to resolve them against. `assist/v5` stops asking for placeholders
+/// in the free-query tasks and a hard cause in the service's integrity gate makes that a
+/// guarantee, so there is no longer anything to protect against.
 /// </para>
 /// <para>
 /// The frozen contract accepts an optional <c>pos_id</c> in the body and ignores it, because
@@ -32,6 +36,25 @@ public class AiAssistSaleRequest
 
     /// <summary>The operator's question, or null when the piece itself is the request.</summary>
     public string? Query { get; set; }
+
+    /// <summary>
+    /// Catalog filters for the free-query mode. Empty when the operator selected none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Non-nullable with a default, which is <see cref="AiSubstitutesRequest"/>'s shape for the
+    /// same contract field and for the same reason: the contract declares <c>filters</c> with a
+    /// default rather than as nullable, and <c>AiContractSnapshotTests</c> holds the two in
+    /// parity. An empty filter set and an absent property mean the same thing to the service,
+    /// so sending one costs nothing and keeps the two sibling requests identical in shape.
+    /// </para>
+    /// <para>
+    /// Ignored by the service when a piece is anchored: the anchor already determines what is
+    /// retrieved. Sent anyway, because suppressing it here would put a second, undocumented rule
+    /// in a client whose job is to carry the request faithfully.
+    /// </para>
+    /// </remarks>
+    public AiSearchFilters Filters { get; set; } = new();
 }
 
 /// <summary>

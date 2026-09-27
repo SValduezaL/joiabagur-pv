@@ -1,7 +1,7 @@
 # T-AIENG-024: Evaluation harness, hand-labelled golden set and retrieval baselines (C24)
 
 > Ticket técnico del change OpenSpec `add-eval-harness-golden-set-and-baselines`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-024](../../../Documentos/Historias/AI-Eng/HU-AIENG-024.md) y las decisiones cerradas de [c24-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-exploration-measurements.md).
+> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-024](../../../../Documentos/Historias/AI-Eng/HU-AIENG-024.md) y las decisiones cerradas de [c24-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-exploration-measurements.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -285,14 +285,14 @@ Candidatos posibles: `JPV_RRF_WEIGHT_VECTOR` y `JPV_BRANCH_DEPTH`. El barrido es
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-024](../../../Documentos/Historias/AI-Eng/HU-AIENG-024.md)
-- **Decisiones y pleitos:** [c24-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-exploration-measurements.md)
-- **Informes que dejaron pleitos abiertos:** [c21-hybrid-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md) · [c22-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md) · [c23-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md)
-- **Diseño RAG:** [§7.6, §8.1.1, §11.1, §11.2, §15](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** [ficha C24](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **HU origen:** [HU-AIENG-024](../../../../Documentos/Historias/AI-Eng/HU-AIENG-024.md)
+- **Decisiones y pleitos:** [c24-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c24-exploration-measurements.md)
+- **Informes que dejaron pleitos abiertos:** [c21-hybrid-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c21-hybrid-exploration-measurements.md) · [c22-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-implementation-measurements.md) · [c23-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md)
+- **Diseño RAG:** [§7.6, §8.1.1, §11.1, §11.2, §15](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** [ficha C24](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Specs vivas:** `openspec/specs/vector-retrieval/` · `openspec/specs/hybrid-fusion/` · `openspec/specs/query-expansion/` · `openspec/specs/pos-projection/` · `openspec/specs/ai-vector-schema/` · `openspec/specs/ai-service-api-contracts/`
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
-- **Apuntes:** [S10 · Medición artesanal de relevancia](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Como%20saber%20reranking%20compensa%20-%20medicion%20artesanal%20relevancia%20.md) · [S16 · Tratamiento de regresiones](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Tratamiento%20de%20regresiones.md)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **Apuntes:** [S10 · Medición artesanal de relevancia](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Como%20saber%20reranking%20compensa%20-%20medicion%20artesanal%20relevancia%20.md) · [S16 · Tratamiento de regresiones](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Tratamiento%20de%20regresiones.md)
 
 ---
 

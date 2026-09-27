@@ -126,13 +126,13 @@ Medición sobre el índice vivo, **antes de elegir nada**, de 1.168 piezas activ
 
 Las de **≥2 materiales son el 7,8 %** y son las únicas que arrastran la sección de piezas mixtas, o sea donde vive el riesgo de atribución cruzada. De ahí que la muestra sea **estratificada a partes iguales** —20 y 20— y no proporcional, que habría traído una o dos. Las de **0 materiales quedan fuera y no por descuido**: `ground_piece` no les direcciona ningún fragmento, así que el parámetro barrido no puede moverlas.
 
-Selección determinista y **escrita, no re-derivada**: `ORDER BY md5(product_id::text) LIMIT 20` por estrato, con los 40 identificadores en [`evals/assist/sweep-sample.yaml`](../../../ai-service/evals/assist/sweep-sample.yaml). Una muestra que se recalcula puede moverse entre dos brazos, y dos brazos medidos sobre piezas distintas no son una ablación de nada. `test_the_sweep_sample_is_declared_and_not_derived_at_run_time` lo fija.
+Selección determinista y **escrita, no re-derivada**: `ORDER BY md5(product_id::text) LIMIT 20` por estrato, con los 40 identificadores en [`evals/assist/sweep-sample.yaml`](../../../../ai-service/evals/assist/sweep-sample.yaml). Una muestra que se recalcula puede moverse entre dos brazos, y dos brazos medidos sobre piezas distintas no son una ablación de nada. `test_the_sweep_sample_is_declared_and_not_derived_at_run_time` lo fija.
 
 El golden set **no sirve** para esto y está comprobado: 72 consultas, **0 con ancla de pieza**. Anotado en la ficha de C38.
 
 ### 3.2. El barrido, ejecutado
 
-120 generaciones · 3 brazos · `gpt-4o-mini` a temperatura 0 · **0,0897 USD** · artefacto [`c30b-assist-sweep-5a6e1b4b8621.json`](../../../ai-service/evals/results/c30b-assist-sweep-5a6e1b4b8621.json), atado a `run_id`, `git_sha` y `prompt_version`.
+120 generaciones · 3 brazos · `gpt-4o-mini` a temperatura 0 · **0,0897 USD** · artefacto [`c30b-assist-sweep-5a6e1b4b8621.json`](../../../../ai-service/evals/results/c30b-assist-sweep-5a6e1b4b8621.json), atado a `run_id`, `git_sha` y `prompt_version`.
 
 | Brazo | Citas ofrecidas | Rechazo 1.ª pasada | Causas | **Retenidos** | Citas retiradas | Frases | USD/petición |
 |---|---|---|---|---|---|---|---|
@@ -455,7 +455,7 @@ Corregido en `a149f26`, **fuera del alcance de C30b y a petición expresa**, con
 
 ### 10.6. Una corrección de este mismo informe, sobre Terraform
 
-La primera redacción del informe de implementación decía que llevar la credencial a la demo vivía en `terraform/`. **Es falso**, comprobado sobre el árbol: el rol de instancia ya lee **todo el prefijo** `/jbg-demo/` —sin cambio de IAM— y los secretos **no se declaran en Terraform a propósito**, porque un valor pasado a Terraform acaba en claro en el fichero de estado. Lo que falta son cuatro pasos en `deploy/demo/` y `compose.demo.yaml`, detallados en [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md).
+La primera redacción del informe de implementación decía que llevar la credencial a la demo vivía en `terraform/`. **Es falso**, comprobado sobre el árbol: el rol de instancia ya lee **todo el prefijo** `/jbg-demo/` —sin cambio de IAM— y los secretos **no se declaran en Terraform a propósito**, porque un valor pasado a Terraform acaba en claro en el fichero de estado. Lo que falta son cuatro pasos en `deploy/demo/` y `compose.demo.yaml`, detallados en [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md).
 
 Comprobado además que **la demo no genera hoy**: `compose.demo.yaml` no pasa ninguna credencial de proveedor al contenedor, así que sirve la respuesta de C30a con 200 — el comportamiento declarado, no un fallo.
 

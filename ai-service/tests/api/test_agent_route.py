@@ -383,7 +383,7 @@ def test_the_deterministic_route_answers_exactly_what_it_answered_before(
     for added in ("partial", "stop_reason", "iterations", "tool_calls_used", "trace"):
         assert added not in body
     assert "calls" not in body["usage"], "the shared usage object did not grow a field"
-    assert body["prompt_version"] == PROMPT_VERSION == "assist/v3"
+    assert body["prompt_version"] == PROMPT_VERSION == "assist/v5"
     assert MAX_PROVIDER_CALLS == 3, "the deterministic ceiling is the one C31 published"
 
 
@@ -398,17 +398,47 @@ def test_the_published_contract_moved_by_addition_only(
     route or to one of its new models — an addition somewhere else would be a change to an
     existing surface wearing the clothes of an addition.
 
-    **The «before» is a fixture**: `fixtures/openapi-c32a-baseline.json`, the committed snapshot
-    as C32a left it (git blob `dd8df91d…`; `43f70fda…` in a Windows checkout with CRLF). Until
-    the independent verification of C32b this test compared the committed snapshot against the
-    generated one — which is `test_openapi_snapshot_is_stable` again — and would have passed
-    over a removed field once the snapshot was regenerated. Reading the baseline from git
-    instead would tie the suite to the history being present, which a shallow clone or a
-    container does not guarantee. **The next change that moves the contract replaces this
-    fixture and the allowed additions below, deliberately.**
+    **The «before» is a fixture**: `fixtures/openapi-c42-baseline.json`, the committed snapshot
+    as it stood at `c81c3fa`, before C42 moved it (`sha256 8d9060ac…`). Until the independent
+    verification of C32b this test compared the committed snapshot against the generated one —
+    which is `test_openapi_snapshot_is_stable` again — and would have passed over a removed
+    field once the snapshot was regenerated. Reading the baseline from git instead would tie the
+    suite to the history being present, which a shallow clone or a container does not guarantee.
+    **The next change that moves the contract replaces this fixture and the allowed additions
+    below, deliberately.** C40 did that for C32a's fixture; **C42 is the next one and does it
+    for C40's**, whose two moves — `AssistRequest.filters` and `RetrievalResponse.warnings` —
+    are now part of the baseline rather than part of the difference.
+
+    **C42's move is one field, `AgentAssistGroup.origin`, and it costs one new schema.** The
+    provenance of a group had to reach the consumer: until now the distinction lived only in the
+    payload the model reads, so the argument said «y como alternativa…» while the screen had
+    nothing to label the rows with. It goes on a **subclass of the shared group model** and not
+    on the model itself, by the precedent `AgentUsage` set, because `AssistGroup` is what
+    `POST /v1/assist/sale` publishes and widening it would move that route's schema.
+
+    Measured over the whole document **with the walk below**: 1295 leaves at the C42 baseline,
+    1316 now, **0 removed**, 21 added, and **exactly one leaf changed**.
+
+    **That one changed leaf is a `$ref`, and this test's own docstring used to say a changed
+    `$ref` must fail — so it is declared here with the reason, not waved through.**
+    `AgentAssistResponse.properties.groups.items.$ref` moves from `AssistGroup` to
+    `AgentAssistGroup`. On the wire it is still an addition and nothing else: the new schema
+    carries every property of the old one with the same type and the same description, plus
+    `origin`, which the assertions below verify property by property rather than trusting the
+    name. A consumer that deserialises the old shape reads exactly what it read before and
+    ignores one unknown field. What a narrowed `$ref` would break is a consumer that **generates**
+    from the schema and pins the type name — which is why it is named rather than allowed by
+    rule, so that the next `$ref` to move still fails here.
+
+    **«Leaf» is not one concept, so the walk is named.** `_walk` never emits an empty container —
+    an empty dict does not reach its `else` — so the eleven empty `security[0].HTTPBearer`
+    objects are not leaves here. A counter that emitted them would report 1306 and 1327. Both
+    definitions are correct and the deltas agree in both; the absolute figures do not, so the two
+    assertions below pin the ones this walk produces rather than leaving them to prose that
+    nobody recounts.
     """
     baseline = json.loads(
-        (Path(__file__).parent / "fixtures" / "openapi-c32a-baseline.json").read_text(
+        (Path(__file__).parent / "fixtures" / "openapi-c42-baseline.json").read_text(
             encoding="utf-8"
         )
     )
@@ -420,29 +450,66 @@ def test_the_published_contract_moved_by_addition_only(
     before = dict(_walk(baseline))
     after = dict(_walk(committed))
 
+    # Pinned, so the figures in the docstring and in the C40 report cannot drift from what this
+    # walk actually counts. A change here is a real movement of the contract's size and should be
+    # read as one, not corrected silently.
+    assert len(before) == 1295, len(before)
+    assert len(after) == 1316, len(after)
+
     assert after == dict(_walk(generated)), "the committed snapshot is the one the app generates"
 
     removed = sorted(set(before) - set(after))
     changed = sorted(path for path in set(before) & set(after) if before[path] != after[path])
     added = sorted(set(after) - set(before))
-    new_models = (
-        "AgentAssistRequest",
-        "AgentAssistResponse",
-        "AgentTraceIteration",
-        "AgentTraceTool",
-        "AgentTurn",
-        "AgentUsage",
-    )
-    allowed = ("$.paths./v1/assist/agent.",) + tuple(
-        f"$.components.schemas.{name}." for name in new_models
+
+    # One new schema and one new description on the property that points at it. Nothing else,
+    # and in particular nothing under `AssistGroup`, `AssistResponse` or any retrieval model.
+    allowed = (
+        "$.components.schemas.AgentAssistGroup.",
+        "$.components.schemas.AgentAssistResponse.properties.groups.description",
     )
 
+    # The only leaf whose VALUE may differ, named individually and argued in the docstring: the
+    # `$ref` of the agent response's groups, narrowed to the subclass. Naming it keeps the
+    # guard's teeth — any other changed leaf, and in particular any other changed `type` or
+    # `$ref`, still fails here.
+    allowed_changes = {
+        "$.components.schemas.AgentAssistResponse.properties.groups.items.$ref",
+    }
+
     assert removed == [], removed[:10]
-    assert changed == [], changed[:10]
-    assert added, "the change adds a route; an empty difference would mean the fixture is stale"
+    assert set(changed) <= allowed_changes, sorted(set(changed) - allowed_changes)[:10]
+    assert added, "the change moves the contract; an empty difference would mean a stale fixture"
     assert [path for path in added if not path.startswith(allowed)] == []
-    for name in new_models:
-        assert any(path.startswith(f"$.components.schemas.{name}.") for path in added), name
+
+    # **The narrowed `$ref` is an addition on the wire, verified property by property.** Every
+    # property of the shared group model is present on the subclass with the same definition, so
+    # a consumer deserialising the old shape reads what it read before. Trusting the class name
+    # would be trusting exactly the thing this test exists not to trust.
+    shared = committed["components"]["schemas"]["AssistGroup"]
+    subclass = committed["components"]["schemas"]["AgentAssistGroup"]
+    assert set(subclass["properties"]) - set(shared["properties"]) == {"origin"}
+    for name, definition in shared["properties"].items():
+        assert subclass["properties"][name] == definition, name
+
+    # And the shared model itself did not move: it is what the deterministic route publishes.
+    assert shared == json.loads(
+        (Path(__file__).parent / "fixtures" / "openapi-c42-baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )["components"]["schemas"]["AssistGroup"]
+    assert (
+        committed["components"]["schemas"]["AssistResponse"]["properties"]["groups"]["items"][
+            "$ref"
+        ]
+        == "#/components/schemas/AssistGroup"
+    ), "the deterministic route still points at the unwidened model"
+
+    # The new field is required on the agent's group, which is deliberate: a provenance that
+    # could be absent would leave the screen deciding what to label a group with, and guessing
+    # is the failure the marker exists to prevent.
+    assert "origin" in subclass["required"]
+    assert subclass["properties"]["origin"]["enum"] == ["catalogo", "sustitutos"]
 
     # And the shape of the deterministic response is pinned as a SET, not as a count.
     assert set(committed["components"]["schemas"]["AssistResponse"]["properties"]) == {
@@ -460,6 +527,13 @@ def test_the_published_contract_moved_by_addition_only(
     }
     assert "calls" not in committed["components"]["schemas"]["Usage"]["properties"]
     assert "/v1/assist/agent" in committed["paths"]
+
+    # The new field is optional on the way out too: absent from `required`, so a consumer
+    # that never reads it is unaffected, and typed as a plain list of strings.
+    retrieval = committed["components"]["schemas"]["RetrievalResponse"]
+    assert "warnings" not in retrieval.get("required", [])
+    assert retrieval["properties"]["warnings"]["type"] == "array"
+    assert retrieval["properties"]["warnings"]["items"]["type"] == "string"
     assert set(committed["paths"]["/v1/assist/agent"]) == {"post"}
 
 

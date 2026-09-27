@@ -198,7 +198,7 @@
   "areas": [
     {
       "name": "docs-themselves",
-      "globs": ["README.md", "backend/README.md", "frontend/README.md", "ai-service/README.md", "ai-service/tests/README.md", "terraform/README.md", "Documentos/**", "openspec/project.md", "openspec/config.yaml", "openspec/DEFERRED_TASKS.md"],
+      "globs": ["README.md", "backend/README.md", "frontend/README.md", "ai-service/README.md", "ai-service/tests/README.md", "terraform/README.md", "deploy/demo/README.md", "Documentos/**", "openspec/project.md", "openspec/config.yaml", "openspec/DEFERRED_TASKS.md"],
       "docs": [],
       "reason": "El propio cambio ya toca documentacion: comprueba coherencia con el resto, no lo cuentes como disparador nuevo."
     },
@@ -258,9 +258,9 @@
     },
     {
       "name": "frontend-tests",
-      "globs": ["frontend/e2e/**", "frontend/src/test/**", "frontend/playwright.config.ts", "frontend/vite.config.ts"],
+      "globs": ["frontend/e2e/**", "frontend/src/test/**", "frontend/src/**/__tests__/**", "frontend/src/**/*.test.ts", "frontend/src/**/*.test.tsx", "frontend/src/**/*.spec.ts", "frontend/src/**/*.spec.tsx", "frontend/playwright.config.ts", "frontend/vite.config.ts"],
       "docs": ["doc-testing-frontend", "readme-frontend"],
-      "reason": "Tests o configuracion de test del frontend: stack, estructura y convenciones documentadas."
+      "reason": "Tests o configuracion de test del frontend: stack, estructura y convenciones documentadas. Los tests unitarios y de componente estan COLOCADOS junto al codigo (component.test.tsx, __tests__/), no en una carpeta aparte como los del backend: sin esos globs caian en frontend-app y Documentos/testing-frontend.md nunca salia como candidato, que es el hueco que la verificacion de C40 encontro."
     },
     {
       "name": "frontend-services",
@@ -324,7 +324,7 @@
     },
     {
       "name": "infra-docker",
-      "globs": ["**/Dockerfile*", "**/docker-compose*.yml", "**/.dockerignore", "**/nginx*.conf", "**/deploy*.sh"],
+      "globs": ["**/Dockerfile*", "**/docker-compose*.yml", "**/compose*.yml", "**/compose*.yaml", "**/.dockerignore", "**/nginx*.conf", "**/deploy*.sh", "deploy/demo/**"],
       "docs": ["doc-arquitectura", "readme-root", "doc-guias-deploy"],
       "reason": "Contenedores o proxy: entorno de desarrollo/produccion e instrucciones de instalacion."
     },

@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from jbg_ai.api.auth import ServicePrincipal
 from jbg_ai.api.schemas.assist import (
+    AgentAssistGroup,
     AgentAssistRequest,
     AgentAssistResponse,
     AgentUsage,
@@ -64,6 +65,7 @@ from jbg_ai.api.schemas.retrieval import (
     SubstitutesResponse,
 )
 from jbg_ai.assist.constants import (
+    GROUP_ORIGIN_CATALOGUE,
     INTENT_PRODUCT_PITCH,
     INTENT_UNCLASSIFIED,
     STOP_NO_CLIENT,
@@ -166,7 +168,7 @@ def retrieval_products_stub(
         candidates_returned=count,
         low_confidence=_is_low_confidence(request.query),
         trace_id=principal.trace_id,
-        effective_pos_id=principal.pos_id,
+        effective_pos_id=principal.pos_id or "",
     )
 
 
@@ -193,7 +195,7 @@ def retrieval_substitutes_stub(
         candidates_returned=count,
         low_confidence=False,
         trace_id=principal.trace_id,
-        effective_pos_id=principal.pos_id,
+        effective_pos_id=principal.pos_id or "",
     )
 
 
@@ -284,9 +286,24 @@ def assist_sale_stub(request: AssistRequest, principal: ServicePrincipal) -> Ass
     anchored = request.product_id is not None and request.query is None
     intent = INTENT_PRODUCT_PITCH if anchored else INTENT_UNCLASSIFIED
     subject = request.query.strip() if request.query else f"la pieza {request.product_id}"
+
+    # **The free-query mode emits no placeholders, and the double has to say so too.**
+    # `PitchPlaceholderResolver` on the .NET side withholds the whole argument whenever a
+    # placeholder reaches it without an anchor to resolve against — by design, and with a test
+    # fixing it. So a stub that wrote them here would hand every client running against stubs an
+    # argument that the real pipeline would suppress: the double would be teaching the wrong
+    # contract, which is the one thing a double must never do.
+    #
+    # Comparative language without a figure stays allowed, and is what the free-query prompt
+    # asks for; there is simply no price and no quantity to name when no piece is anchored.
     pitch = (
         f"Para «{subject}» te encajan {len(groups)} familias. "
         f"Precio {PRICE_PLACEHOLDER} y quedan {STOCK_PLACEHOLDER} unidades en tu punto de venta."
+        if request.product_id is not None
+        else (
+            f"Para «{subject}» te encajan {len(groups)} familias. "
+            "Tienes la lista con precios y existencias delante."
+        )
     )
     citations = [
         _assist_citation(index, group.members[0].product_id)
@@ -308,7 +325,7 @@ def assist_sale_stub(request: AssistRequest, principal: ServicePrincipal) -> Ass
         abstained=False,
         prompt_version=None,
         trace_id=principal.trace_id,
-        effective_pos_id=principal.pos_id,
+        effective_pos_id=principal.pos_id or "",
     )
 
 
@@ -335,7 +352,7 @@ def inventory_propose_stub(
         proposals=proposals,
         horizon_days=request.horizon_days,
         trace_id=principal.trace_id,
-        effective_pos_id=principal.pos_id,
+        effective_pos_id=principal.pos_id or "",
     )
 
 
@@ -628,7 +645,15 @@ def assist_agent_stub(
         (turn.text for turn in reversed(request.turns) if turn.role == "operario"),
         request.turns[-1].text,
     )
-    groups = [_assist_group(index) for index in range(request.top_k)]
+    # **Every group is a catalogue match here, and that is not a shortcut.** The stub runs no
+    # loop — `iterations: 0`, and the stop reason says so — so no tool ran, and a group marked
+    # as a substitute would claim `buscar_sustitutos` was invoked. The shape a client renders
+    # is the field being present and carrying a value of the closed vocabulary; pretending a
+    # pivot would be the same mistake the first form of this stub made with the two warnings.
+    groups = [
+        AgentAssistGroup(**_assist_group(index).model_dump(), origin=GROUP_ORIGIN_CATALOGUE)
+        for index in range(request.top_k)
+    ]
     citations = [
         _assist_citation(index, group.members[0].product_id)
         for index, group in enumerate(groups)
@@ -655,5 +680,5 @@ def assist_agent_stub(
         trace=[],
         agent_prompt_version=None,
         trace_id=principal.trace_id,
-        effective_pos_id=principal.pos_id,
+        effective_pos_id=principal.pos_id or "",
     )

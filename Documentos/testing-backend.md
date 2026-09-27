@@ -375,6 +375,135 @@ Sobre los dos primeros conviene una precisión que ahorra tests engañosos. Al p
 > El detalle está en
 > `Documentos/Proyecto Final AIEng/informes/c28-implementation-measurements.md`.
 
+> **Actualización del 2026-09-24, sobre `c40-add-frontend-free-query-panel`.** La suite tiene ahora
+> **1.328 tests**: C40 añade **87**. La línea base dio **50 fallos de 1.241**; al cierre, **47 de
+> 1.328**. **Cero fallos en el área del change** —`AiCallScope`, `AiGateway`, `FreeQuerySearch`,
+> `AssistedSearch`, `SalesAssist`, `Substitutes`, `ProductSearchEvent` y `AiContract`—, comprobado
+> con cuatro pasadas dirigidas a lo largo del change y una más en la verificación, con 410 de 410.
+>
+> **Y ésta es la medición que convierte «compara nombres» en un criterio utilizable**, porque pone
+> número a la rotación que las entradas anteriores describían de oído. Dos pasadas completas del
+> **mismo commit** `93115cf`, mismo árbol, **sin recompilar entre medias**:
+>
+> | | Pasada 1 | Pasada 2 |
+> |---|---|---|
+> | Con error | **50** | **51** |
+> | Total | 1.241 | 1.241 |
+> | Duración | 8 m 58 s | 8 m 1 s |
+>
+> Comparadas **por nombre**: **43 estables**, **8 que aparecen sólo en la segunda**, **7 que
+> desaparecen tras la primera** — **rotación total de quince nombres**. Y el dato que la hace
+> utilizable: **los quince están confinados a dos clases**, 14 en `InventoryIntegrationTests` y 1 en
+> `ReturnsControllerTests`. **Cero rotación fuera de ellas.** `PaymentMethodsControllerTests`, la
+> tercera del trío histórico, no rotó ese día pero mantiene su fallo fijo.
+>
+> **Cómo se lee el DoD con esta tabla al lado.** El criterio literal «cero nombres desaparecidos y
+> cero nuevos en rojo» **no es alcanzable** en este backend, y exigirlo lleva a perseguir ruido. La
+> lectura correcta es: **los nombres que difieran deben caer dentro de las clases inestables
+> conocidas, y ninguno en una clase que el change toque.** El único nombre nuevo del cierre de C40 es
+> `InventoryIntegrationTests.Operator_ViewStock_ForAssignedPOS_ShouldSucceed`, dentro de ellas.
+>
+> **La regla de la duración volvió a morder, y de otra forma.** La primera pasada del grupo de cierre
+> dio **484 fallos de 1.328 en 2 minutos**, contra 47 en 20. No era una regresión: eran
+> `System.TimeoutException` en masa, porque se lanzaron **las tres suites a la vez** y además una
+> reconstrucción de la imagen de `jbg-ai`, y Testcontainers no pudo levantar sus contenedores.
+> Confirma la regla de la entrada anterior y le añade una causa: **no sólo «mira la duración», sino
+> corre la suite del backend en solitario**, sin otra suite ni un build de imagen en paralelo.
+>
+> El detalle está en
+> `Documentos/Proyecto Final AIEng/informes/c40-implementation-measurements.md` §1 y §14.3.
+
+> **Actualización del 2026-09-26, sobre `c40-fix-all-shops-scope-unreachable` (C40_FIX).** La suite
+> llega a **1.339 tests** con la implementación (+10) y a **1.347** tras su verificación
+> independiente (+8). Cuatro pasadas completas, dos de cada pasada:
+>
+> | Pasada | Con error | Total |
+> |---|---|---|
+> | Línea base del implementador, sobre `501c97c` | 45 | 1.329 |
+> | Cierre del implementador, sobre `4b1d056` | 52 | 1.339 |
+> | Línea base de la verificación, **sobre el mismo `4b1d056`** | **51** | 1.339 |
+> | Cierre de la verificación | 53 | 1.347 |
+>
+> **Cero fallos en el área del change** —`AssistedSearch*`, `AiSearch*`, `FreeQuery*`, `AiScope*`,
+> `Availability*`— en las cuatro. Las dos pasadas dirigidas dieron 122/122 y 130/130.
+>
+> **Y aquí está la medición más fuerte que este documento tiene sobre la rotación.** Las dos pasadas
+> completas de la verificación difieren en **doce nombres** —siete entran, cinco salen— y **los doce
+> están en `InventoryIntegrationTests`**. Cero rotación fuera de ella: ni una clase más aparece o
+> desaparece. La entrada de C40 midió quince nombres repartidos entre dos clases; ésta los concentra
+> en una sola, y el `+2` neto del recuento (51 → 53) es **exactamente** el saldo de esa rotación
+> (7 − 5), no de los ocho tests nuevos, que salieron los ocho en verde. Nótese además que
+> la línea base de la verificación y el cierre del implementador **son el mismo commit y dan 51 y
+> 52**: el recuento no identifica un árbol.
+>
+> **Un corolario de método, que costó una sesión al implementador.** `dotnet test` **desde la raíz
+> del repositorio** imprime `MSBUILD : error MSB1003` —no hay solución ahí, vive en
+> `backend/src/JoiabagurPV.sln`— y **sale 0 sin ejecutar un solo test**. Es una segunda vía al mismo
+> desenlace que el `JoiabagurPV.API.exe` vivo bloqueando `bin/Debug`, y refuerza la única regla que
+> vale: **leer la línea de resumen, nunca el código de salida.**
+>
+> El detalle está en el `qa.md` del change archivado, §1 y §11.9.
+
+> **Actualización del 2026-09-26, sobre `c42-add-frontend-agent-panel` (C42).** La suite tiene ahora
+> **1.401 tests**: C42 añade **54** —16 de la pasarela, 21 del servicio de aplicación, 13 de endpoint y
+> 4 de arranque—, los 54 en verde. La línea base dio **53 fallos de 1.347**; al cierre, **46 de 1.401**:
+> el rojo **baja siete** mientras la suite crece 54.
+>
+> **La rotación, otra vez confinada.** Cuatro nombres entran y once salen; los cuatro que entran son
+> tres de `InventoryIntegrationTests` y uno de `ReturnsControllerTests`, y los once que salen son todos
+> de `InventoryIntegrationTests`. **Cero fallos en el área del change** —`Agent*`, `AiGateway*`,
+> `AiSearch*`, `AssistedSearch*`, `FreeQuery*`, `AiScope*`— en las dos pasadas.
+>
+> **Y una tercera vía al mismo desenlace de «sale 0 sin medir nada», que esta entrada añade: medir en
+> paralelo.** La primera pasada de C42 lanzó las tres suites del repositorio a la vez y **el backend
+> dio 490 fallos de 1.347**. No era regresión ni orden: `vitest` con 14 *workers* satura la máquina y
+> **testcontainers deja de alcanzar el demonio de Docker por su tubería con nombre**, así que todos los
+> `IntegrationTests` mueren al arrancar con
+> `System.TimeoutException at System.IO.Pipes.NamedPipeClientStream.ConnectInternal` bajo
+> `Docker.DotNet.DockerClient`. El mismo commit, en serie, da 53.
+>
+> Es peor que las otras dos vías porque **sí ejecuta tests y sí imprime una línea de resumen**: la
+> línea dice 490 y es verdad, sólo que no mide el código. La regla que lo cubre no es la del código de
+> salida sino una nueva: **una pasada de las tres suites es serial**, y cuesta unos 20 minutos.
+>
+> El detalle está en `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` §1.
+
+### `coverlet` no mide `JoiabagurPV.Application`, y no avisa
+
+**Cualquier cifra de cobertura tomada en este repositorio con el comando por defecto excluye la capa
+donde vive la lógica de negocio.** Encontrado en el QA de C34 y **reproducido el 2026-09-26** al
+verificar C40_FIX, así que no es una anomalía de una máquina.
+
+```bash
+dotnet test --collect:"XPlat Code Coverage"   # el informe NO trae JoiabagurPV.Application
+```
+
+El informe Cobertura sale con `JoiabagurPV.API`, `JoiabagurPV.Domain` y `JoiabagurPV.Infrastructure`
+y **sin** `JoiabagurPV.Application`. No hay error, no hay aviso: el paquete simplemente no está. Con
+`--diag` aparece la causa:
+
+```text
+[coverlet]Unable to instrument module: …\JoiabagurPV.Tests\bin\Debug\net10.0\JoiabagurPV.Application.dll
+Coverlet.Core.Exceptions.CecilAssemblyResolutionException: AssemblyResolutionException for
+'Microsoft.Extensions.Logging.Abstractions, Version=10.0.0.0, …'
+```
+
+Ese ensamblado llega del **framework compartido de ASP.NET Core** y nunca se copia al `bin`, así que
+Mono.Cecil no lo resuelve y coverlet abandona el módulo entero. **La sugerencia de coverlet,
+`-p:CopyLocalLockFileAssemblies=true`, no lo arregla** (probado en C34 y en C40_FIX).
+
+Lo que sí funciona, y hay que deshacerlo después:
+
+1. copiar a `backend/src/JoiabagurPV.Tests/bin/Debug/net10.0/` los `Microsoft.Extensions.*.dll` del
+   framework `Microsoft.AspNetCore.App/10.0.11` que no estén ya ahí —fueron **47** las dos veces—,
+   sólo para que Cecil los resuelva: en ejecución no cuentan, porque el host carga por `deps.json`;
+2. correr con `--no-build`;
+3. **borrarlos a continuación** y comprobar que no queda ninguno.
+
+Con eso `JoiabagurPV.Application` aparece en el informe. **Consecuencia práctica:** si el DoD de un
+change pide cobertura sobre código nuevo que vive en `Application` —que es donde vive casi todo—, el
+comando del README no la mide, y la cifra que devuelve describe la herramienta y no el cambio.
+
 ### Por qué se acumularon sin que nadie los viera
 
 Los dos árboles se comportan de forma muy distinta, y esa es la clave:
@@ -403,7 +532,8 @@ Los dos primeros grupos son **deriva de dependencias**, no lógica rota; los dos
 |---|---|---|
 | «Se esperaba 401 y llegó 200 / 403 / 201» | 16 | El `HttpClient` compartido de la clase de test es el que hace los `login`, así que **arrastra sus cookies**: la llamada «anónima» no lo es. Se arregla pidiendo un cliente nuevo a la factoría |
 | `Cannot create a DbSet for 'TestEntity'` | 4 | `RepositoryTests` usa una entidad que no está en el modelo del contexto |
-| `22001: value too long for character varying(20)` | 4 | Las *object mothers* generan datos con Bogus y el teléfono generado no siempre cabe en `PointOfSale.Phone`. **Es la única familia genuinamente no determinista**, y explica que dos ejecuciones del mismo código den recuentos distintos |
+| `22001: value too long for character varying(20)` | 4 | Las *object mothers* generan datos con Bogus y el teléfono generado no siempre cabe en `PointOfSale.Phone`. Es **no determinista**, y explica que dos ejecuciones del mismo código den recuentos distintos |
+| `UpdatedAt` anterior a `CreatedAt` por microsegundos | 1 | `ProductsControllerTests.Update_WithValidData_ShouldReturnUpdatedProduct`. Los dos sellos se toman del reloj del sistema dentro de la misma operación y el segundo cae **antes** que el primero por una fracción de milisegundo: *«Expected updated.UpdatedAt to be on or after ‹…16.462865›, but found ‹…16.462797›»*. Medido en **0,6 ms** y en **68 µs** en corridas distintas. **Pasa ejecutado aislado.** La **segunda familia no determinista**, anotada al verificar C34 (§10.9 de su QA) |
 | Varios | resto | Concurrencia en venta de última unidad, validaciones de importación, un 500 y un 400 puntuales |
 
 ### Cómo distinguir una regresión propia
@@ -419,7 +549,22 @@ git stash pop              # recuperarlo
 
 ### Qué haría falta para cerrarlo
 
-No es trabajo de un change de funcionalidad y **merece uno propio**. En orden de rentabilidad: extender el disparador de CI a las ramas de trabajo, para que esto deje de crecer en silencio; arreglar la familia de las cookies, que son 16 tests con una sola corrección; fijar los datos generados que chocan con límites de columna; y alinear ImageSharp con lo que `PdfSharpCore` espera.
+No es trabajo de un change de funcionalidad y **merece uno propio**. En orden de rentabilidad: ~~extender el disparador de CI a las ramas de trabajo, para que esto deje de crecer en silencio~~; arreglar la familia de las cookies, que son 16 tests con una sola corrección; fijar los datos generados que chocan con límites de columna; y alinear ImageSharp con lo que `PdfSharpCore` espera.
+
+> **El primero está hecho desde el 2026-09-27, con C39a.** `test-backend.yml` y
+> `test-frontend.yml` disparaban sobre `[main, develop]` y **ninguna de las dos ramas existe** en este
+> repositorio —las reales son `master`, `ai-eng` y `demo`—, así que los workflows estaban bien escritos
+> y eran **inertes**: no se habían ejecutado nunca, ni una vez. Ahora disparan sobre `[ai-eng, master]`,
+> conservando el filtro `paths:`.
+>
+> **Entran informativos y no como puerta**, y eso sigue siendo deliberado: una comprobación obligatoria
+> sobre los ~50 fallos preexistentes no es una puerta, es un bloqueo permanente que alguien acabará
+> saltándose. Lo que el arreglo compra no es que la suite pase: es que **deje de crecer en silencio**,
+> que era exactamente lo que esta línea pedía. Los otros tres puntos siguen pendientes.
+>
+> Y si alguna vez se hace obligatoria, hay una trampa escrita en `openspec/DEFERRED_TASKS.md`: un
+> workflow **omitido** por filtro de rutas nunca reporta estado, y una comprobación requerida que no
+> reporta deja la PR bloqueada para siempre.
 
 Dos de estas familias se toparon y se corrigieron **dentro de los tests nuevos** de C04, así que el patrón de arreglo ya está escrito en `AiSearchEventsControllerTests`.
 

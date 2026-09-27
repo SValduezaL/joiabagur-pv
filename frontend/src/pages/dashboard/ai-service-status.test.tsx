@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DashboardPage } from './page';
-import type { AiHealthOutcome } from '@/types/ai-health.types';
+import type {
+  AiHealthOutcome,
+  AiHealthProjection,
+  AiHealthReport,
+} from '@/types/ai-health.types';
 import type { DashboardStats, PaginatedLowStockResult } from '@/types/dashboard.types';
 
 /**
@@ -61,21 +65,20 @@ vi.mock('@/services/inventory.service', () => ({
   },
 }));
 
-const healthy: AiHealthOutcome = {
-  kind: 'ok',
-  report: {
-    status: 'OK',
-    version: '0.1.0',
-    database: 'ok',
-    provider: 'configured',
-    index: {
-      documents: 1200,
-      model: 'openai/text-embedding-3-small',
-      configuredModel: 'openai/text-embedding-3-small',
-      status: 'ok',
-    },
+const healthyReport: AiHealthReport = {
+  status: 'OK',
+  version: '0.1.0',
+  database: 'ok',
+  provider: 'configured',
+  index: {
+    documents: 1200,
+    model: 'openai/text-embedding-3-small',
+    configuredModel: 'openai/text-embedding-3-small',
+    status: 'ok',
   },
 };
+
+const healthy: AiHealthOutcome = { kind: 'ok', report: healthyReport };
 
 function asAdministrator() {
   mockUseAuth.mockReturnValue({
@@ -186,5 +189,119 @@ describe('AI service status card', () => {
     // The rest of the page is still there. An AI outage is one card, not a blank dashboard.
     expect(screen.getByText('Ventas hoy')).toBeInTheDocument();
     expect(screen.getByText('Stock crítico')).toBeInTheDocument();
+  });
+});
+
+describe('Projection freshness on the AI service card (C41)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    asAdministrator();
+  });
+
+  const withProjection = (projection: AiHealthProjection): AiHealthOutcome => ({
+    kind: 'ok',
+    report: { ...healthyReport, projection },
+  });
+
+  it('should show the projection age on the AI service card', async () => {
+    mockGetHealth.mockResolvedValue(
+      withProjection({
+        status: 'ok',
+        syncedAt: '2026-09-26T10:00:00Z',
+        fullSyncedAt: '2026-09-26T10:00:00Z',
+        ageSeconds: 720,
+        ceilingSeconds: 3600,
+        stale: false,
+        failedPages: 0,
+        pointsOfSale: 11,
+        shopsWithoutScope: 0,
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText('Al día')).toBeInTheDocument();
+    expect(await screen.findByText(/hace 12 minutos/)).toBeInTheDocument();
+  });
+
+  it('should warn about completeness and never about reliability when the projection is stale', async () => {
+    mockGetHealth.mockResolvedValue(
+      withProjection({
+        status: 'stale',
+        syncedAt: '2026-09-06T10:00:00Z',
+        fullSyncedAt: null,
+        ageSeconds: 1_728_000,
+        ceilingSeconds: 3600,
+        stale: true,
+        failedPages: 0,
+        pointsOfSale: 11,
+        shopsWithoutScope: 0,
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText('Desactualizada')).toBeInTheDocument();
+    expect(await screen.findByText(/hace 20 días/)).toBeInTheDocument();
+    // The backend still applies the truth when it hydrates, so staleness costs a short page
+    // and never a wrong one. Saying "unreliable" here would be false.
+    expect(
+      await screen.findByText(/pueden devolver menos resultados de los disponibles/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/no son fiables/)).not.toBeInTheDocument();
+  });
+
+  it('should name the points of sale with no scope when there are any', async () => {
+    mockGetHealth.mockResolvedValue(
+      withProjection({
+        status: 'ok',
+        syncedAt: '2026-09-26T10:00:00Z',
+        fullSyncedAt: '2026-09-26T10:00:00Z',
+        ageSeconds: 30,
+        ceilingSeconds: 3600,
+        stale: false,
+        failedPages: 0,
+        pointsOfSale: 12,
+        shopsWithoutScope: 1,
+      }),
+    );
+
+    renderDashboard();
+
+    expect(
+      await screen.findByText(/1 tienda sin surtido sincronizado/),
+    ).toBeInTheDocument();
+  });
+
+  it('should tell a projection never drained from a stale one', async () => {
+    mockGetHealth.mockResolvedValue(
+      withProjection({
+        status: 'never_drained',
+        syncedAt: null,
+        fullSyncedAt: null,
+        ageSeconds: null,
+        ceilingSeconds: 3600,
+        stale: true,
+        failedPages: 0,
+        pointsOfSale: 0,
+        shopsWithoutScope: 0,
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText('Sin sincronizar nunca')).toBeInTheDocument();
+    expect(await screen.findByText(/no se ha ejecutado nunca/)).toBeInTheDocument();
+  });
+
+  it('should render the card unchanged when the AI service does not report the projection', async () => {
+    // A deployment can run an older jbg-ai image than this API. A card that threw on the
+    // absence would turn a version skew into a broken dashboard.
+    mockGetHealth.mockResolvedValue(healthy);
+
+    renderDashboard();
+
+    expect(await screen.findByText('Servicio de IA')).toBeInTheDocument();
+    expect(screen.queryByTestId('ai-projection-freshness')).not.toBeInTheDocument();
   });
 });

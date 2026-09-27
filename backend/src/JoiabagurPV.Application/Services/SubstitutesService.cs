@@ -252,7 +252,11 @@ public class SubstitutesService : ISubstitutesService
                 Name = row.Name,
                 VariantLabel = candidate.VariantLabel,
                 Price = row.Price,
-                QuantityAtPointOfSale = row.Quantity,
+                // Substitutes are refused without a point of sale — their ranking reads that
+                // shop's availability — so the hydration that produced this row named one.
+                QuantityAtPointOfSale = row.Quantity
+                    ?? throw new InvalidOperationException(
+                        "Substitutes hydrated without a point of sale. They are refused without one."),
                 PrimaryPhotoUrl = row.PrimaryPhotoFileName is null
                     ? null
                     : await _fileStorage.GetUrlAsync(row.PrimaryPhotoFileName, "products"),

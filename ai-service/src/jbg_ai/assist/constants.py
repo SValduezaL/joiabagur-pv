@@ -38,6 +38,20 @@ WARNING_QUERY_NOT_IN_CATALOGUE = "query_not_in_catalogue"
 #: the whole of this code: the information existed and nobody could read it.
 WARNING_KNOWLEDGE_NOT_COVERED = "knowledge_not_covered"
 
+#: The query is answerable and the operator's own filters are what left almost nothing. C40.
+#:
+#: **A different statement from an abstention, and they must never be confused.** An abstention
+#: says the description found nothing; this says the description found something the filter
+#: excluded. The two end in opposite actions at the counter — describe it another way, or remove
+#: a filter — and asserting this one over an unanswerable query would claim a fit that does not
+#: exist. The decision that separates them is the unfiltered probe of the retrieval orchestrator:
+#: a flat probe abstains, a peaked probe with a thin filtered set emits this.
+#:
+#: Emitted by **retrieval**, not by the assistance layer, which is why it reaches every path that
+#: accepts catalog-side filters rather than only the generative one. `retrieval/orchestrator.py`
+#: reads it from here — this module imports nothing precisely so that it can.
+WARNING_FILTERS_TOO_NARROW = "filters_too_narrow"
+
 #: **Closed, and closed is the point.** The model never sees this tuple and cannot add to it,
 #: which is what makes "warnings are rule-derived" a property a test can witness instead of a
 #: promise a reader has to take on trust. The Spanish a human reads is the frontend's: codes
@@ -54,6 +68,7 @@ ASSIST_WARNING_CODES: tuple[str, ...] = (
     WARNING_QUERY_OUT_OF_DOMAIN,
     WARNING_QUERY_NOT_IN_CATALOGUE,
     WARNING_KNOWLEDGE_NOT_COVERED,
+    WARNING_FILTERS_TOO_NARROW,
 )
 
 #: The two codes that state a **refusal by the router**, as opposed to a fact about a piece.
@@ -147,7 +162,7 @@ FAMILY_ROSTER_CAP = 24
 #: sections — one per route the router can decide, plus the degraded one for an anchored
 #: question the corpus does not cover. `test_the_previous_prompt_version_is_present_and_intact`
 #: is what keeps v1 from being edited by accident later.
-PROMPT_VERSION = "assist/v3"
+PROMPT_VERSION = "assist/v5"
 
 #: The prompt of the **classifier**, versioned separately because it is a different call with a
 #: different output and a different model setting. A router prompt that shared the argument's
@@ -270,10 +285,28 @@ CAUSE_STOCK_ADJACENT = "stock_adjacent_figure"
 #: the gate forgives nothing — but it is the cause the *prompt* exists to remove, and telling it
 #: apart is what says whether "continuous prose" is working.
 CAUSE_ENUMERATION_FORMAT = "enumeration_format"
+#: The two placeholders the generated argument carries instead of a price and a stock figure.
+#: They live here, in the module that imports nothing, because both the contract schemas and the
+#: integrity gate need them and the dependency only runs one way — towards this file. Declaring
+#: them beside the schemas and reading them from the gate would put `api` inside `assist`.
+PRICE_PLACEHOLDER = "{{price}}"
+STOCK_PLACEHOLDER = "{{stock}}"
+
 #: A figure absent from the context whose digits, with every separator stripped, do match one
 #: that is present: `1.500` against `1500`. A violation too, and the cause that would say a
 #: separator rule needs a measurement rather than an opinion.
 CAUSE_DECIMAL_FORM = "decimal_form"
+#: A price or stock placeholder written in a **free query**, where no piece is anchored. Checked
+#: only when `product_id is None`: with an anchor the placeholder is not merely allowed, it is
+#: what the prompt asks for, and the .NET side substitutes the real figure.
+#:
+#: Without an anchor there is nothing to substitute it against. `PitchPlaceholderResolver`
+#: withholds the **whole** argument the moment it meets one, by design and with a test fixing
+#: it, so a placeholder here does not degrade the prose — it deletes it. The prompt asks the
+#: model not to write them; this is the guardrail that makes the asking a guarantee, and it is
+#: what makes the frequency **measurable partitioned by cause** instead of showing up as an
+#: unexplained drop in delivered arguments.
+CAUSE_PLACEHOLDER_IN_FREE_QUERY = "placeholder_in_free_query"
 
 #: The two causes that are not about figures.
 CAUSE_DANGLING_CITATION = "dangling_citation"
@@ -288,6 +321,7 @@ PITCH_VIOLATION_CAUSES: tuple[str, ...] = (
     CAUSE_STOCK_ADJACENT,
     CAUSE_ENUMERATION_FORMAT,
     CAUSE_DECIMAL_FORM,
+    CAUSE_PLACEHOLDER_IN_FREE_QUERY,
 )
 
 #: The causes whose survival costs the whole argument. Resolution and the numeric gate: a
@@ -302,6 +336,7 @@ HARD_VIOLATION_CAUSES: tuple[str, ...] = (
     CAUSE_STOCK_ADJACENT,
     CAUSE_ENUMERATION_FORMAT,
     CAUSE_DECIMAL_FORM,
+    CAUSE_PLACEHOLDER_IN_FREE_QUERY,
 )
 
 
@@ -484,7 +519,16 @@ AGENT_PROMPT_VERSION = "agent/v1"
 #:
 #: `PROMPT_VERSION` above is **unchanged and still what `POST /v1/assist/sale` reports**. The two
 #: travel as separate values on the agent's response.
-AGENT_PITCH_PROMPT_VERSION = "assist/v4"
+#:
+#: **Moved to `assist/v6` by C42, and `assist/v4` stays on disk untouched** — the 204 requests of
+#: C32b were measured against it. Fourth time, same precedent, and this time the reason is a
+#: defect of composition rather than a new payload field: the *Sistema* of `v4` orders price and
+#: availability to be written as placeholders **without condition**, the agent's payload is
+#: correctly unanchored — its argument speaks of several pieces — and C40 made a placeholder over
+#: an unanchored payload a **hard** violation. So an argument obeying its own prompt was withheld
+#: in full. `v6` carries the free-query rule into the agent's task and nothing else; its *Sistema*
+#: is `v5`'s character for character, and a test asserts that identity rather than a reviewer.
+AGENT_PITCH_PROMPT_VERSION = "assist/v6"
 
 #: The model that runs the loop. A **setting with its own variable**, and it never inherits the
 #: argument's nor the classifier's: choosing *which tool* is a harder call than choosing *which

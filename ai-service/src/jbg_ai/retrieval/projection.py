@@ -34,17 +34,24 @@ EMPTY_PROJECTION_DETAIL = (
 )
 
 
-def parse_pos_id(raw: str | None) -> UUID:
-    """The token claim as a UUID, or a rejection.
+def parse_pos_id(raw: str | None) -> UUID | None:
+    """The token claim as a UUID, `None` when it was omitted, or a rejection.
 
     A claim that does not parse is a mis-issued token, never a request for a global search.
     The auth module wrote the rule before this scope existed: a wildcard point of sale is
     exactly what must not exist, because this claim is the retriever's only hard filter.
     Widening to the whole catalogue on a malformed value would turn a broken token into a
     silent leak of every other shop's assortment.
+
+    **C40 separates the omission from the malformation, and only the first is admitted.** A
+    token issued for a search spread over every shop carries no `pos_id` at all, and there is
+    nothing broken about that; a token carrying an unusable value is still broken, and an empty
+    string is a value. The two used to share a branch because only one of them could happen.
     """
-    if raw is None or not raw.strip():
-        raise InvalidPosIdError("pos_id claim is absent")
+    if raw is None:
+        return None
+    if not raw.strip():
+        raise InvalidPosIdError("pos_id claim is present but empty")
     try:
         return UUID(raw.strip())
     except ValueError as exc:
@@ -112,7 +119,7 @@ def age_seconds(synced_at: datetime | None, *, now: datetime | None = None) -> f
 
 
 async def resolve_scope(
-    pos_id: UUID,
+    pos_id: UUID | None,
     *,
     search: ProductSearchPort,
     enabled: bool,
@@ -135,7 +142,11 @@ async def resolve_scope(
 
     **Fresh** — the scope is applied.
     """
-    if not enabled:
+    # **No point of sale named, so there is no scope to resolve.** Not a degradation and not a
+    # failure: the caller asked about every shop, and the prefilter simply does not apply. It is
+    # reported as not applied, exactly like the switch being off, because for the reader of the
+    # stage line those are the same fact — no restriction ran.
+    if not enabled or pos_id is None:
         return ProjectionScope(
             pos_id=None, age_seconds=None, size=-1, applied=False, stale=False
         )

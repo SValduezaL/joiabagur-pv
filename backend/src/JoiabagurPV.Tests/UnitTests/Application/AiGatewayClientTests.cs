@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using FluentAssertions;
 using JoiabagurPV.Application.DTOs.Ai;
+using JoiabagurPV.Application.Interfaces;
 using JoiabagurPV.Application.Exceptions;
 using JoiabagurPV.Application.Services;
 using JoiabagurPV.Tests.TestHelpers;
@@ -356,5 +357,74 @@ public class AiGatewayClientTests
 
         handler.Requests.Should().BeEmpty(
             "the scope is refused before anything leaves the process");
+    }
+
+    // --- C40 · the third scope, and the two routes that take it ---------------------------
+
+    /// <summary>
+    /// Retrieval and sale assistance can answer without a shop, so they take it. The list is
+    /// closed: every other point-of-sale operation refuses it below.
+    /// </summary>
+    [Fact]
+    public async Task ForAllPointsOfSale_IsAcceptedByRetrievalAndAssistance()
+    {
+        var handler = new FakeHttpMessageHandler().AlwaysRespond(HttpStatusCode.OK, SuccessBody);
+        await using var provider = AiGatewayTestHost.Build(handler);
+        var everyShop = AiCallScope.ForAllPointsOfSale(Guid.NewGuid(), "Operator");
+
+        var act = async () => await provider.Client().SearchAsync(AnyRequest(), everyShop);
+
+        await act.Should().NotThrowAsync<ArgumentException>();
+        handler.Requests.Should().NotBeEmpty(
+            "the request is issued: an absent pos_id makes the prefilter not apply, and the "
+            + "service reads it that way rather than as a wildcard");
+    }
+
+    /// <summary>
+    /// **No exception here, and the reason is what substitutes are for.** They rank by what a
+    /// shop can actually hand over, so with no shop the ranking has nothing to read and the
+    /// answer would be to a different question from the one asked.
+    /// </summary>
+    [Fact]
+    public async Task ForAllPointsOfSale_IsRefusedBySubstitutes()
+    {
+        var handler = new FakeHttpMessageHandler().AlwaysRespond(HttpStatusCode.OK, SuccessBody);
+        await using var provider = AiGatewayTestHost.Build(handler);
+        var everyShop = AiCallScope.ForAllPointsOfSale(Guid.NewGuid(), "Operator");
+
+        var act = async () => await provider.Client().SubstitutesAsync(
+            new AiSubstitutesRequest { ProductId = Guid.NewGuid().ToString(), TopK = 5 },
+            everyShop);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithParameterName("scope");
+
+        handler.Requests.Should().BeEmpty(
+            "refused before any request is issued, like the catalog scope above");
+    }
+
+    /// <summary>
+    /// The inventory refusal the specification also asks for has **no .NET surface to be
+    /// asserted on**, and that is recorded here rather than left as a missing test.
+    /// </summary>
+    /// <remarks>
+    /// `/v1/inventory/propose` exists on jbg-ai and this client has no operation for it: nothing
+    /// in .NET calls that route. The equivalent guarantee is enforced on the service side, where
+    /// the route keeps the strict claims dependency and rejects a token with no `pos_id` —
+    /// asserted by `test_pos_scoped_route_still_rejects_it` in `tests/api/test_auth.py`.
+    ///
+    /// What this test can assert is the property that makes the absence safe: the client's
+    /// point-of-sale operations are exactly the three below, so there is no fourth one quietly
+    /// taking a scope nobody checked.
+    /// </remarks>
+    [Fact]
+    public void ForAllPointsOfSale_IsRefusedByInventory_HasNoClientSurface()
+    {
+        typeof(IAiGatewayClient)
+            .GetMethods()
+            .Select(method => method.Name)
+            .Should().NotContain(name => name.Contains("Inventory", StringComparison.Ordinal),
+                "if this client ever grows an inventory call, it needs its own scope refusal "
+                + "and this test should become that refusal");
     }
 }

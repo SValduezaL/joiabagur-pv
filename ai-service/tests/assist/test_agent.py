@@ -16,10 +16,12 @@ import asyncio
 import dataclasses
 import json
 import time
+import uuid
 
 import pytest
 
 from jbg_ai.api.auth import ServicePrincipal
+from jbg_ai.api.schemas.assist import AgentAssistGroup, AssistGroup
 from jbg_ai.assist.agent import (
     AgentBudgets,
     ToolCallTrace,
@@ -34,8 +36,11 @@ from jbg_ai.assist.constants import (
     AGENT_PROMPT_VERSION,
     AGENT_STOP_REASONS,
     AVAILABILITY_LABELS,
+    AVAILABILITY_NO_SCOPE,
+    AVAILABILITY_OUT_OF_STOCK,
     GROUP_ORIGIN_CATALOGUE,
     GROUP_ORIGIN_SUBSTITUTES,
+    GROUP_ORIGINS,
     MAX_AGENT_CONCURRENT_TOOL_CALLS,
     MAX_AGENT_ITERATIONS,
     MAX_AGENT_PROVIDER_CALLS,
@@ -72,7 +77,7 @@ from support.assist_router import decision, refusing_router, scripted_router
 from support.assist_world import FAMILY, PIECE, indexed_row, run
 from support.fake_embedding_client import FakeEmbeddingClient
 from support.fake_product_search import FakeProductSearch
-from support.settings import build_settings
+from support.settings import TOKEN_TRACE_ID, build_settings
 
 TALK = (
     (TURN_ROLE_OPERATOR, "busco un anillo de plata"),
@@ -1508,9 +1513,15 @@ def test_every_declared_prompt_version_names_the_file_that_is_loaded() -> None:
         assert text.splitlines()[0].strip() == f"# {version}"
 
     assert AGENT_PROMPT_VERSION == "agent/v1"
-    assert AGENT_PITCH_PROMPT_VERSION == "assist/v4"
-    # The deterministic route did not move.
-    assert PROMPT_VERSION == "assist/v3"
+    # **v6 since C42, and the loop's own version did not move with it.** The two are apart for
+    # the reason they were split: another call, another output, another model.
+    assert AGENT_PITCH_PROMPT_VERSION == "assist/v6"
+    # The deterministic route moved to v5 in C40 and stays there: the agent's pitch prompt did
+    # not follow it then, and C42 moving the agent's does not drag the deterministic one along.
+    assert PROMPT_VERSION == "assist/v5"
+    assert AGENT_PITCH_PROMPT_VERSION != PROMPT_VERSION, (
+        "the two constants are deliberately apart; merging them is the alternative D2 rejected"
+    )
 
 
 def test_the_argument_prompt_the_deterministic_route_runs_is_present_and_unedited() -> None:
@@ -1659,3 +1670,125 @@ def test_the_rich_trace_is_available_in_process_and_pairs_every_observation(
     assert all(isinstance(call, ToolCallTrace) for call in calls)
     assert {call.call_id for call in calls} == {"call-1", "call-2"}
     assert all(call.content is not None for call in calls)
+
+
+# --- C42 · the provenance reaches the consumer, and only on this route --------------------------
+
+
+def test_agent_group_declares_its_origin(
+    knowledge: InMemoryKnowledgeIndex, principal: ServicePrincipal
+) -> None:
+    """The marker on the **response**, not only on the payload the model reads.
+
+    Until C42 the distinction existed one layer in: the argument said «y como alternativa…»
+    because the prompt told it to, while the screen had nothing to label the rows with — which
+    is the exact failure the marker exists to prevent. The loop asked for substitutes 125 times
+    in the measured pass, so this is routine and not an edge case.
+
+    **Read from the same key the payload group is built from and not recomputed.** A second rule
+    — «a group whose pieces appear in the substitutes ledger» — would be a second thing to keep
+    in step, and the two would disagree the day the cap's priority changes.
+    """
+    world = FakeProductSearch(
+        [
+            indexed_row(),
+            indexed_row(
+                product_id=uuid.UUID("aaaaaaaa-aaaa-4aaa-8aaa-000000000007"),
+                sku="JBG-0007",
+                family_id=None,
+                family_name=None,
+            ),
+        ]
+    )
+
+    outcome, _agent, _router, pitch_provider, registry = drive(
+        search=world,
+        knowledge=knowledge,
+        principal=principal,
+        agent_script=(
+            wants(("buscar_catalogo", {"consulta": "anillo de plata"})),
+            wants(("buscar_sustitutos", {"sku": "JBG-0001"})),
+            finishes(),
+        ),
+    )
+
+    assert registry.evidence.substitutes, "the pivot must actually have happened"
+    assert outcome.groups, "and the response must carry the groups it produced"
+
+    origins = {group.origin for group in outcome.groups}
+    assert origins <= set(GROUP_ORIGINS)
+    assert GROUP_ORIGIN_SUBSTITUTES in origins
+
+    # The two layers agree, which is what «published, not recomputed» means here.
+    handed = data_block(pitch_provider.user_of(0))
+    assert [group["procedencia"] for group in handed["candidatas"]] == [
+        group.origin for group in outcome.groups
+    ]
+
+
+def test_a_catalogue_only_run_declares_the_catalogue_origin_on_its_response(
+    search: FakeProductSearch, knowledge: InMemoryKnowledgeIndex, principal: ServicePrincipal
+) -> None:
+    """The other side of the closed vocabulary, so the field cannot be write-only on the wire."""
+    outcome, _agent, _router, _pitch, _registry = drive(
+        search=search,
+        knowledge=knowledge,
+        principal=principal,
+        agent_script=(
+            wants(("buscar_catalogo", {"consulta": "anillo de plata"})),
+            finishes(),
+        ),
+    )
+
+    assert outcome.groups
+    assert {group.origin for group in outcome.groups} == {GROUP_ORIGIN_CATALOGUE}
+
+
+def test_the_shared_group_model_did_not_grow_the_field(
+    search: FakeProductSearch, knowledge: InMemoryKnowledgeIndex, principal: ServicePrincipal
+) -> None:
+    """**The promise this change makes about the other route, field by field.** D3.
+
+    `AssistGroup` is what `POST /v1/assist/sale` publishes, so widening it would move that
+    route's schema — which is exactly what the subclass avoids, by the precedent `AgentUsage`
+    set one class up. This fails the day somebody moves `origin` onto the shared model «because
+    both routes have groups».
+    """
+    assert set(AssistGroup.model_fields) == {"family_id", "family_label", "members"}
+    assert "origin" not in AssistGroup.model_fields
+    assert set(AgentAssistGroup.model_fields) - set(AssistGroup.model_fields) == {"origin"}
+    assert issubclass(AgentAssistGroup, AssistGroup), (
+        "a subclass and not a parallel model: the comparison the evaluation runs has to be a "
+        "difference of fields rather than a translation between two shapes"
+    )
+
+
+def test_with_no_scope_the_loop_reports_no_scope_rather_than_no_stock(
+    knowledge: InMemoryKnowledgeIndex
+) -> None:
+    """The consequence of C42 admitting the omission on this route, at the level of the loop.
+
+    With no point of sale the availability tool can only report that no scope applies, so the
+    label can never say the shop is out of stock and **the pivot to substitutes cannot fire**.
+    That is a property of the data and not a behaviour anybody simulates — which is why the
+    frontend states it as a capability lost when the every-shop scope is selected, rather than
+    as a display preference.
+    """
+    unscoped = ServicePrincipal(
+        user_id="u-1", role="Operator", trace_id=TOKEN_TRACE_ID, pos_id=None
+    )
+
+    _outcome, _agent, _router, _pitch, registry = drive(
+        search=FakeProductSearch([indexed_row()]),
+        knowledge=knowledge,
+        principal=unscoped,
+        agent_script=(
+            wants(("buscar_catalogo", {"consulta": "anillo de plata"})),
+            wants(("consultar_disponibilidad", {"sku": "JBG-0001"})),
+            finishes(),
+        ),
+    )
+
+    labels = [label for _sku, label in registry.evidence.availability]
+    assert labels == [AVAILABILITY_NO_SCOPE]
+    assert AVAILABILITY_OUT_OF_STOCK not in labels

@@ -40,11 +40,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from jbg_ai.api.schemas.assist import (
+    AgentAssistGroup,
     AgentAssistResponse,
     AgentTraceIteration,
     AgentTraceTool,
     AgentUsage,
-    AssistGroup,
     AssistGroupMember,
 )
 from jbg_ai.api.auth import ServicePrincipal
@@ -225,7 +225,7 @@ class AgentRun:
     iterations: int
     tool_calls_used: int
     usage: TokenUsage
-    groups: tuple[AssistGroup, ...] = ()
+    groups: tuple[AgentAssistGroup, ...] = ()
     citations: tuple[KnowledgeCitation, ...] = ()
     warnings: tuple[str, ...] = ()
     clarification_question: str | None = None
@@ -713,7 +713,9 @@ def _append_turn(
 # --- the evidence and the argument ------------------------------------------------------------
 
 
-def _pieces(registry: ToolRegistry, cap: int) -> tuple[list[FreeQueryGroup], list[AssistGroup]]:
+def _pieces(
+    registry: ToolRegistry, cap: int
+) -> tuple[list[FreeQueryGroup], list[AgentAssistGroup]]:
     """Project the ledger onto the payload's groups and the response's groups.
 
     Two shapes from one source, and neither is derived from the other: the payload carries what
@@ -777,7 +779,7 @@ def _pieces(registry: ToolRegistry, cap: int) -> tuple[list[FreeQueryGroup], lis
     kept = [(sku, entry) for sku, entry in seen.items() if sku in chosen]
 
     payload_groups: list[FreeQueryGroup] = []
-    response_groups: list[AssistGroup] = []
+    response_groups: list[AgentAssistGroup] = []
     # Grouped by family within each origin, and **null family implies exactly one member** —
     # the invariant the contract states, enforced structurally here as `_group_results`
     # enforces it for the deterministic route rather than asserted afterwards: a piece with no
@@ -804,9 +806,14 @@ def _pieces(registry: ToolRegistry, cap: int) -> tuple[list[FreeQueryGroup], lis
             )
         )
         response_groups.append(
-            AssistGroup(
+            # **The same `origin` the payload group carries, read from the same key and not
+            # recomputed.** Deriving it a second time — from whether the group's pieces appear
+            # in `ledger.substitutes`, say — would be a second rule to keep in step with the
+            # first, and the two would disagree the day the priority above changes.
+            AgentAssistGroup(
                 family_id=families[key],
                 family_label=_family_label(members),
+                origin=origin,
                 members=[_response_member(item) for item in members],
             )
         )

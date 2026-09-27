@@ -226,7 +226,7 @@ La recuperación **funciona** —`jbg-ai` recibe la petición y embebe la consul
 
 Este es el defecto que la ficha no podía anticipar y que sólo aparece ejecutando: la funcionalidad habría llegado a producción **pareciendo sana** —HTTP 200, resultados en pantalla— respondiendo siempre desde el buscador léxico. Es exactamente el modo de fallo que la columna de origen de C15 existe para hacer visible.
 
-**Acción tomada:** `RetrievalTimeoutMs` de 800 a **2500 ms**, en `appsettings.json` y en el valor por defecto de `AiGatewayOptions`, con la instrucción de volver a 800 ms cuando se arregle la caché. Registrado en [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md). La causa no se arregla aquí: `retrieval.py` construye un `LiteLlmEmbeddingClient` por petición, deuda anotada por C15 y asignada a C21/C22.
+**Acción tomada:** `RetrievalTimeoutMs` de 800 a **2500 ms**, en `appsettings.json` y en el valor por defecto de `AiGatewayOptions`, con la instrucción de volver a 800 ms cuando se arregle la caché. Registrado en [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md). La causa no se arregla aquí: `retrieval.py` construye un `LiteLlmEmbeddingClient` por petición, deuda anotada por C15 y asignada a C21/C22.
 
 ### 6.3. Recuperación real, y el corte por punto de venta medido
 

@@ -29,6 +29,7 @@ from jbg_ai.assist.errors import RouterProviderError
 from jbg_ai.assist.prompt import NUMERAL, QUERY_CLOSE, QUERY_OPEN
 from jbg_ai.assist.routing import (
     CLARIFICATION_TEMPLATES,
+    ROUTER_INDEX_ABSENT,
     RoutingOutcome,
     build_router_messages,
     clarification_for,
@@ -422,3 +423,74 @@ def test_the_ceiling_of_three_is_derived_and_not_written_as_a_digit() -> None:
     assert MAX_PITCH_PROVIDER_CALLS == 2
     assert MAX_PROVIDER_CALLS == MAX_ROUTER_PROVIDER_CALLS + MAX_PITCH_PROVIDER_CALLS
     assert MAX_PROVIDER_CALLS == 3
+
+
+# --- C40 · the internally contradictory reply, coerced rather than obeyed --------------------
+
+
+def test_served_verdict_without_index_is_routed_to_both() -> None:
+    """`in_domain` + no missing axis + no index asserts two things at once, and both cannot hold.
+
+    The schema says of `index` *«Null when the query is not served»* and of `missing_axis`
+    *«null whenever it is not served»*. A served, sufficient verdict with no index therefore
+    says both «this query belongs to this shop» and «nothing is to be consulted».
+
+    Until C40 the code believed neither: it ran no task section, while the orchestrator's
+    fail-open had *already* consulted both indexes — fifteen pieces and up to five fragments
+    retrieved and thrown away, with a blank answer written over them. `both` is what that
+    fail-open already does, so this coerces to the behaviour the surrounding code is written
+    for rather than inventing a fourth one.
+    """
+    outcome = RoutingOutcome(decision=decision(index=None))
+
+    assert outcome.route == "both"
+    assert not outcome.short_circuits, "it is served, so nothing is cut short"
+
+
+def test_coercion_is_recorded_with_its_own_cause() -> None:
+    """Observable by cause, which is how this repository reads its guardrails.
+
+    Without it a coerced route would be indistinguishable from one the classifier chose, and the
+    rate H7 measured at 5 of 42 could never be checked again.
+    """
+    coerced = RoutingOutcome(decision=decision(index=None))
+    chosen = RoutingOutcome(decision=decision(index="both"))
+
+    assert coerced.coerced_cause == ROUTER_INDEX_ABSENT
+    assert chosen.coerced_cause is None
+    assert chosen.route == coerced.route, "same route, and only the cause tells them apart"
+
+
+def test_a_refused_or_insufficient_verdict_is_never_coerced() -> None:
+    """The coercion resolves a contradiction, and neither of these is one.
+
+    A refusal names no index because there is nothing to consult; a clarification names none
+    because the query has not been understood yet. Routing either to `both` would retrieve for
+    a request the router decided not to serve.
+    """
+    refused = RoutingOutcome(decision=decision(served="out_of_domain", index=None))
+    asking = RoutingOutcome(decision=decision(index=None, missing_axis="piece_type"))
+    degraded = RoutingOutcome(degraded_cause="timeout")
+
+    for outcome in (refused, asking, degraded):
+        assert outcome.route is None
+        assert outcome.coerced_cause is None
+
+
+def test_the_coercion_reaches_the_stage_log(caplog) -> None:
+    """The line states the route actually taken, not the field the model returned."""
+    client, _ = scripted_router(decision(index=None))
+
+    with caplog.at_level(logging.INFO, logger="jbg_ai.assist.routing"):
+        run(classify_query("un anillo de plata", client=client))
+
+    entry = next(
+        record.getMessage()
+        for record in caplog.records
+        if "stage=router" in record.getMessage()
+    )
+
+    assert "index=None" in entry, "what the model said is still reported verbatim"
+    assert "route=both" in entry
+    assert f"coerced={ROUTER_INDEX_ABSENT}" in entry
+    assert "un anillo de plata" not in entry, "the query text never reaches a router log line"

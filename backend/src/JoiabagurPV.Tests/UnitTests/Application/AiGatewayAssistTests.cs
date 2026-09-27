@@ -168,6 +168,112 @@ public class AiGatewayAssistTests
     }
 
     [Fact]
+    public async Task AssistSaleAsync_WithFilters_SerializesThemWithContractNames()
+    {
+        var assist = new FakeHttpMessageHandler().EnqueueResponse(HttpStatusCode.OK, AssistBody);
+        await using var provider = AiGatewayTestHost.Build(
+            new FakeHttpMessageHandler(), assistHandler: assist);
+
+        var request = AssistRequest();
+        request.Filters = new AiSearchFilters
+        {
+            Materials = ["plata", "oro"],
+            Category = "pendientes",
+            FamilyId = "22222222-2222-2222-2222-222222222222",
+            ExcludeProductIds = ["99999999-9999-9999-9999-999999999999"]
+        };
+
+        await provider.Client().AssistSaleAsync(request, PosScope());
+
+        using var body = JsonDocument.Parse(assist.RequestBodies.Single());
+        var filters = body.RootElement.GetProperty("filters");
+
+        // snake_case, from the single naming policy rather than from per-property attributes.
+        // A mistyped name here would not fail to compile: it would arrive as a field the
+        // service does not know and be dropped, and the filter would silently not apply —
+        // which is the exact failure mode this whole change exists to remove.
+        filters.GetProperty("materials").EnumerateArray()
+            .Select(material => material.GetString()).Should().Equal("plata", "oro");
+        filters.GetProperty("category").GetString().Should().Be("pendientes");
+        filters.GetProperty("family_id").GetString().Should()
+            .Be("22222222-2222-2222-2222-222222222222");
+        filters.GetProperty("exclude_product_ids").EnumerateArray()
+            .Select(id => id.GetString()).Should().Equal("99999999-9999-9999-9999-999999999999");
+    }
+
+    /// <remarks>
+    /// The shape follows <c>AiSubstitutesRequest</c>, which carries the same contract field the
+    /// same way: the contract declares <c>filters</c> with a **default** rather than as nullable,
+    /// and <c>AiContractSnapshotTests</c> holds the .NET model and the schema in nullability
+    /// parity. A nullable property omitted when empty reads more frugal and breaks that parity,
+    /// which is how this was caught — the guard fired on the first full run.
+    ///
+    /// Nothing is lost by sending it: an empty filter set and an absent property mean the same
+    /// thing to the service, which defaults the field either way.
+    /// </remarks>
+    [Fact]
+    public async Task AssistSaleAsync_WithoutFilters_SendsAnEmptyFilterSet()
+    {
+        var assist = new FakeHttpMessageHandler().EnqueueResponse(HttpStatusCode.OK, AssistBody);
+        await using var provider = AiGatewayTestHost.Build(
+            new FakeHttpMessageHandler(), assistHandler: assist);
+
+        await provider.Client().AssistSaleAsync(AssistRequest(), PosScope());
+
+        using var body = JsonDocument.Parse(assist.RequestBodies.Single());
+        var filters = body.RootElement.GetProperty("filters");
+
+        filters.GetProperty("materials").GetArrayLength().Should().Be(0);
+        filters.GetProperty("category").ValueKind.Should().Be(JsonValueKind.Null);
+        filters.GetProperty("family_id").ValueKind.Should().Be(JsonValueKind.Null);
+        filters.GetProperty("exclude_product_ids").GetArrayLength().Should().Be(0);
+    }
+
+    /// <remarks>
+    /// The free query is the third of the three modes and the only one an operator could not
+    /// reach. This client refused it until C40, for a reason that was sound while it held: the
+    /// generated argument carried placeholders naming no product, and the resolver withholds
+    /// the whole argument rather than guess which piece a price belongs to.
+    ///
+    /// `assist/v5` stops asking for placeholders in the free-query tasks, and the hard cause
+    /// `placeholder_in_free_query` makes that a guarantee instead of a request — so the refusal
+    /// now protects nothing and only costs the mode.
+    /// </remarks>
+    [Fact]
+    public async Task AssistSaleAsync_WithQueryAndNoProduct_IssuesTheRequest()
+    {
+        var assist = new FakeHttpMessageHandler().EnqueueResponse(HttpStatusCode.OK, AssistBody);
+        await using var provider = AiGatewayTestHost.Build(
+            new FakeHttpMessageHandler(), assistHandler: assist);
+
+        var response = await provider.Client().AssistSaleAsync(
+            new AiAssistSaleRequest { Query = "¿la plata se puede mojar?" }, PosScope());
+
+        response.Should().NotBeNull();
+
+        using var body = JsonDocument.Parse(assist.RequestBodies.Single());
+        body.RootElement.GetProperty("query").GetString().Should().Be("¿la plata se puede mojar?");
+        body.RootElement.GetProperty("product_id").ValueKind.Should().Be(JsonValueKind.Null,
+            "a free query anchors no piece, and the contract declares the field nullable");
+    }
+
+    [Fact]
+    public async Task AssistSaleAsync_WithNeitherAnchor_ThrowsBeforeAnyRequest()
+    {
+        var assist = new FakeHttpMessageHandler().AlwaysRespond(HttpStatusCode.OK, AssistBody);
+        await using var provider = AiGatewayTestHost.Build(
+            new FakeHttpMessageHandler(), assistHandler: assist);
+
+        var act = async () => await provider.Client().AssistSaleAsync(
+            new AiAssistSaleRequest(), PosScope());
+
+        // Still refused, and still before the socket: the contract requires at least one anchor,
+        // so a request carrying neither is a programming error rather than a paid round trip.
+        await act.Should().ThrowAsync<ArgumentException>();
+        assist.RequestCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task AssistSaleAsync_WithCatalogScope_IsRejected()
     {
         var assist = new FakeHttpMessageHandler().AlwaysRespond(HttpStatusCode.OK, AssistBody);
@@ -180,20 +286,32 @@ public class AiGatewayAssistTests
     }
 
     /// <summary>
-    /// The free-query mode exists in the contract and not through this client: its placeholders
-    /// have no product to be resolved against.
+    /// The free-query mode now reaches the service through this client. **This test asserted the
+    /// opposite until C40**, and the reversal is the point of that change rather than a slip.
     /// </summary>
+    /// <remarks>
+    /// What it used to say: "the free-query mode exists in the contract and not through this
+    /// client, because its placeholders have no product to be resolved against". True, and the
+    /// refusal was the right call while the argument carried placeholders — withholding is
+    /// better than resolving a price against the wrong piece.
+    ///
+    /// What changed is the other end of the chain, not this opinion of it: `assist/v5` stops
+    /// asking for placeholders in the three free-query tasks, and the hard cause
+    /// `placeholder_in_free_query` turns that request into a guarantee. With nothing to resolve,
+    /// the refusal stopped protecting anything and only kept the one mode of the three that an
+    /// operator had no way to reach.
+    /// </remarks>
     [Fact]
-    public async Task AssistSaleAsync_WithoutProduct_IsRejectedBeforeAnyRequest()
+    public async Task AssistSaleAsync_WithoutProduct_ReachesTheServiceSinceTheArgumentCarriesNoPlaceholder()
     {
         var assist = new FakeHttpMessageHandler().AlwaysRespond(HttpStatusCode.OK, AssistBody);
         await using var provider = AiGatewayTestHost.Build(new FakeHttpMessageHandler(), assistHandler: assist);
 
-        var act = async () => await provider.Client().AssistSaleAsync(
+        var response = await provider.Client().AssistSaleAsync(
             new AiAssistSaleRequest { ProductId = null, Query = "anillos de plata" }, PosScope());
 
-        await act.Should().ThrowAsync<ArgumentException>().WithParameterName("request");
-        assist.Requests.Should().BeEmpty();
+        response.Should().NotBeNull();
+        assist.Requests.Should().ContainSingle();
     }
 
     // ---------------------------------------------------------------- sale assistance: failures

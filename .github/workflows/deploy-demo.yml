@@ -136,8 +136,16 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.value }}
         run: |
           set -euo pipefail
+          # `--build-context corpus=…` (C39a): the knowledge corpus lives at
+          # `data/knowledge`, OUTSIDE this build's primary context, so no COPY in the
+          # Dockerfile could reach it. The primary context stays `ai-service` on purpose —
+          # `backend/docker-compose.yml` builds the same file with that context for local
+          # development, and the root `.dockerignore` states in writing that it does not
+          # govern this image. Omitting the flag fails the build rather than producing an
+          # image with no corpus, which is the property that matters.
           docker build \
             -f ai-service/Dockerfile \
+            --build-context corpus=./data/knowledge \
             -t "$ECR_REGISTRY/$AI_REPOSITORY:$IMAGE_TAG" \
             ai-service
           docker push "$ECR_REGISTRY/$AI_REPOSITORY:$IMAGE_TAG"

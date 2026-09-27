@@ -13,6 +13,7 @@ from jbg_ai.api.deps import (
     V1_RESPONSES,
     get_app_settings,
     get_service_principal,
+    get_unscoped_principal,
 )
 from jbg_ai.api.schemas.retrieval import (
     RetrievalRequest,
@@ -111,7 +112,10 @@ def _resolve_freshness(request: Request) -> ProjectionFreshness:
 async def retrieve_products(
     payload: RetrievalRequest,
     request: Request,
-    principal: ServicePrincipal = Depends(get_service_principal),
+    # C40: this route takes a token with or without `pos_id`. Absent, the availability
+    # prefilter does not apply — it does not match everything — and the response echoes the
+    # absence. Substitutes below keeps `get_service_principal` and still rejects it.
+    principal: ServicePrincipal = Depends(get_unscoped_principal),
     settings: Settings = Depends(get_app_settings),
 ) -> RetrievalResponse:
     """Over-fetch candidates so .NET can filter and still fill a page of `top_k`.

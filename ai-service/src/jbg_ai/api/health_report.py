@@ -34,6 +34,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from sqlalchemy import text
@@ -41,6 +42,7 @@ from sqlalchemy import text
 from jbg_ai.config.settings import Settings
 from jbg_ai.db.engine import session_scope
 from jbg_ai.indexing.constants import DEFAULT_EMBEDDING_MODEL
+from jbg_ai.indexing.pos_projection import POS_FEED
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,101 @@ INDEX_UNAVAILABLE = "unavailable"
 PROVIDER_CONFIGURED = "configured"
 PROVIDER_MISSING = "missing"
 
+PROJECTION_OK = "ok"
+PROJECTION_STALE = "stale"
+#: The drain has never run in this environment. Distinguished from `stale` on purpose: a
+#: projection nobody has ever drained answers 503 to every scoped retrieval, while a stale
+#: one serves a wider window and says so. They need different actions and this is the only
+#: place that can tell them apart.
+PROJECTION_NEVER_DRAINED = "never_drained"
+PROJECTION_UNAVAILABLE = "unavailable"
+
+#: Read from the checkpoint and NEVER from `max(ai.pos_projection.refreshed_at)`. The feed is
+#: incremental by keyset, so an assignment that does not change is never re-emitted and that
+#: column records when the assignment last moved — not when the projection was last looked at.
+#: Reading it from the rows would report months of staleness on a projection synchronised
+#: thirty seconds ago. This confusion has already cost two sessions: one diagnosing with the
+#: wrong column and one *repairing* with it, which is why the warning is repeated here.
+_PROJECTION_CHECKPOINT_SQL = text(
+    "SELECT last_incremental_sync_at, last_full_sync_at "
+    "FROM ai.sync_checkpoint WHERE feed = :feed"
+)
+
+#: Both counts in one statement, because the number that matters is their difference.
+_PROJECTION_SHOPS_SQL = text(
+    "SELECT count(DISTINCT pos_id) AS points_of_sale, "
+    "count(DISTINCT pos_id) FILTER (WHERE is_assigned_hint) AS scoped "
+    "FROM ai.pos_projection"
+)
+
+_PROJECTION_FAILURES_SQL = text(
+    "SELECT count(*) FROM ai.sync_failure WHERE feed = :feed"
+)
+
+
+def projection_age_seconds(
+    synced_at: datetime | None, *, now: datetime | None = None
+) -> float | None:
+    """Seconds since the last drain, or `None` when it has never run."""
+    if synced_at is None:
+        return None
+    reference = now or datetime.now(tz=UTC)
+    if synced_at.tzinfo is None:
+        synced_at = synced_at.replace(tzinfo=UTC)
+    return max((reference - synced_at).total_seconds(), 0.0)
+
+
+def build_projection_section(
+    snapshot: IndexSnapshot, settings: Settings, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """The projection block of the report.
+
+    **The age and the verdict both travel, and that is not redundancy.** The age informs a
+    reader; `status` states what the retrieval guard decided against the ceiling *this*
+    deployment is configured with. Deriving the verdict on the consumer's side would put the
+    threshold in two places, which is exactly the duplication the change set out to avoid — so
+    `ceiling_seconds` travels too, and a screen can explain the verdict without knowing how the
+    service is configured.
+
+    **The age is the drain's, not a shop's.** The checkpoint holds one row per feed, so every
+    scope reports the same number; anything named as though it were per-shop would be false.
+    """
+    ceiling = settings.jpv_pos_projection_max_age_seconds
+    age = projection_age_seconds(snapshot.projection_synced_at, now=now)
+
+    if age is None:
+        status = PROJECTION_NEVER_DRAINED
+    elif age > ceiling:
+        status = PROJECTION_STALE
+    else:
+        status = PROJECTION_OK
+
+    return {
+        "status": status,
+        "synced_at": (
+            snapshot.projection_synced_at.isoformat()
+            if snapshot.projection_synced_at
+            else None
+        ),
+        "full_synced_at": (
+            snapshot.projection_full_synced_at.isoformat()
+            if snapshot.projection_full_synced_at
+            else None
+        ),
+        "age_seconds": age,
+        "ceiling_seconds": ceiling,
+        "stale": status != PROJECTION_OK,
+        "failed_pages": snapshot.projection_failed_pages,
+        "points_of_sale": snapshot.projection_points_of_sale,
+        # The count that C34 needed and nobody reported: a point of sale with no assigned row
+        # answers 503 to every scoped retrieval while the deployment looks healthy from
+        # outside, because the .NET side degrades correctly to its lexical path with a 200.
+        "shops_without_scope": max(
+            snapshot.projection_points_of_sale - snapshot.projection_scoped_points_of_sale,
+            0,
+        ),
+    }
+
 
 @dataclass(frozen=True)
 class IndexSnapshot:
@@ -88,6 +185,27 @@ class IndexSnapshot:
     #: False only when no `DATABASE_URL` is configured at all. See
     #: DATABASE_NOT_CONFIGURED.
     database_configured: bool = True
+
+    # --- point-of-sale projection (C41) -------------------------------------------------
+    #
+    # Read in the SAME session as the two above, so the whole report still costs one
+    # connection out of a pool capped at five.
+
+    #: `ai.sync_checkpoint.last_incremental_sync_at` for the POS feed, or `None` when the
+    #: drain has never run. **Never `max(ai.pos_projection.refreshed_at)`**: the feed is
+    #: incremental by keyset, so that column records when an assignment last changed and
+    #: would report months on a projection synchronised seconds ago.
+    projection_synced_at: datetime | None = None
+    projection_full_synced_at: datetime | None = None
+    #: Points of sale that appear in the projection at all.
+    projection_points_of_sale: int = 0
+    #: Of those, the ones holding at least one assigned row. The difference is the count
+    #: that matters: a point of sale with none answers 503 to every scoped retrieval.
+    projection_scoped_points_of_sale: int = 0
+    #: Rows in `ai.sync_failure` for the POS feed. Cumulative and persisted, not
+    #: "the last run's": nothing else reads that table, so a page that failed months ago
+    #: is otherwise invisible for ever.
+    projection_failed_pages: int = 0
 
 
 class HealthProbe(Protocol):
@@ -121,6 +239,16 @@ class SqlAlchemyHealthProbe:
                         )
                     )
                 ).scalars().all()
+                # Same session as the two above: the whole report stays one connection.
+                checkpoint = (
+                    await session.execute(_PROJECTION_CHECKPOINT_SQL, {"feed": POS_FEED})
+                ).mappings().first()
+                shops = (
+                    await session.execute(_PROJECTION_SHOPS_SQL)
+                ).mappings().first()
+                failed_pages = (
+                    await session.execute(_PROJECTION_FAILURES_SQL, {"feed": POS_FEED})
+                ).scalar()
         except Exception:  # noqa: BLE001 - any failure to reach the database is one answer
             # Deliberately broad, and deliberately not re-raised. This endpoint
             # exists to REPORT that the database is unreachable; raising would
@@ -132,6 +260,15 @@ class SqlAlchemyHealthProbe:
             database_reachable=True,
             documents=int(documents or 0),
             models=tuple(sorted(str(model) for model in models)),
+            projection_synced_at=(
+                checkpoint["last_incremental_sync_at"] if checkpoint else None
+            ),
+            projection_full_synced_at=(
+                checkpoint["last_full_sync_at"] if checkpoint else None
+            ),
+            projection_points_of_sale=int((shops or {}).get("points_of_sale") or 0),
+            projection_scoped_points_of_sale=int((shops or {}).get("scoped") or 0),
+            projection_failed_pages=int(failed_pages or 0),
         )
 
 
@@ -166,6 +303,20 @@ async def build_health_report(settings: Settings, probe: HealthProbe) -> dict[st
             ),
             "index": index,
             "provider": provider,
+            # Present even here, and saying it does not know. An absent section would be
+            # indistinguishable from an old service that predates it, which is precisely the
+            # ambiguity the consumer's tolerant reading would then have to guess at.
+            "projection": {
+                "status": PROJECTION_UNAVAILABLE,
+                "synced_at": None,
+                "full_synced_at": None,
+                "age_seconds": None,
+                "ceiling_seconds": settings.jpv_pos_projection_max_age_seconds,
+                "stale": None,
+                "failed_pages": None,
+                "points_of_sale": None,
+                "shops_without_scope": None,
+            },
         }
 
     # An empty index is NOT a mismatch. There is no indexed model to disagree
@@ -186,7 +337,16 @@ async def build_health_report(settings: Settings, probe: HealthProbe) -> dict[st
         indexed_model = ", ".join(snapshot.models)
         index_status = INDEX_MODEL_MISMATCH
 
+    projection = build_projection_section(snapshot, settings)
+
     return {
+        # **The projection does NOT move the top-level status, and that is deliberate.** A
+        # stale projection is a degradation of the candidate window, not of the service: the
+        # .NET side still puts the truth, no valid product is hidden, and `GET /health` is what
+        # the container health check probes. Letting staleness mark the service degraded would
+        # make an environment that is serving correct results look broken, and — worse — would
+        # couple the liveness of the container to a cron. The projection reports its own state
+        # in its own section, which is what the administrator card reads.
         "status": STATUS_OK if index_status == INDEX_OK else STATUS_DEGRADED,
         "version": settings.service_version,
         "database": DATABASE_OK,
@@ -197,6 +357,7 @@ async def build_health_report(settings: Settings, probe: HealthProbe) -> dict[st
             "status": index_status,
         },
         "provider": provider,
+        "projection": projection,
     }
 
 

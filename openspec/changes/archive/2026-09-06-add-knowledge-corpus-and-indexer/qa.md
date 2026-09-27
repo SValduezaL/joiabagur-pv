@@ -276,7 +276,7 @@ Los dos ajustes nuevos no viajan en ninguna petición: son *default* en `Setting
 
 ## 8. Mediciones
 
-Informe completo en [`c23-implementation-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md).
+Informe completo en [`c23-implementation-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c23-implementation-measurements.md).
 
 ### 8.1. La rama léxica se queda, y por medición (tarea 9.3)
 

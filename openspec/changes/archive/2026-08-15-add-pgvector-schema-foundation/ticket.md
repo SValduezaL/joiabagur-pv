@@ -1,7 +1,7 @@
 # T-AIENG-005: pgvector schema foundation — `ai` schema, Alembic migrations and bounded pool (C05)
 
 > Ticket técnico del change OpenSpec `add-pgvector-schema-foundation`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG, plan de changes y apuntes del Máster S8), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-005](../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md).
+> **Fuentes de verdad:** `openspec/project.md`, `Documentos/` (diseño RAG, plan de changes y apuntes del Máster S8), specs vivas de `openspec/specs/`, el contrato congelado `ai-service/openapi.json` y [HU-AIENG-005](../../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -264,15 +264,15 @@ Ni `SELECT` ni `<=>` en código de aplicación (C14); ni una fila insertada (C13
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-005](../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md)
+- **HU origen:** [HU-AIENG-005](../../../../Documentos/Historias/AI-Eng/HU-AIENG-005.md)
 - **Change OpenSpec:** `openspec/changes/add-pgvector-schema-foundation/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C05, reglas transversales de testing) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2, §7.3, §7.6)
-- **Apuntes del Máster (S8):** [Anatomía de un índice vectorial](../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Anatomia%20de%20un%20Indice%20Vectorial%20HNSW,%20IVFFlat%20y%20el%20horizonte%20DiskANN.md) · [Diseño del esquema y búsqueda semántica](../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Dise%C3%B1o%20del%20esquema%20y%20busqueda%20semantica.md) · [Del prototipo a producción](../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Del%20prototipo%20a%20produccion%20Tuning,%20Monitorizacion%20y%20techo%20PGVector.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C05, reglas transversales de testing) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.3, §7.2, §7.3, §7.6)
+- **Apuntes del Máster (S8):** [Anatomía de un índice vectorial](../../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Anatomia%20de%20un%20Indice%20Vectorial%20HNSW,%20IVFFlat%20y%20el%20horizonte%20DiskANN.md) · [Diseño del esquema y búsqueda semántica](../../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Dise%C3%B1o%20del%20esquema%20y%20busqueda%20semantica.md) · [Del prototipo a producción](../../../../Documentos/Sesiones%20Master%20AIEng/S8_BBDD_Vectoriales/Del%20prototipo%20a%20produccion%20Tuning,%20Monitorizacion%20y%20techo%20PGVector.md)
 - **Specs vivas afectadas:** `openspec/specs/ai-service-runtime/spec.md`, `openspec/specs/ai-service-dev-compose/spec.md`
 - **Precedentes:** `openspec/changes/archive/2026-08-03-init-ai-service-skeleton/design.md` (una sola RDS, imagen pgvector, riesgo de la extensión) · `openspec/changes/archive/2026-08-11-add-product-search-event-tracking/` (criterio del test de esquema y guardarraíl del arnés)
 - **Contrato congelado:** `ai-service/openapi.json` — **se lee, no se modifica**
 - **Convenciones de test:** `ai-service/tests/README.md` (carpeta `migrations/`, marcador `db`, fixture local)
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

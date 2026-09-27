@@ -25,6 +25,10 @@ public class AssistedSearchService : IAssistedSearchService
     private readonly IFileStorageService _fileStorage;
     private readonly ITraceContextAccessor _traceContext;
     private readonly IOptionsMonitor<AiSearchOptions> _options;
+    private readonly IAssistedSearchResultProjector _projector;
+    private readonly IOptionsMonitor<AiSalesAssistOptions> _assistOptions;
+    private readonly IOptionsMonitor<AiFreeQuerySearchOptions> _freeQueryOptions;
+    private readonly IOptionsMonitor<AiAgentAssistOptions> _agentOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<AssistedSearchService> _logger;
 
@@ -37,9 +41,17 @@ public class AssistedSearchService : IAssistedSearchService
         IFileStorageService fileStorage,
         ITraceContextAccessor traceContext,
         IOptionsMonitor<AiSearchOptions> options,
+        IAssistedSearchResultProjector projector,
+        IOptionsMonitor<AiSalesAssistOptions> assistOptions,
+        IOptionsMonitor<AiFreeQuerySearchOptions> freeQueryOptions,
+        IOptionsMonitor<AiAgentAssistOptions> agentOptions,
         TimeProvider timeProvider,
         ILogger<AssistedSearchService> logger)
     {
+        _projector = projector;
+        _assistOptions = assistOptions;
+        _freeQueryOptions = freeQueryOptions;
+        _agentOptions = agentOptions;
         _gateway = gateway;
         _repository = repository;
         _cache = cache;
@@ -97,7 +109,7 @@ public class AssistedSearchService : IAssistedSearchService
             // AI is not answering, which would make the two origins incomparable in exactly the
             // analysis the funnel exists for. The extra rows cost nothing at this catalog size
             // and are truncated away below.
-            rows = await DegradedAsync(request, LexicalWindow(options), cancellationToken);
+            rows = await DegradedAsync(request, filters, LexicalWindow(options), cancellationToken);
             retrieval = retrieval with { RetrievalMs = ElapsedMs(lexicalStartedAt) };
         }
 
@@ -120,8 +132,71 @@ public class AssistedSearchService : IAssistedSearchService
             LowConfidence = retrieval.LowConfidence,
             PointOfSaleId = request.PointOfSaleId,
             CandidatesReturned = retrieval.Candidates.Count,
-            SurvivedHydration = rows.Count
+            SurvivedHydration = rows.Count,
+            // Passed through, never recomputed: the decision behind it needed the unfiltered
+            // probe of the retriever, which this side has no way of taking.
+            Warnings = [.. retrieval.Warnings],
+            // Only the degraded and disabled paths can leave a filter unapplied. The assisted
+            // path hands every filter to the retriever, which honours all of them.
+            UnappliedFilters = retrieval.Origin == SearchOrigin.Assisted
+                ? []
+                : UnappliedFilters(filters)
         });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Reads switches and calls nothing.
+    ///
+    /// The generative flag requires <strong>both</strong> the free-query endpoint's own switch and
+    /// the sale card's. <strong>That is stricter than the route it describes, and knowingly so
+    /// since the independent verification of C40_FIX measured it.</strong> The first switch is the
+    /// one <c>FreeQuerySearchService</c> actually enforces; the second belongs to
+    /// <c>SalesAssistService</c> and is <em>not</em> read anywhere on the free-query path — the
+    /// gateway writes prose for a free query with the sale card switched off, verified over HTTP.
+    /// So with the free query on and the card off this reports <c>switched_off</c> for a scope the
+    /// route serves, which the panel turns into a disabled option and, in the every-shop scope,
+    /// into a dead end with a false reason. Kept as it stands rather than loosened here, because
+    /// which side is wrong is a product decision: see <c>openspec/DEFERRED_TASKS.md</c> and
+    /// <c>AiScopePredicateAgreementTests</c>, which pins the present answer.
+    /// </remarks>
+    public AiSearchAvailabilityResponse GetAvailability(Guid? pointOfSaleId)
+    {
+        // The shared predicate in all three, so that what this reports and what each route
+        // enforces cannot drift. With no shop named the deployment default governs — the narrow
+        // reading, already decided by the free-query route: enabling the feature shop by shop has
+        // not enabled it for «all of them». See AiScopeSwitchExtensions.
+        var assistedAnswer =
+            _freeQueryOptions.CurrentValue.IsEnabledForScope(pointOfSaleId)
+            && _assistOptions.CurrentValue.IsEnabledForScope(pointOfSaleId);
+
+        // **The agent's own switch, read through the same shared predicate and NOT derived from
+        // the verdict above.** The agent has a credential chain of its own on the service side —
+        // agent, then assist, then the shared key — so a deployment can have the assisted answer
+        // configured and the agent not. Reporting one for the other would tell the screen the agent
+        // is available while every agent request came back degraded: exactly the failure this route
+        // was created to remove, and the reason the third path is reported rather than inferred.
+        var agent = _agentOptions.CurrentValue.IsEnabledForScope(pointOfSaleId);
+
+        return new AiSearchAvailabilityResponse
+        {
+            PointOfSaleId = pointOfSaleId,
+
+            // Reported with its own predicate even for the wider scope, which the fast route does
+            // not serve. **This describes a switch, not reachability.** Answering false here would
+            // state that semantic search is switched off, which is a different fact and a false
+            // one; that the fast route cannot serve this scope is the panel's to say, and it says
+            // it in its own words.
+            SemanticSearchAvailable = _options.CurrentValue.IsEnabledForScope(pointOfSaleId),
+            AssistedAnswerAvailable = assistedAnswer,
+
+            // Only the switch can be known without calling. An outage or a rejected credential is
+            // discovered by making a call, and making one here would defeat the purpose.
+            AssistedAnswerUnavailableReason = assistedAnswer ? null : "switched_off",
+
+            AgentAvailable = agent,
+            AgentUnavailableReason = agent ? null : "switched_off"
+        };
     }
 
     /// <summary>
@@ -280,6 +355,7 @@ public class AssistedSearchService : IAssistedSearchService
     /// </summary>
     private async Task<IReadOnlyList<AssistedSearchRow>> DegradedAsync(
         AssistedSearchRequest request,
+        AiSearchFilters filters,
         int take,
         CancellationToken cancellationToken)
     {
@@ -290,7 +366,53 @@ public class AssistedSearchService : IAssistedSearchService
         }
 
         return await _repository.SearchLexicalAsync(
-            terms, request.PointOfSaleId, take, cancellationToken);
+            terms, request.PointOfSaleId, ToDomainFilters(filters), take, cancellationToken);
+    }
+
+    /// <summary>
+    /// Maps the gateway's filter shape to the one the catalog understands.
+    /// </summary>
+    /// <remarks>
+    /// The two are kept apart on purpose. <see cref="AiSearchFilters"/> is the body of a frozen
+    /// external contract and carries fields that only the vector index can answer; the domain
+    /// type carries the two the transactional catalog can. Mapping in one place is what makes
+    /// <see cref="UnappliedFilters"/> computable at all — the fields that fall on the floor here
+    /// are exactly the ones the response has to declare.
+    /// </remarks>
+    private static AssistedSearchFilters ToDomainFilters(AiSearchFilters filters) => new()
+    {
+        Materials = filters.Materials,
+        Category = filters.Category
+    };
+
+    /// <summary>
+    /// The filters the operator selected that a degraded search cannot honour.
+    /// </summary>
+    /// <remarks>
+    /// Family and exclusion lists are properties of the vector index, so the lexical searcher has
+    /// nothing to evaluate them against. Category and materials are <strong>not</strong> listed
+    /// here: they are applied, and a piece missing the profile field they read simply fails the
+    /// filter, which is the filter working rather than failing.
+    ///
+    /// This exists so the screen can say so. A control that stays visibly engaged while the
+    /// results ignore it is the one failure of this capability that misleads without announcing
+    /// itself, and it is the defect that opened this change.
+    /// </remarks>
+    private static List<string> UnappliedFilters(AiSearchFilters filters)
+    {
+        var unapplied = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(filters.FamilyId))
+        {
+            unapplied.Add(nameof(AiSearchFilters.FamilyId));
+        }
+
+        if (filters.ExcludeProductIds.Count > 0)
+        {
+            unapplied.Add(nameof(AiSearchFilters.ExcludeProductIds));
+        }
+
+        return unapplied;
     }
 
     /// <summary>
@@ -339,41 +461,13 @@ public class AssistedSearchService : IAssistedSearchService
         var page = ordered.Take(pageSize).ToList();
         var results = new List<AssistedSearchResultDto>(page.Count);
 
+        // The projection moved to a collaborator when C40 gave it a second consumer. The rule it
+        // carries — price, stock, SKU, name and photo from the catalog; score, materials, match
+        // reasons, family and variant from the index — is the one thing here that is easy to get
+        // wrong and impossible to notice, so it exists once.
         foreach (var (row, candidate) in page)
         {
-            if (candidate is not null && !string.Equals(candidate.Sku, row.Sku, StringComparison.Ordinal))
-            {
-                // The catalog wins. A divergence means the index is behind, which is worth
-                // knowing about and is not worth failing a search over.
-                _logger.LogWarning(
-                    "Assisted search found index drift: the index reports SKU {IndexedSku} for product {ProductId}, the catalog holds {CatalogSku}. TraceId={TraceId}",
-                    candidate.Sku,
-                    row.ProductId,
-                    row.Sku,
-                    _traceContext.CurrentTraceId);
-            }
-
-            results.Add(new AssistedSearchResultDto
-            {
-                ProductId = row.ProductId,
-                Sku = row.Sku,
-                Name = row.Name,
-                Price = row.Price,
-                QuantityAtPointOfSale = row.Quantity,
-                HasStock = row.Quantity > 0,
-                PrimaryPhotoUrl = row.PrimaryPhotoFileName is null
-                    ? null
-                    : await _fileStorage.GetUrlAsync(row.PrimaryPhotoFileName, "products"),
-                CollectionName = row.CollectionName,
-                Score = candidate?.Score,
-                // From the candidate, never from hydration: these are index signals that explain
-                // the match, not catalog truth. Empty on the degraded and disabled paths, where
-                // there is no candidate because no retriever ran.
-                Materials = candidate?.Materials ?? [],
-                MatchReasons = candidate?.MatchReasons ?? [],
-                FamilyId = candidate?.FamilyId,
-                VariantLabel = candidate?.VariantLabel
-            });
+            results.Add(await _projector.ProjectAsync(row, candidate));
         }
 
         return results;
@@ -502,17 +596,23 @@ public class AssistedSearchService : IAssistedSearchService
         SearchOrigin Origin,
         IReadOnlyList<AiSearchResult> Candidates,
         bool LowConfidence,
-        int? RetrievalMs)
+        int? RetrievalMs,
+        IReadOnlyList<string> Warnings)
     {
         public static Retrieval Assisted(AiSearchResponse response, int retrievalMs) =>
-            new(SearchOrigin.Assisted, response.Results, response.LowConfidence, retrievalMs);
+            new(
+                SearchOrigin.Assisted,
+                response.Results,
+                response.LowConfidence,
+                retrievalMs,
+                response.Warnings);
 
         /// <summary>The AI service was consulted and could not answer.</summary>
         public static Retrieval Degraded() =>
-            new(SearchOrigin.LexicalFallback, [], false, null);
+            new(SearchOrigin.LexicalFallback, [], false, null, []);
 
         /// <summary>The AI service was never consulted, because the feature is switched off.</summary>
         public static Retrieval Disabled() =>
-            new(SearchOrigin.Disabled, [], false, null);
+            new(SearchOrigin.Disabled, [], false, null, []);
     }
 }

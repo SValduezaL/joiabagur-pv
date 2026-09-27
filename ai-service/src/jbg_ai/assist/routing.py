@@ -84,6 +84,15 @@ REFUSAL_CODE_BY_VERDICT: Mapping[str, str] = {
     "not_in_catalogue": WARNING_QUERY_NOT_IN_CATALOGUE,
 }
 
+#: Why a route was coerced rather than chosen: the reply was served and sufficient and still
+#: named no index, which is a contradiction the code cannot resolve by believing one half.
+#:
+#: A **cause in the stage log** and not a warning on the wire. The caller is not being told
+#: something about its query — it is getting the answer the fail-open would have produced
+#: anyway — and a code on the response would ask an operator to act on a defect of the
+#: classifier. What it buys is the rate, which H7 put at 5 of 42 · 11,9 %.
+ROUTER_INDEX_ABSENT = "router_index_absent"
+
 #: The closed catalogue of clarification questions, one per missing axis. **es-ES, written here
 #: and never by the model.**
 #:
@@ -229,7 +238,35 @@ class RoutingOutcome:
             return None
         if not self.decision.is_sufficient:
             return None
+        if self.decision.index is None:
+            # **An internally contradictory reply, coerced rather than obeyed.** The schema says
+            # of `index` *«Null when the query is not served»* and of `missing_axis` *«null
+            # whenever it is not served»*; a served, sufficient verdict with no index asserts
+            # both that this query belongs to this shop and that nothing is to be consulted.
+            # The code cannot know which half to believe, and until C40 it believed neither: it
+            # ran no task, while the orchestrator's fail-open had already paid for both indexes.
+            # That is work retrieved and thrown away — fifteen pieces and up to five fragments —
+            # and then a blank answer over it.
+            #
+            # `both` is what the fail-open already consults when the router says nothing at all,
+            # so this coerces to the behaviour the surrounding code is written for rather than
+            # inventing a fourth one. The contradiction stays **observable** by cause in the
+            # stage log, which is how this repository reads its guardrails.
+            return "both"
         return self.decision.index
+
+    @property
+    def coerced_cause(self) -> str | None:
+        """Names the contradiction the route above resolved, or `None` when there was none.
+
+        Reported so the rate is measurable — H7 saw it on 5 of 42 · 11,9 % — and so that a
+        reader can never mistake a coerced route for one the classifier chose.
+        """
+        if self.decision is None or not self.decision.is_served:
+            return None
+        if not self.decision.is_sufficient:
+            return None
+        return ROUTER_INDEX_ABSENT if self.decision.index is None else None
 
     @property
     def short_circuits(self) -> bool:
@@ -284,15 +321,22 @@ async def classify_query(
 
     elapsed_ms = (time.perf_counter() - started) * 1000.0
     decision = completion.decision
+    # Built before the line that reports it, so the log states the route actually taken
+    # rather than the field the model returned. The two differ exactly on the coercion.
+    _served_outcome = RoutingOutcome(
+        decision=decision, usage=completion.usage, elapsed_ms=elapsed_ms
+    )
     logger.info(
         "stage=%s trace_id=%s verdict=%s index=%s missing_axis=%s degraded=false "
-        "router_ms=%.1f prompt_version=%s model=%s prompt_tokens=%s completion_tokens=%s "
-        "total_tokens=%s provider_calls=%s",
+        "route=%s coerced=%s router_ms=%.1f prompt_version=%s model=%s prompt_tokens=%s "
+        "completion_tokens=%s total_tokens=%s provider_calls=%s",
         STAGE,
         trace_id,
         decision.served,
         decision.index,
         decision.missing_axis,
+        _served_outcome.route,
+        _served_outcome.coerced_cause or "none",
         elapsed_ms,
         ROUTER_PROMPT_VERSION,
         completion.usage.model,
@@ -302,9 +346,7 @@ async def classify_query(
         completion.usage.calls,
         extra={"trace_id": trace_id},
     )
-    return RoutingOutcome(
-        decision=decision, usage=completion.usage, elapsed_ms=elapsed_ms
-    )
+    return _served_outcome
 
 
 def clarification_axes() -> Sequence[str]:

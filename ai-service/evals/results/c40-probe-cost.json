@@ -1,0 +1,287 @@
+{
+  "measurement": "c40-probe-cost",
+  "measured_at": "2026-09-25T06:58:25.052Z",
+  "surface": "POST /api/ai/search (semantic route, no generation call)",
+  "n_queries": 12,
+  "filter": {
+    "materials": [
+      "plata"
+    ],
+    "category": "anillo"
+  },
+  "note": "Latencies are the service's own stage lines, not the wall clock: end to end folds in the embedding round trip, which dwarfs both statements and would hide the difference this measures. One warm-up request is issued and discarded.",
+  "unfiltered": {
+    "statements": 12,
+    "probes": 0,
+    "search_p50": 21.3,
+    "search_p95": 24.9,
+    "end_to_end_p50": 82,
+    "end_to_end_p95": 97
+  },
+  "filtered": {
+    "statements": 12,
+    "probes": 12,
+    "search_p50": 9.3,
+    "search_p95": 12.4,
+    "probe_p50": 20.9,
+    "probe_p95": 29.3,
+    "probe_max": 29.3,
+    "end_to_end_p50": 87,
+    "end_to_end_p95": 112
+  },
+  "filters_too_narrow": 2,
+  "filters_too_narrow_unfiltered": 0,
+  "router": {
+    "served": 0,
+    "coerced": 0
+  },
+  "rows": [
+    {
+      "query": "anillo de plata",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 97,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "pendientes de oro",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 91,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "collar largo",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 90,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "pulsera de cuero",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 89,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "colgante de perla",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 87,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "cadena fina",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 82,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "aro pequeño",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 76,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "sortija con piedra",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 81,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "brazalete ancho",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 77,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "gargantilla sencilla",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 81,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "pendientes de aro",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 86,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "anillo de compromiso",
+      "filtered": false,
+      "status": 200,
+      "elapsed_ms": 76,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "anillo de plata",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 93,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "pendientes de oro",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 87,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "collar largo",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 79,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": true,
+      "warnings": []
+    },
+    {
+      "query": "pulsera de cuero",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 90,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": true,
+      "warnings": []
+    },
+    {
+      "query": "colgante de perla",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 110,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "cadena fina",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 67,
+      "results": 1,
+      "candidates": 1,
+      "low_confidence": true,
+      "warnings": [
+        "filters_too_narrow"
+      ]
+    },
+    {
+      "query": "aro pequeño",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 73,
+      "results": 10,
+      "candidates": 34,
+      "low_confidence": false,
+      "warnings": [
+        "filters_too_narrow"
+      ]
+    },
+    {
+      "query": "sortija con piedra",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 112,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "brazalete ancho",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 80,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": true,
+      "warnings": []
+    },
+    {
+      "query": "gargantilla sencilla",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 83,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": true,
+      "warnings": []
+    },
+    {
+      "query": "pendientes de aro",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 96,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    },
+    {
+      "query": "anillo de compromiso",
+      "filtered": true,
+      "status": 200,
+      "elapsed_ms": 95,
+      "results": 10,
+      "candidates": 60,
+      "low_confidence": false,
+      "warnings": []
+    }
+  ],
+  "run_id": "2d876f8c67b9",
+  "git_sha": "d1af1557493291700e6524c102fdffa597f290fb",
+  "prompt_version": "assist/v5"
+}

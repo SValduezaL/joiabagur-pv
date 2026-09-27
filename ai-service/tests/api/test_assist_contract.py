@@ -23,6 +23,7 @@ from jbg_ai.assist.constants import (
     ASSIST_REFUSAL_CODES,
     ASSIST_WARNING_CODES,
     WARNING_FAMILY_HAS_VARIANTS,
+    WARNING_FILTERS_TOO_NARROW,
     WARNING_KNOWLEDGE_NOT_COVERED,
     WARNING_QUERY_NOT_IN_CATALOGUE,
     WARNING_QUERY_OUT_OF_DOMAIN,
@@ -184,12 +185,15 @@ def test_assist_response_does_not_reuse_low_confidence_for_abstention() -> None:
 
 
 def test_warning_vocabulary_holds_the_two_rule_codes_and_the_three_of_the_router() -> None:
-    """C30a's two are first and unchanged; C31 stacked three on top and moved neither.
+    """C30a's two are first and unchanged; C31 stacked three on top and C40 a sixth.
 
     The two refusal codes are **distinct from each other**, which is D1 stated as an assertion:
     what an operator says to a customer differs between a trade the shop does not practise and
     a piece the shop does not carry, and one shared `refused` code would erase the distinction
     exactly where a consumer reads it.
+
+    `filters_too_narrow` is **appended and never inserted**: the order of this tuple is what a
+    consumer reads, and every code before it keeps the position it had.
     """
     assert ASSIST_WARNING_CODES[:2] == (
         WARNING_FAMILY_HAS_VARIANTS,
@@ -201,6 +205,7 @@ def test_warning_vocabulary_holds_the_two_rule_codes_and_the_three_of_the_router
         WARNING_QUERY_OUT_OF_DOMAIN,
         WARNING_QUERY_NOT_IN_CATALOGUE,
         WARNING_KNOWLEDGE_NOT_COVERED,
+        WARNING_FILTERS_TOO_NARROW,
     )
     assert WARNING_QUERY_OUT_OF_DOMAIN != WARNING_QUERY_NOT_IN_CATALOGUE
     assert ASSIST_REFUSAL_CODES == (
@@ -208,6 +213,9 @@ def test_warning_vocabulary_holds_the_two_rule_codes_and_the_three_of_the_router
         WARNING_QUERY_NOT_IN_CATALOGUE,
     )
     assert set(ASSIST_REFUSAL_CODES) <= set(ASSIST_WARNING_CODES)
+    assert WARNING_FILTERS_TOO_NARROW not in ASSIST_REFUSAL_CODES, (
+        "a narrow filter is not a refusal: the router admitted the query and retrieval ran"
+    )
 
 
 def test_no_warning_code_is_a_sentence_in_natural_language() -> None:

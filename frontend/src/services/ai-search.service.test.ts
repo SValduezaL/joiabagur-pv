@@ -139,3 +139,119 @@ describe('aiSearchService.reportSelection', () => {
     await expect(aiSearchService.reportSelection('event-1', 'product-1')).resolves.toBeUndefined();
   });
 });
+
+/**
+ * Availability (C40).
+ *
+ * The property worth holding is that this never reports a failure as an outage. The panel works
+ * without knowing the switches, so a read that fails must degrade to "I could not tell" — saying
+ * the assistant is down would be alarming about something that may well be fine.
+ */
+describe('aiSearchService.getAvailability', () => {
+  it('should report both switches when the endpoint answers', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        pointOfSaleId: 'pos-1',
+        semanticSearchAvailable: true,
+        assistedAnswerAvailable: false,
+        assistedAnswerUnavailableReason: 'switched_off',
+      },
+    } as never);
+
+    const outcome = await aiSearchService.getAvailability('pos-1');
+
+    expect(outcome.kind).toBe('ok');
+    if (outcome.kind !== 'ok') throw new Error('expected ok');
+    expect(outcome.availability.semanticSearchAvailable).toBe(true);
+    expect(outcome.availability.assistedAnswerAvailable).toBe(false);
+    expect(outcome.availability.assistedAnswerUnavailableReason).toBe('switched_off');
+  });
+
+  it('should send the point of sale as a query parameter', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: {} } as never);
+
+    await aiSearchService.getAvailability('pos-7');
+
+    expect(apiClient.get).toHaveBeenCalledWith('/ai/search/availability', {
+      params: { pointOfSaleId: 'pos-7' },
+    });
+  });
+
+  it('should return an unknown outcome instead of throwing when the read fails', async () => {
+    vi.mocked(apiClient.get).mockRejectedValue({ statusCode: 500 });
+
+    const outcome = await aiSearchService.getAvailability('pos-1');
+
+    // Not 'error', and not a rejection: the panel searches perfectly well without this, so a
+    // failure here must not become a message the operator cannot act on.
+    expect(outcome).toEqual({ kind: 'unknown' });
+  });
+
+  /**
+   * C40_FIX, added by its independent verification: the branch this change introduced here had no
+   * test of its own.
+   *
+   * **Omitted, never blanked.** The route reads the key not being there as the scope covering every
+   * shop and refuses anything else, so sending `pointOfSaleId: ''` would turn the wider scope into
+   * a validation error rather than the wider answer. Asserting on `params` being absent is the
+   * point: a truthiness check is easy to "tidy" into a template string later, and nothing downstream
+   * would catch it — the page test only sees that this function was called with `undefined`.
+   */
+  it('should omit the query parameter entirely when no point of sale is given', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: {} } as never);
+
+    await aiSearchService.getAvailability();
+
+    expect(apiClient.get).toHaveBeenCalledWith('/ai/search/availability', {
+      params: undefined,
+    });
+  });
+});
+
+/**
+ * The assisted route (C40).
+ *
+ * Same discipline as the semantic one — never throws, typed outcomes — and the rate-limit member
+ * matters three times more here: this route's allowance is a third of search's.
+ */
+describe('aiSearchService.searchAssisted', () => {
+  const assistedRequest = {
+    query: '¿la plata se puede mojar?',
+    pointOfSaleId: '22222222-2222-2222-2222-222222222222',
+  };
+
+  it('should post to the assisted endpoint, which is not the semantic one', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { groups: [] } } as never);
+
+    await aiSearchService.searchAssisted(assistedRequest);
+
+    // Two endpoints and not a `mode` field: a rate limit is an attribute of an endpoint, so one
+    // route would have to pick a single allowance for both.
+    expect(apiClient.post).toHaveBeenCalledWith('/ai/search/assisted', assistedRequest);
+  });
+
+  it('should keep a throttle distinguishable from an outage', async () => {
+    vi.mocked(apiClient.post).mockRejectedValue({ statusCode: 429 });
+
+    const outcome = await aiSearchService.searchAssisted(assistedRequest);
+
+    // Opposite remedies: one resolves by waiting a few seconds, the other does not resolve by
+    // waiting at all.
+    expect(outcome).toEqual({ kind: 'rate-limited' });
+    expect(outcome.kind).not.toBe('error');
+  });
+
+  it('should return a typed outcome instead of throwing on any failure', async () => {
+    for (const [statusCode, kind] of [
+      [403, 'forbidden'],
+      [400, 'invalid'],
+      [500, 'error'],
+    ] as const) {
+      vi.mocked(apiClient.post).mockRejectedValue({ statusCode });
+
+      const outcome = await aiSearchService.searchAssisted(assistedRequest);
+
+      expect(outcome.kind).toBe(kind);
+    }
+  });
+});

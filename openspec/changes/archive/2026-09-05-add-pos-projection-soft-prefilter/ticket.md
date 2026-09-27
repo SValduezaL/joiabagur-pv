@@ -1,7 +1,7 @@
 # T-AIENG-022: POS projection sync and soft prefilter, with an injected sales clock (C22)
 
 > Ticket técnico del change OpenSpec `add-pos-projection-soft-prefilter`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-022](../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md) y las mediciones de [c22-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-exploration-measurements.md).
+> **Fuentes de verdad:** `openspec/project.md`, specs vivas de `openspec/specs/`, [HU-AIENG-022](../../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md) y las mediciones de [c22-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-exploration-measurements.md).
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -137,7 +137,7 @@ Más la capacidad nueva **`pos-projection`**, al estilo de `hybrid-fusion` en C2
 
 ## Criterios de Aceptación
 
-Los diez escenarios normativos están en [HU-AIENG-022](../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md#criterios-de-aceptación). En resumen ejecutable:
+Los diez escenarios normativos están en [HU-AIENG-022](../../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md#criterios-de-aceptación). En resumen ejecutable:
 
 **Pruebas de validación** (`uv run pytest` desde `ai-service/`, `dotnet test` desde `backend/`):
 
@@ -191,7 +191,7 @@ Los diez escenarios normativos están en [HU-AIENG-022](../../../Documentos/Hist
 
 ## Preguntas Abiertas → Decisiones
 
-Las nueve decisiones de diseño se cerraron en la sesión de exploración del 2026-09-05 y están en la tabla de [HU-AIENG-022](../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md#decisiones-de-diseño-ya-acordadas). Quedan abiertas dos, con opción por defecto:
+Las nueve decisiones de diseño se cerraron en la sesión de exploración del 2026-09-05 y están en la tabla de [HU-AIENG-022](../../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md#decisiones-de-diseño-ya-acordadas). Quedan abiertas dos, con opción por defecto:
 
 | # | Pregunta | Opción por defecto si no hay respuesta antes del apply |
 |---|---|---|
@@ -210,14 +210,14 @@ Las nueve decisiones de diseño se cerraron en la sesión de exploración del 20
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-022](../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md)
+- **HU origen:** [HU-AIENG-022](../../../../Documentos/Historias/AI-Eng/HU-AIENG-022.md)
 - **Change:** [`openspec/changes/add-pos-projection-soft-prefilter/`](./)
-- **Mediciones:** [c22-exploration-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-exploration-measurements.md)
-- **Diseño RAG:** [§6.2, §6.3, §7.2, §7.6 y §11.2](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** [ficha C22](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Mediciones:** [c22-exploration-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c22-exploration-measurements.md)
+- **Diseño RAG:** [§6.2, §6.3, §7.2, §7.6 y §11.2](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** [ficha C22](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
 - **Specs vivas:** `openspec/specs/index-feed/`, `openspec/specs/product-document-indexer/`, `openspec/specs/vector-retrieval/`, `openspec/specs/hybrid-fusion/`, `openspec/specs/ai-service-api-contracts/`
-- **Procedimientos:** [User Stories](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
-- **Apuntes:** [S10 · Filtrado contextual y temporal](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md)
+- **Procedimientos:** [User Stories](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Tickets de Trabajo](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Apuntes:** [S10 · Filtrado contextual y temporal](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md)
 
 ---
 

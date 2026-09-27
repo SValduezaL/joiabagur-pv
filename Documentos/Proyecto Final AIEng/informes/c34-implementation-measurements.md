@@ -1,7 +1,7 @@
 # C34 — informe de implementación: el card de venta en .NET, y lo que la implementación precisa
 
 **Change:** `add-dotnet-assist-and-recommendation-endpoints` (C34) · **Rama:** `c34-add-dotnet-assist-and-recommendation-endpoints`
-**Fecha:** 2026-09-21 · **Historia:** [HU-AIENG-034](../../Historias/AI-Eng/HU-AIENG-034.md) · **Ticket:** [T-AIENG-034](../../../openspec/changes/add-dotnet-assist-and-recommendation-endpoints/ticket.md) · **Exploración:** [c34-exploration-decisions.md](c34-exploration-decisions.md)
+**Fecha:** 2026-09-21 · **Historia:** [HU-AIENG-034](../../Historias/AI-Eng/HU-AIENG-034.md) · **Ticket:** [T-AIENG-034](../../../openspec/changes/archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md) · **Exploración:** [c34-exploration-decisions.md](c34-exploration-decisions.md)
 **Capability nueva:** `ai-sales-assist` — 15 requisitos, 45 escenarios · **Modificada:** `ai-gateway-client` — 1 `ADDED` (5 escenarios) y 5 `MODIFIED` (23 escenarios)
 
 C34 entrega **el primer consumidor .NET de `POST /v1/assist/sale` y de `POST /v1/retrieval/substitutes`**:
@@ -18,9 +18,10 @@ necesitado corrección**: D-A, D-B, D-E y D-N se implementan tal cual, y `opensp
 detalles que los artefactos no podían saber sin el árbol, en el §2. **Lo segundo es la latencia**
 (§4): medida de extremo a extremo en Docker Compose, sin el interceptor de Norton y con proveedor
 real, da **p95 7,1 s y máximo 7,9 s** sobre 80 peticiones, así que **`AssistTimeoutMs` se queda en
-10.000**. **Lo tercero es lo que no está**: la credencial de la demo, su despliegue y la nueva medición
-de memoria (11.3, 11.4) son pasos manuales del desarrollador; quedan declarados en el §6 con su motivo,
-y **no se ha inventado ninguna cifra para cubrirlos**.
+10.000**. **Lo tercero es la demo** (§6): desplegada y verificada con una asistencia real —*«disponible
+por 250,00 € y cuenta con 5»*—, con la memoria del contenedor en **269,9 MiB de 512** y la conclusión
+de que **la cuota del proveedor no es la restricción operativa**: corta antes el límite propio de 10
+peticiones por minuto y usuario. **Las 50 tareas quedan hechas.**
 
 ---
 
@@ -307,16 +308,68 @@ una propiedad que ningún test nombra.
 
 ---
 
-## 6 · Lo que no se hizo, y por qué
+## 6 · La demo, desplegada y verificada (tareas 11.3 y 11.4)
 
-| Tarea | Estado | Motivo |
-|---|---|---|
-| **11.3** Crear `/jbg-demo/ASSIST_LLM_API_KEY` y desplegar | **pendiente, manual** | Es un secreto: se crea a mano como los otros seis, fuera de Terraform. El comando y lo que hay que ver en el log están en `deploy/demo/README.md` §3 y §5.6b |
-| **11.4** Memoria de `jbg-demo-ai` y cuota de tokens por minuto | **pendiente** | Sólo tiene sentido tras 11.3. Estaba en **232,5 MiB de 512** sin generación; `DEFERRED_TASKS.md` (*Instance sizing*) dice qué anotar |
+Hecho el **2026-09-22**, con el parámetro creado a mano y la rama `demo` avanzada al commit `d6a740f`.
+El despliegue traía **188 commits** —la demo corría C17— y con ellos **tres migraciones de EF Core**:
+`AddFamilyReviewVerdict`, `AddFamilyReviewSeconds` y `AddVerdictSubjectPopulation`, las tres de **C28** y
+**ninguna de C34**. Las aplica la propia API al arrancar (`Program.cs:67`,
+`context.Database.MigrateAsync()`, sin condicionar por entorno), que es la razón real de que el salto
+fuera seguro. El servicio de IA aplicó además dos revisiones de Alembic durante `deploy.sh`.
 
-**La HU pide una cifra que este informe no da**: el escenario 12 («la demo enseña el argumentario»)
-queda sin cubrir hasta 11.3. La medición local del §4 enseña que el mecanismo funciona con el proveedor
-real —74 argumentarios generados y resueltos, 0 con marcadores—, pero no es la demo.
+> **Corrección de la verificación independiente (2026-09-22).** Este párrafo y la fila equivalente del
+> §13.1 del QA decían **«cero migraciones de EF Core»**, y era falso: la comprobación previa al empuje
+> dio la respuesta equivocada. No tuvo consecuencia —el salto era seguro de todos modos, por el
+> `MigrateAsync()` del arranque—, pero el razonamiento que la frase encierra («no hay migraciones, luego
+> no hay riesgo de esquema») habría sido peligroso si se reutilizara. Reproducible con
+> `git diff --name-only --diff-filter=A f5212a7..d6a740f -- 'backend/src/JoiabagurPV.Infrastructure/Data/Migrations/*'`.
+
+| Comprobación | Resultado |
+|---|---|
+| La credencial se leyó | `[deploy] Generation credential: present (the sale argument will be generated)` |
+| El tag desplegado | `Deployed sha-d6a740fa…`, la punta de C34 |
+| La verificación del despliegue | `verify.sh` en verde: 1.200 documentos indexados |
+| El cliente generativo | `stage=assist_client model=openai/gpt-4o-mini timeout_s=4.0 credential=assist` |
+| El enrutador, como anticipaba el §2.4 | `stage=router_client model=openai/gpt-4o timeout_s=2.0 credential=assist_fallback` — construido y **sin uso**, porque sólo corre en la consulta libre |
+| **Una asistencia real (SKU1051)** | `pitchStatus: generated`, `assist/v3`, 2 citas, sin marcadores: *«Este anillo está disponible por **250,00 €** y cuenta con **5**»* — precio en formato es-ES y stock como entero, los dos **resueltos dentro del texto** |
+| Sobre 6 piezas | 6 de 6 `generated`; **4 de 6** con precio y stock en el texto; 0 con marcadores sobrantes. **No es comparable con el 22 de 37 del §4**: aquél cuenta sólo el precio sobre 37 M2, y con n = 6 aquí no hay proporción que sostener |
+| Sustitutos | `outcome: ok`, **60 candidatos → 28 en la tienda → página de 5**: tres de los cuatro tramos del embudo del diseño (`candidates_returned → carried → in_stock → returned`); el tramo intermedio no se anotó al medir |
+| Latencia observada | 1,3 s a 3,8 s por petición, dentro de la distribución del §4 |
+| **Memoria de `jbg-demo-ai` (11.4)** | **269,9 MiB de 512 (52,7 %)**, e **idéntica antes y después** de las diez generaciones que permitió la ventana. Eran 232,5 MiB en C17: los ~37 MiB de más son los clientes y el corpus, no el generar |
+| Host | 751 MB usados de 1.909, 836 disponibles, **sin swap** |
+| **La cuota de tokens por minuto (11.4)** | **No es la restricción operativa.** Las diez generaciones que la ventana permitió salieron todas `generated`, sin una sola degradación del proveedor. Quien corta primero es **el límite propio**: 10 por minuto y usuario, con 429 a partir de la 11.ª petición de la ventana. **No fueron diez seguidas**: 6 del sondeo de piezas + 4 de una ráfaga de 12, con las otras 8 en 429 (§13.3 del QA) |
+
+**El escenario 12 de la HU queda cubierto.** Y el camino hasta aquí dejó dos hallazgos que no son de
+C34 pero que este change fue el primero en tropezar:
+
+### 6.1 · Un despliegue nuevo deja la recuperación en 503 hasta que se drena la proyección
+
+Los primeros sustitutos en la demo dieron `outcome: ai_unavailable`. El log lo explicó entero:
+`jbg-ai` respondió **503** dos veces —el reintento del cliente de recuperación, `Attempts: 2`—, .NET lo
+tradujo a `AiUnavailableException` y el servicio degradó con 200, **exactamente como está
+especificado**. La causa estaba en Python:
+
+```python
+size = await search.count_scope(pos_id)
+if size == 0:
+    raise RetrievalDependencyError(EMPTY_PROJECTION_DETAIL)
+```
+
+`ai.pos_projection` estaba **vacía**: la demo nunca había drenado el feed de disponibilidad, que es de
+C22, posterior al despliegue de C17 que corría allí. Y `resolve_scope` lo llaman **las dos** rutas, así
+que la búsqueda asistida también estaba respondiendo 503 y saliendo por su vía léxica. Se arregló con
+`python -m jbg_ai.indexing sync-pos --full` dentro del contenedor. Queda anotado en `DEFERRED_TASKS.md`
+y en el runbook.
+
+### 6.2 · El corpus de conocimiento no viaja en la imagen de `jbg-ai`
+
+`ai.knowledge_chunk` tenía **0 filas**, y por eso M2 salía `withheld_by_ai` —sin material al que
+anclarse, la puerta de C30b retira el texto— y M3 declaraba `knowledge_not_covered` con 0 citas. El
+motivo es estructural: `CORPUS_DIR` es `<raíz del repo>/data/knowledge` y el `Dockerfile` del servicio
+copia sólo `src`, `migrations` y `prompts`. El corpus **sí** está en el paquete de despliegue del host,
+así que se resolvió copiándolo al contenedor y ejecutando `sync-knowledge --full`; tras eso, M2 pasó a
+`generated` con 2 citas. Arreglarlo de verdad es tocar `ai-service/`, que C34 declara fuera de alcance:
+queda como tarea diferida.
 
 ---
 
@@ -338,8 +391,13 @@ real —74 argumentarios generados y resueltos, 0 con marcadores—, pero no es 
 6. **`ProductsControllerTests.Update_WithValidData_ShouldReturnUpdatedProduct` es intermitente** por una
    carrera de reloj de 0,6 ms (§3), y no estaba en el inventario de fallos conocidos. No es de este
    change y no se toca.
-7. **La latencia es de una máquina de desarrollo** (§4): n = 80, una franja horaria, sin concurrencia.
-   La de la demo, en eu-west-1, es la 11.4.
+7. **La latencia del §4 es de una máquina de desarrollo**: n = 80, una franja horaria, sin
+   concurrencia. La demo (§6) confirma el orden de magnitud —1,3 s a 3,8 s— pero con n = 18.
+8. **La cuota del proveedor sigue sin medirse de verdad** (§6): el límite propio corta en 10 peticiones
+   por minuto y usuario, así que para alcanzar la cuota harían falta varios operarios a la vez. Lo que
+   sí queda establecido es que **no es la primera barrera**.
+9. **El corpus de la demo se cargó a mano** (§6.2), y volverá a hacer falta en cualquier entorno nuevo
+   hasta que el corpus viaje en la imagen.
 
 ---
 
@@ -358,7 +416,7 @@ real —74 argumentarios generados y resueltos, 0 con marcadores—, pero no es 
 | 9 | Con la IA caída el card sale igual | `SalesAssist_WhenAiUnavailable_ServesAnchorAndFamilyFromCatalog` · `SalesAssist_WhenAiUnavailable_ServesTheFamilyFromTheCatalog` *(int.)* · `SalesAssist_AnyGatewayFailure_DegradesAndNeverThrows` (×4) · `SalesAssist_WhenCredentialRejected_DegradesAndLogsError` · `SalesAssist_When422_DegradesAndLogsProductNotIndexed` |
 | 10 | Un timeout no se reintenta; el presupuesto cubre el peor caso | `AssistSaleAsync_WhenTimeout_DoesNotRetry` · `AssistSaleAsync_When503_DoesNotRetry` · `AssistSaleAsync_WhenConnectionNeverOpened_RetriesOnce` · `AssistSaleAsync_WhenItsCircuitOpens_RetrievalKeepsWorking` · `AddAiGateway_WhenAssistBudgetBelowServiceWorstCase_FailsAtStartup` · y la medición del §4: máximo 7,9 s, **0 de 80** por encima de 8 s |
 | 11 | Nada de lo que se pregunta ni se responde queda en un log | `SalesAssist_ResolvedPitchIsNeverLogged` · `SalesAssist_QuestionIsLoggedOnlyAtDebug` · `SalesAssist_LogLine_CarriesTheFieldsOfTheDesign` · `Substitutes_LogsTheFunnel` · `AssistSaleAsync_CompletionEvent_CarriesNoArgumentText` · y el log real del §4: ni un «€», ni un `{{`, ni una pregunta |
-| 12 | La demo enseña el argumentario | **pendiente de 11.3 / 11.4** (§6). La configuración está verificada con `docker compose config`, y el mecanismo, con proveedor real en local (§4) |
+| 12 | La demo enseña el argumentario | **Cubierto** (§6): `pitchStatus: generated` sobre SKU1051 con «250,00 €» y «5» en el texto, `credential=assist` en el log sin mostrar la clave, y la memoria del contenedor remedida en 269,9 MiB de 512 |
 | 13 | Fuera de alcance: ni consulta libre, ni agente, ni contrato de Python | `SalesCard_ExposesNoRouteForAFreeQuestionOrTheAgent` *(int.)* · `AssistSaleAsync_WithoutProduct_IsRejectedBeforeAnyRequest` · `sha256` idéntico (§1) · `git diff` vacío en migraciones · los tests de C15 sin cambio de resultado (§3) · `SearchAsync_When422_StillThrowsUnavailable` |
 
 ---

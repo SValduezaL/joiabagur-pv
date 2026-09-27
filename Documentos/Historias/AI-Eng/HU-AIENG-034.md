@@ -133,7 +133,7 @@ están en el [informe](../../Proyecto%20Final%20AIEng/informes/c34-exploration-d
 
 - Change de OpenSpec: `openspec/changes/add-dotnet-assist-and-recommendation-endpoints/` (C34), rama
   `c34-add-dotnet-assist-and-recommendation-endpoints`
-- Ticket: [T-AIENG-034](../../../openspec/changes/add-dotnet-assist-and-recommendation-endpoints/ticket.md)
+- Ticket: [T-AIENG-034](../../../openspec/changes/archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/ticket.md)
 - Informe de exploración: [`c34-exploration-decisions.md`](../../Proyecto%20Final%20AIEng/informes/c34-exploration-decisions.md)
 - Ficha del plan: [§3 · C34](../../Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) y la
   nota del **§0 del 2026-09-21**

@@ -52,7 +52,13 @@ public class AssistedSearchResultDto
     public decimal Price { get; set; }
 
     /// <summary>Units at the point of sale of the search, not the sum across points of sale.</summary>
-    public int QuantityAtPointOfSale { get; set; }
+    /// <remarks>
+    /// <strong>Null and zero are different answers and must stay so.</strong> Zero means the
+    /// shop carries none; <see langword="null"/> means no shop was named, so there is nothing
+    /// to count — a free query spread over every point of sale. A zero there would assert
+    /// something false about a piece that may be sitting in the next shop along.
+    /// </remarks>
+    public int? QuantityAtPointOfSale { get; set; }
 
     /// <summary>
     /// False when the product is assigned to this point of sale but has run out.
@@ -61,7 +67,11 @@ public class AssistedSearchResultDto
     /// Such a result is kept on purpose: "we carry it, we are out of it" is an answer that can
     /// still save a sale, and suppressing it would turn a useful fact into a silent gap.
     /// </remarks>
-    public bool HasStock { get; set; }
+    /// <remarks>
+    /// <see langword="null"/> with no shop named: whether a piece is in stock is a question
+    /// about a shop, and answering false would read as «none left» rather than «nobody asked».
+    /// </remarks>
+    public bool? HasStock { get; set; }
 
     /// <summary>URL of the primary photo, when the product has one.</summary>
     public string? PrimaryPhotoUrl { get; set; }
@@ -142,6 +152,46 @@ public class AssistedSearchResponse
 
     /// <summary>Candidates that survived hydration at this point of sale.</summary>
     public int SurvivedHydration { get; set; }
+
+    /// <summary>
+    /// Codes the retriever emitted about the query itself, from the closed vocabulary the
+    /// assisted answer already uses. Today only <c>filters_too_narrow</c>.
+    /// </summary>
+    /// <remarks>
+    /// <strong>A different statement from <see cref="UnappliedFilters"/>, and they must not
+    /// be collapsed.</strong> That one names a filter the search could not evaluate at all;
+    /// this one says every filter was applied and admitted almost nothing, over a query the
+    /// catalogue can answer. The first is a gap in the searcher, the second is a fact about
+    /// the operator's own selection, and they end in different actions.
+    /// </remarks>
+    /// <remarks>
+    /// Empty on the degraded and disabled paths, which never reach the retriever.
+    /// </remarks>
+    public List<string> Warnings { get; set; } = [];
+
+    /// <summary>
+    /// Filters the operator selected that this search could not apply at all, so the screen can
+    /// say so instead of leaving a control visibly engaged over results that ignore it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Empty on the assisted path, which honours every filter. On the degraded and disabled paths
+    /// it names the ones the lexical searcher has nothing to evaluate against. A category or
+    /// material never appears here: those are applied, and a piece whose enriched profile lacks
+    /// the field simply fails the filter — that is the filter working, not failing.
+    /// </para>
+    /// <para>
+    /// <strong>It is empty in every case this endpoint can currently produce</strong>, and that is
+    /// worth stating rather than leaving to be discovered. The panel's request carries exactly two
+    /// filters and the degraded path now applies both, so there is nothing left to declare. The
+    /// channel is kept because the requirement is a safety net rather than a feature: the failure
+    /// it guards against — a pressed control over results that ignore it — is the one that opened
+    /// this change, and it was invisible precisely because there was nowhere to report it. A
+    /// filter added later that the catalog cannot answer has a place to say so, and the screen
+    /// already knows how to render it.
+    /// </para>
+    /// </remarks>
+    public List<string> UnappliedFilters { get; set; } = [];
 }
 
 /// <summary>

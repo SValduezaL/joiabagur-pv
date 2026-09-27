@@ -41,7 +41,7 @@ import { dashboardService } from '@/services/dashboard.service';
 import { salesService } from '@/services/sales.service';
 import { aiHealthService } from '@/services/ai-health.service';
 import type { DashboardStats, PaginatedLowStockResult } from '@/types/dashboard.types';
-import type { AiHealthOutcome } from '@/types/ai-health.types';
+import type { AiHealthOutcome, AiHealthProjection } from '@/types/ai-health.types';
 import type { Sale } from '@/types/sales.types';
 import { ROUTES } from '@/routing/routes';
 
@@ -76,6 +76,39 @@ interface PosRevenueItem {
 const STOCK_PAGE_SIZE = 10;
 
 const formatCount = (value: number) => new Intl.NumberFormat('es-ES').format(value);
+
+/**
+ * How long ago the projection was drained, in words.
+ *
+ * Words and not seconds, because this is a diagnostic line a person reads rather than a figure
+ * anybody measures with — the exact value is in the element's `title` for when it is needed.
+ * The phrasing names the *drain*, never a shop: the instant it comes from is one per feed, so
+ * "hace 12 minutos en esta tienda" would be false for ten of the eleven.
+ */
+const describeProjectionFreshness = (projection: AiHealthProjection): string => {
+  if (projection.status === 'unavailable') {
+    return 'No se ha podido leer el estado de la sincronización.';
+  }
+  if (projection.ageSeconds === null || projection.ageSeconds === undefined) {
+    return 'La sincronización no se ha ejecutado nunca en este entorno.';
+  }
+
+  const seconds = Math.max(Math.floor(projection.ageSeconds), 0);
+  if (seconds < 60) return 'Última sincronización: hace menos de un minuto.';
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `Última sincronización: hace ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `Última sincronización: hace ${hours} ${hours === 1 ? 'hora' : 'horas'}.`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `Última sincronización: hace ${days} ${days === 1 ? 'día' : 'días'}.`;
+};
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -628,6 +661,76 @@ export function AdminDashboard() {
                     )}
                   </dd>
                 </div>
+
+                {/*
+                  Rendered only when the AI service reports it: a deployment can run an older
+                  `jbg-ai` image than this API, and painting "desconocido" for that would be
+                  noise about a version skew rather than about the projection.
+                */}
+                {aiHealth.report.projection ? (
+                  <div className="space-y-1" data-testid="ai-projection-freshness">
+                    <dt className="text-xs text-muted-foreground">
+                      Disponibilidad por tienda
+                    </dt>
+                    <dd className="space-y-1">
+                      {aiHealth.report.projection.status === 'ok' ? (
+                        <Badge variant="success" appearance="light">
+                          Al día
+                        </Badge>
+                      ) : aiHealth.report.projection.status === 'never_drained' ? (
+                        <Badge variant="destructive" appearance="light">
+                          Sin sincronizar nunca
+                        </Badge>
+                      ) : aiHealth.report.projection.status === 'stale' ? (
+                        <Badge variant="warning" appearance="light">
+                          Desactualizada
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" appearance="light">
+                          Sin datos
+                        </Badge>
+                      )}
+
+                      <p
+                        className="text-xs text-muted-foreground"
+                        title={
+                          aiHealth.report.projection.syncedAt ??
+                          'La sincronización no se ha ejecutado nunca'
+                        }
+                      >
+                        {describeProjectionFreshness(aiHealth.report.projection)}
+                      </p>
+
+                      {/*
+                        The copy is about COMPLETENESS and never about correctness. The backend
+                        applies the truth when it hydrates, so a stale projection costs a short
+                        page — it never shows a piece the shop does not carry, and it never hides
+                        one from the authority. "Los resultados no son fiables" would be false.
+                      */}
+                      {aiHealth.report.projection.stale ? (
+                        <p className="text-xs text-muted-foreground">
+                          Las búsquedas asistidas pueden devolver menos resultados de los
+                          disponibles.
+                        </p>
+                      ) : null}
+
+                      {(aiHealth.report.projection.shopsWithoutScope ?? 0) > 0 ? (
+                        <p className="text-xs text-destructive">
+                          {aiHealth.report.projection.shopsWithoutScope === 1
+                            ? '1 tienda sin surtido sincronizado: su búsqueda asistida no funciona.'
+                            : `${aiHealth.report.projection.shopsWithoutScope} tiendas sin surtido sincronizado: su búsqueda asistida no funciona.`}
+                        </p>
+                      ) : null}
+
+                      {(aiHealth.report.projection.failedPages ?? 0) > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          {aiHealth.report.projection.failedPages} página(s) con errores
+                          registrados.
+                        </p>
+                      ) : null}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
 
               <Separator />
@@ -636,6 +739,24 @@ export function AdminDashboard() {
                 Versión {aiHealth.report.version}
                 {aiHealth.report.index.model ? ` · Modelo del índice: ${aiHealth.report.index.model}` : ''}
               </p>
+
+              {/*
+                Stated rather than offered as a button. With the drain running at start-up and
+                every ten minutes, a "refresh now" control would save at most one interval of
+                waiting, and it would cost a route on a frozen contract. What a person actually
+                needs from here is the FULL reconciliation — after the injected sales clock
+                moves, or after failed pages — and only a person knows when that applies.
+              */}
+              {aiHealth.report.projection &&
+              aiHealth.report.projection.status !== 'ok' &&
+              aiHealth.report.projection.status !== 'unavailable' ? (
+                <p className="text-xs text-muted-foreground">
+                  Reconciliación completa:{' '}
+                  <code className="text-[11px]">
+                    docker exec -i jbg-demo-ai python -m jbg_ai.indexing sync-pos --full
+                  </code>
+                </p>
+              ) : null}
             </div>
           )}
         </CardContent>

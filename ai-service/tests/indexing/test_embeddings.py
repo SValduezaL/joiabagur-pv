@@ -188,6 +188,31 @@ def test_main_does_not_import_indexing() -> None:
     assert "jbg_ai.indexing" not in source
 
 
+def test_lifespan_reaches_the_drain_without_the_provider_sdk() -> None:
+    """C41 moved the lifespan out of `main.py`; the guard follows it rather than losing it.
+
+    The application must be able to start a POS drain, and the drain lives in `jbg_ai.indexing`,
+    so `main.py` alone could no longer carry the whole rule. The property being protected was
+    never "main.py mentions no string": it is that **no provider SDK enters the import graph of
+    a process whose job is to answer HTTP**. The POS drain embeds nothing and needs no embedding
+    key, so it can be reached without `indexing.embeddings` — and this asserts that it is.
+    """
+    from jbg_ai.api import lifespan as api_lifespan
+
+    source = Path(api_lifespan.__file__).read_text(encoding="utf-8")
+    assert "jbg_ai.indexing.embeddings" not in source
+    assert "jbg_ai.indexing.cli" not in source
+    assert "jbg_ai.data" not in source
+
+    # The reachable path, checked one hop further: the scheduler must not pull the CLI in
+    # either, because the CLI is what imports the embedding client.
+    from jbg_ai.indexing import scheduler
+
+    scheduler_source = Path(scheduler.__file__).read_text(encoding="utf-8")
+    assert "jbg_ai.indexing.cli" not in scheduler_source
+    assert "jbg_ai.indexing.embeddings" not in scheduler_source
+
+
 def test_index_routes_use_catalog_principal() -> None:
     source = (
         AI_SERVICE_ROOT / "src" / "jbg_ai" / "api" / "routers" / "index.py"

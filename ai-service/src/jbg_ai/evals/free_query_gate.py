@@ -31,10 +31,18 @@ from jbg_ai.api.schemas.assist import AssistRequest
 from jbg_ai.assist.constants import (
     DEFAULT_ASSIST_MODEL,
     DEFAULT_ROUTER_MODEL,
+    PRICE_PLACEHOLDER,
     PITCH_VIOLATION_CAUSES,
+    STOCK_PLACEHOLDER,
     PROMPT_VERSION,
 )
 from jbg_ai.assist.llm import LiteLlmAssistClient
+from jbg_ai.assist.prompt import (
+    FREE_QUERY_TASKS,
+    _SECTION_BY_TASK,
+    load_prompt_file,
+    prompt_sections,
+)
 from jbg_ai.assist.router_llm import LiteLlmRouterClient
 from jbg_ai.evals.routing import RESULTS_DIR, git_sha, load_routing_cases, provenance
 from jbg_ai.knowledge.search import SqlAlchemyKnowledgeIndex
@@ -44,6 +52,14 @@ from jbg_ai.retrieval.search import SqlAlchemyProductSearch
 #: Wider than the serving cut, for the reason the routing sweep gives: a sweep has nobody
 #: waiting at a counter, and a serving budget would turn provider jitter into measured failures.
 SWEEP_TIMEOUT_SECONDS = 30.0
+
+
+def _count(outcome, marker: str) -> int:
+    """Occurrences of a placeholder in the first generated attempt, or 0 when none ran."""
+    attempt = getattr(outcome, "initial_generated", None) if outcome else None
+    if attempt is None:
+        attempt = getattr(outcome, "generated", None) if outcome else None
+    return attempt.pitch.count(marker) if attempt else 0
 
 
 async def _run(args) -> dict:
@@ -95,13 +111,35 @@ async def _run(args) -> dict:
 
     orchestrator_module.classify_query = capturing_classify
 
+    # **The prompt version is a parameter of the run, so a before/after varies one thing.**
+    # `--prompt-version` is what makes the C40 measurement a comparison rather than two
+    # anecdotes: the same code, the same index, the same corpus and the same queries, with the
+    # prompt as the only difference. `generate_pitch` already takes the text and the version
+    # side by side, precisely so a caller cannot stamp a response with a prompt that never
+    # reached the model.
+    prompt_text = load_prompt_file(args.prompt_version)
+    prompt_sections_present = prompt_sections(prompt_text)
+
     async def capturing(payload_obj, task, **kwargs):
-        outcome = await real_generate_pitch(payload_obj, task, **kwargs)
-        captured.append((payload_obj, task, outcome))
+        # A version older than C40 has no «sin cobertura» section for the free query, so a task
+        # it cannot serve falls back to the one its route would have used. Without this the
+        # "before" pass would die on the first uncovered knowledge query instead of measuring
+        # what that version actually did, which is to run the normal task with no fragments.
+        resolved = task
+        section = _SECTION_BY_TASK.get(task)
+        if section is not None and section not in prompt_sections_present:
+            resolved = FREE_QUERY_TASKS.get(routed[-1].route if routed else "", task)
+            fallbacks.append((getattr(task, "value", None), getattr(resolved, "value", None)))
+
+        kwargs["prompt_text"] = prompt_text
+        kwargs["prompt_version"] = args.prompt_version
+        outcome = await real_generate_pitch(payload_obj, resolved, **kwargs)
+        captured.append((payload_obj, resolved, outcome))
         return outcome
 
     orchestrator_module.generate_pitch = capturing
 
+    fallbacks: list = []
     causes: Counter = Counter()
     initial_causes: Counter = Counter()
     rows: list[dict] = []
@@ -168,6 +206,11 @@ async def _run(args) -> dict:
                 "citations": len(response.citations),
                 "abstained": response.abstained,
                 "clarified": response.clarification_question is not None,
+                # **The C40 measurement.** Counted on the FIRST attempt, which is what the
+                # prompt produced before any repair, and counted rather than stored: the
+                # argument is content the serving path may not persist, and a count is not.
+                "price_placeholders": _count(outcome, PRICE_PLACEHOLDER),
+                "stock_placeholders": _count(outcome, STOCK_PLACEHOLDER),
                 "generated": bool(response.pitch),
                 "prompt_version": response.prompt_version,
                 "total_tokens": response.usage.total_tokens,
@@ -183,7 +226,19 @@ async def _run(args) -> dict:
         **provenance(model=args.model),
         "git_sha": git_sha(),
         "router_model": args.router_model,
-        "pitch_prompt_version": PROMPT_VERSION,
+        "pitch_prompt_version": args.prompt_version,
+        "serving_prompt_version": PROMPT_VERSION,
+        # **The figure C40 exists to publish.** Counted over the FIRST attempt of every
+        # generation, which is what the prompt produced before any repair.
+        "price_placeholders_total": sum(row.get("price_placeholders", 0) for row in rows),
+        "stock_placeholders_total": sum(row.get("stock_placeholders", 0) for row in rows),
+        "generations_with_a_price_placeholder": sum(
+            1 for row in rows if row.get("price_placeholders", 0)
+        ),
+        "generations_with_a_stock_placeholder": sum(
+            1 for row in rows if row.get("stock_placeholders", 0)
+        ),
+        "task_fallbacks": fallbacks,
         "n_queries": len(rows),
         "n_generated": len(generated),
         "n_withheld_by_the_gate": len(withheld),
@@ -232,13 +287,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default=DEFAULT_ASSIST_MODEL)
     parser.add_argument("--router-model", default=DEFAULT_ROUTER_MODEL)
+    parser.add_argument(
+        "--prompt-version",
+        default=PROMPT_VERSION,
+        help="Which assist prompt to generate with. The before/after of C40 varies only this",
+    )
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--delay", type=float, default=0.5)
     parser.add_argument("--pos-id", default="b0000000-0000-4000-8000-000000000002")
     parser.add_argument("--name", default="c31-free-query-gate")
     args = parser.parse_args(argv)
 
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # Windows installs the ProactorEventLoop by default and `psycopg` refuses it. **Guarded
+    # rather than unconditional**: the attribute does not exist on Linux, so running this
+    # harness inside the container — which is how C40 measures against the provider without a
+    # certificate bundle of its own — died on this line before reaching the first query.
+    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     import litellm  # noqa: F401 — warm the import outside every per-call timeout
 
     payload = asyncio.run(_run(args))

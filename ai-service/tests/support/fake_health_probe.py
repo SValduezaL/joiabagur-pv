@@ -8,6 +8,8 @@ by counting what it did.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from jbg_ai.api.health_report import IndexSnapshot
 
 
@@ -19,12 +21,22 @@ class FakeHealthProbe:
         documents: int = 0,
         models: tuple[str, ...] = (),
         database_configured: bool = True,
+        projection_synced_at: datetime | None = None,
+        projection_full_synced_at: datetime | None = None,
+        projection_points_of_sale: int = 0,
+        projection_scoped_points_of_sale: int = 0,
+        projection_failed_pages: int = 0,
     ) -> None:
         self._snapshot = IndexSnapshot(
             database_reachable=database_reachable,
             documents=documents,
             models=models,
             database_configured=database_configured,
+            projection_synced_at=projection_synced_at,
+            projection_full_synced_at=projection_full_synced_at,
+            projection_points_of_sale=projection_points_of_sale,
+            projection_scoped_points_of_sale=projection_scoped_points_of_sale,
+            projection_failed_pages=projection_failed_pages,
         )
         self.calls = 0
 

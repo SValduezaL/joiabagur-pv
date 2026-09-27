@@ -6,12 +6,51 @@ import uuid
 from pathlib import Path
 
 #: `ai-service/src/jbg_ai/knowledge/constants.py` → ai-service/
+#:
+#: **Correct for a developer checkout and wrong once the package is installed**, which is why
+#: it is no longer what `CORPUS_DIR` is built from. Kept because the first candidate below is
+#: exactly this, and naming it makes that candidate readable.
 AI_SERVICE_ROOT = Path(__file__).resolve().parents[3]
 REPO_ROOT = AI_SERVICE_ROOT.parent
 
+#: Where the corpus is looked for, in order. **Same three candidates and same reason as
+#: `assist/prompt.load_prompt_file`**, whose docstring says it: one search, so that a container
+#: layout cannot diverge from a developer checkout.
+#:
+#: The defect this replaces was measured on 2026-09-27 inside the running demo container. With
+#: `uv sync --no-editable` the package is installed into the virtual environment, so
+#: `Path(__file__)` is `/app/.venv/lib/python3.11/site-packages/jbg_ai/knowledge/constants.py`,
+#: `parents[3]` climbs to `/app/.venv/lib/python3.11` and the corpus was therefore looked for at
+#: **`/app/.venv/lib/data/knowledge`** — a path inside the dependency tree that nothing puts
+#: anything into. `PROMPTS_DIR` has the identical flaw and gets away with it precisely because
+#: `load_prompt_file` does not use it: it searches. The corpus had no search, so C34 had to copy
+#: the files onto that absurd path by hand on the host, uncommitted, and it survived five weeks
+#: only because the indexed fragments live in the database volume.
+_CORPUS_RELATIVE = Path("data") / "knowledge"
+_CORPUS_CANDIDATES = (
+    REPO_ROOT / _CORPUS_RELATIVE,  # developer checkout: …/ai-service/../data/knowledge
+    Path.cwd() / _CORPUS_RELATIVE,
+    Path("/app") / _CORPUS_RELATIVE,  # the container's WORKDIR
+)
+
+
+def _resolve_corpus_dir() -> Path:
+    """The first candidate that is a directory, or the checkout one so the path is always named.
+
+    **Deliberately does not raise.** This runs at import, and a corpus that is missing must not
+    take the whole service down with it: `/health` would stop answering and a corpus problem would
+    present as a total outage. `discover_documents` already raises with the directory named, which
+    is where the failure belongs and where it is actionable.
+    """
+    for candidate in _CORPUS_CANDIDATES:
+        if candidate.is_dir():
+            return candidate
+    return _CORPUS_CANDIDATES[0]
+
+
 #: The corpus itself, versioned in git. That it lives in the repository is what makes a
 #: citation *locate*: `material-plata#cuidados-y-limpieza-en-casa` opens a file and a heading.
-CORPUS_DIR = REPO_ROOT / "data" / "knowledge"
+CORPUS_DIR = _resolve_corpus_dir()
 
 #: Machine-readable record of how the corpus was produced, in the pattern of
 #: `data/catalog/*/generated/*.meta.json`.

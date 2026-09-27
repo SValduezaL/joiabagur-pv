@@ -82,6 +82,17 @@ class RetrievalResponse(ScopedResponse):
     results: list[RetrievalResult]
     candidates_returned: int = Field(..., ge=0, description="Candidates the retriever produced")
     low_confidence: bool = False
+    warnings: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Codes of the closed warning vocabulary that describe the QUERY rather than a "
+            "piece. Today only `filters_too_narrow`: the query is answerable and the caller's "
+            "own catalog-side filters are what left almost nothing. It is emitted here and not "
+            "only on the generative route because the decision belongs to retrieval, and every "
+            "path that accepts filters can hit it. An abstention is a different statement and "
+            "never carries it: that one says the description found nothing."
+        ),
+    )
     projection_age_seconds: float | None = Field(
         default=None,
         ge=0.0,

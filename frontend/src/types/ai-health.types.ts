@@ -32,12 +32,60 @@ export interface AiHealthIndex {
   status: AiHealthIndexStatus;
 }
 
+/**
+ * `never_drained` is kept apart from `stale` because the two need different actions: a
+ * projection nobody has ever drained answers 503 to *every* scoped retrieval — while this API
+ * degrades correctly to its lexical path and answers 200, so from outside the deployment looks
+ * healthy — whereas a stale one serves a wider candidate window and declares it.
+ *
+ * `unavailable` means the AI service reports the section and could not read it, which is not the
+ * same as the section being absent altogether (an older `jbg-ai` image).
+ */
+export type AiHealthProjectionStatus =
+  | 'ok'
+  | 'stale'
+  | 'never_drained'
+  | 'unavailable';
+
+/**
+ * Freshness of the point-of-sale availability projection (C41).
+ *
+ * **The age is the drain's, not a shop's.** Its source holds one row per feed, so every point of
+ * sale reports the same number; anything rendered as though it were per-shop would be false.
+ *
+ * **A stale projection hides nothing.** The backend still applies the truth when it hydrates, so
+ * what staleness costs is a short page, never a missing piece — which is why the copy talks about
+ * completeness and never about reliability.
+ */
+export interface AiHealthProjection {
+  status: AiHealthProjectionStatus | string;
+  /** When the feed was last drained, or null when it never was. */
+  syncedAt: string | null;
+  fullSyncedAt: string | null;
+  /** Seconds since the last drain, or null when it never ran. */
+  ageSeconds: number | null;
+  /** The ceiling the AI service is configured with, so the verdict can be explained here. */
+  ceilingSeconds: number | null;
+  /** What the retrieval guard decided. Never recomputed here: that would duplicate the threshold. */
+  stale: boolean | null;
+  /** Pages recorded as failed for this feed. Cumulative, not "the last run's". */
+  failedPages: number | null;
+  pointsOfSale: number | null;
+  /** Points of sale holding no assortment at all — each one a 503 on every scoped search. */
+  shopsWithoutScope: number | null;
+}
+
 export interface AiHealthReport {
   status: 'OK' | 'degraded' | string;
   version: string;
   database: AiHealthDatabaseStatus | string;
   index: AiHealthIndex;
   provider: AiHealthProviderStatus | string;
+  /**
+   * Optional: a deployment can run an older `jbg-ai` image than this API, and a card that threw
+   * on the absence would turn a version skew into a broken dashboard.
+   */
+  projection?: AiHealthProjection | null;
 }
 
 /**

@@ -85,6 +85,27 @@ public class SalesAssistResponse
     /// <summary>Whether the AI service served this card. False on every degraded path.</summary>
     public bool AiAvailable { get; set; }
 
+    /// <summary>
+    /// Why the AI path degraded, from the closed vocabulary the service already computes for its
+    /// own log line. Null when the path did not degrade.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Six values: <c>switched_off</c>, <c>credential_rejected</c>, <c>not_implemented</c>,
+    /// <c>product_not_indexed</c>, <c>ai_unavailable</c> and <c>unclassified</c>. They were
+    /// computed and thrown away before this existed, so a piece added after the last index
+    /// synchronisation — a state the next synchronisation fixes by itself — reached the operator
+    /// looking exactly like an outage, and only the backend log told them apart.
+    /// </para>
+    /// <para>
+    /// The value is assigned onto this response <strong>before</strong> the log line is written,
+    /// and the log line reads it from here. That is what makes "the screen and the log cannot
+    /// disagree" a property of the code rather than a promise: there is one value, not two that
+    /// have to be kept in step.
+    /// </para>
+    /// </remarks>
+    public string? DegradedReason { get; set; }
+
     /// <summary>Point of sale the card was served for.</summary>
     public Guid PointOfSaleId { get; set; }
 

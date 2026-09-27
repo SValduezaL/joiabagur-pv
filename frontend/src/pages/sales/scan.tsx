@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CameraOff, Flashlight, FlashlightOff, X, ScanLine, Search } from 'lucide-react';
+import { CameraOff, Flashlight, FlashlightOff, X, ScanLine, Search, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeScanningService } from '@/services/barcode-scanning.service';
 import { productService } from '@/services/product.service';
@@ -12,6 +12,13 @@ import { ROUTES } from '@/routing/routes';
 
 type ScanState = 'initializing' | 'scanning' | 'error' | 'success';
 
+/** The piece a scan resolved to, kept only so the sale card can be offered for it (C36). */
+interface ResolvedProduct {
+  id: string;
+  name: string;
+  sku: string;
+}
+
 export function ScanningPage() {
   const navigate = useNavigate();
   const [scanState, setScanState] = useState<ScanState>('initializing');
@@ -19,6 +26,16 @@ export function ScanningPage() {
   const [flashOn, setFlashOn] = useState(false);
   const [manualSku, setManualSku] = useState('');
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  /**
+   * The resolved piece, held back from the till for one step so the operator can open its sale
+   * card instead (C36).
+   *
+   * This is the entrance that matters most for the card: the customer has the piece in their
+   * hand and is asking about it, and before C36 that situation had no route to the knowledge
+   * corpus at all. This page has no point of sale of its own, so none travels — the card offers
+   * its role-resolved selector instead.
+   */
+  const [resolved, setResolved] = useState<ResolvedProduct | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -84,16 +101,14 @@ export function ScanningPage() {
         });
 
         serviceRef.current?.stopContinuousScan();
-        navigate(ROUTES.SALES.NEW, {
-          state: { productId: exactMatch.id },
-        });
+        setResolved({ id: exactMatch.id, name: exactMatch.name, sku: exactMatch.sku });
       } catch {
         toast.error('Producto no encontrado', {
           description: `SKU: ${sku}`,
         });
       }
     },
-    [navigate],
+    [],
   );
 
   const handleToggleFlash = async () => {
@@ -125,13 +140,27 @@ export function ScanningPage() {
         description: `${exactMatch.name}`,
       });
 
-      navigate(ROUTES.SALES.NEW, {
-        state: { productId: exactMatch.id },
-      });
+      setResolved({ id: exactMatch.id, name: exactMatch.name, sku: exactMatch.sku });
     } catch {
       toast.error('Error al buscar producto');
       setIsSubmittingManual(false);
     }
+  };
+
+  /** Carries on to the till exactly as this page did before it offered the card. */
+  const handleContinueToSale = (productId: string) => {
+    navigate(ROUTES.SALES.NEW, { state: { productId } });
+  };
+
+  /**
+   * Opens the sale card for the resolved piece (C36).
+   *
+   * No point of sale travels: this page has never had one. The card offers the same
+   * role-resolved selector the assisted search panel offers, and issues no request until one is
+   * chosen.
+   */
+  const handleOpenCard = (productId: string) => {
+    navigate(ROUTES.SALES.ASSIST(productId));
   };
 
   const handleClose = () => {
@@ -198,6 +227,36 @@ export function ScanningPage() {
             <div className="size-8 animate-pulse rounded-full bg-primary/20 mx-auto" />
             <p className="text-muted-foreground">Iniciando cámara...</p>
           </div>
+        </div>
+      )}
+
+      {/* The piece is resolved and the operator chooses what to do with it. Before C36 this page
+          went straight to the till, which left the customer-with-the-piece-in-their-hand
+          situation — the one the card exists for — with no route to the knowledge corpus at
+          all. Continuing to the sale is still the primary action and still lands exactly where
+          it landed before. */}
+      {scanState === 'success' && resolved && (
+        <div className="flex flex-1 items-center justify-center p-4">
+          <Card className="w-full max-w-md" data-testid="scan-resolved">
+            <CardContent className="space-y-4 pt-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">{resolved.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{resolved.sku}</p>
+              </div>
+              <Button className="w-full" onClick={() => handleContinueToSale(resolved.id)}>
+                Continuar con la venta
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                data-testid="scan-open-card"
+                onClick={() => handleOpenCard(resolved.id)}
+              >
+                <FileText className="mr-2 size-4" />
+                Ver ficha de venta
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 

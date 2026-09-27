@@ -97,7 +97,7 @@ The **C20 synonym dictionary is curated against the corpus, not against observed
 | `POST` | `/v1/retrieval/products` | Bearer | returns `min(top_k × 3, 60)` candidates, reported in `candidates_returned` |
 | `POST` | `/v1/retrieval/substitutes` | Bearer | retrieval result shape plus `similarity_signals` |
 | `POST` | `/v1/assist/sale` | Bearer | `groups[]` by **nullable** `family_id`, rule warnings as codes, citations that resolve. Real since C30a; **writes the argument since C30b** in the two piece-anchored modes, always keeping `{{price}}` / `{{stock}}` unresolved. With **neither** `JPV_ASSIST_LLM_API_KEY` **nor** its fallback `JPV_RAG_LLM_API_KEY` it serves C30a's response with 200, never 503 |
-| `POST` | `/v1/assist/agent` | Bearer | **C32b**: the agent loop over a multi-turn transcript carried in the request (≤ 12 turns, ≤ 500 characters each, ≤ 4.000 in total). Every field of the deterministic response **plus** `partial`, `stop_reason`, `iterations`, `tool_calls_used`, a bounded `trace` and `agent_prompt_version`, with `usage.calls`. With no agent credential it answers without the loop, with 200 |
+| `POST` | `/v1/assist/agent` | Bearer | **C32b**: the agent loop over a multi-turn transcript carried in the request (≤ 12 turns, ≤ 500 characters each, ≤ 4.000 in total). Every field of the deterministic response **plus** `partial`, `stop_reason`, `iterations`, `tool_calls_used`, a bounded `trace` and `agent_prompt_version`, with `usage.calls`. With no agent credential it answers without the loop, with 200. **C42** gave the route its first consumer (`POST /api/ai/search/agent` on the .NET side) and moved three things with it: each group carries `origin` (`catalogo` \| `sustitutos`) on `AgentAssistGroup`, a **subclass** — the shared `AssistGroup` is deliberately **not** widened, by the precedent of `AgentUsage`, so no other assist route sees a new field, and the value is read from the very same key the payload group is built from rather than re-derived; the route accepts a token with **no `pos_id`** (`get_unscoped_principal`), which is the «every shop» scope, so without a shop the quantity and stock flag travel null instead of zero; and the argument is now written with `assist/v6`, whose agent task adds the rule the anchored ones already had — with no anchored piece there is nothing for a `{{price}}`/`{{stock}}` marker to resolve against, so it must not write one, while comparative language is still allowed. Only `AGENT_PITCH_PROMPT_VERSION` moves: `PROMPT_VERSION` stays on `assist/v5` and neither `v4` nor `v5` was touched |
 | `POST` | `/v1/inventory/propose` | Bearer | prioritized proposals, never quantities |
 | `POST` | `/v1/enrich/products` | Bearer | proposed profiles with per-field confidence |
 | `POST` | `/v1/families/suggest` | Bearer (catalog) | family proposals plus the groups a guard refused and the products the gate excluded; writes nothing |
@@ -318,22 +318,70 @@ the `catalog` row. A page that fails is recorded in `ai.sync_failure` and the dr
 on with the remaining pages; the bookmark stays before the page that failed, so a retry
 starts in front of it rather than past it.
 
-**There is no route and no scheduler**, on purpose. `ai-service-api-contracts` enumerates
-the `/v1` surface in a MUST, and an in-process scheduler would add a background task to a
-container capped at 512 MiB competing for a pool of five connections. Honesty about
-staleness comes from `projection_age_seconds` on the retrieval response, not from a hidden
-cron: if nobody has synchronised, the response says so and the guard acts on it.
+**There is still no route** — `ai-service-api-contracts` enumerates the `/v1` surface in a
+MUST — **but since C41 there IS a scheduler**, and you no longer have to run this command to
+keep the projection fresh.
 
-Cron recipe, every ten minutes, logging what it did:
+### The scheduled drain (C41)
+
+The service drains this feed **once when it starts** and then **every
+`JPV_POS_SYNC_INTERVAL_SECONDS`**. The start-up drain runs in full when no checkpoint exists —
+so a brand-new environment synchronises itself — and incrementally when one does.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `JPV_POS_SYNC_SCHEDULER_ENABLED` | `true` | Off restores exactly the pre-C41 behaviour, this command as the only drain. That is the ablation and the rollback |
+| `JPV_POS_SYNC_INTERVAL_SECONDS` | `600` | **Derived, not chosen.** What matters is how many consecutive failed drains fit under `JPV_POS_PROJECTION_MAX_AGE_SECONDS` before the guard degrades the scope: at the 3600 s ceiling, 1800 s tolerates one, 900 s three, 600 s five. Rule: `ceiling / interval >= 4` |
+
+It does not start under `STUB_MODE`, nor without a configured feed, and it **never blocks
+start-up**: the task is created and not awaited, because the container health check probes
+`/health` on a three-second timeout and the composition chains service start-up on it. A feed
+that does not answer is logged and retried with bounded backoff, and never prevents the process
+from starting.
+
+**Why the paragraph this replaces was wrong, which is worth knowing.** It read *«there is no
+route and no scheduler, on purpose … an in-process scheduler would add a background task to a
+container capped at 512 MiB competing for a pool of five connections … honesty about staleness
+comes from `projection_age_seconds`, not from a hidden cron»*, and it carried this recipe:
 
 ```cron
+# DO NOT USE. Kept as the record of a recipe that could not work here.
 */10 * * * * cd /srv/jbg-ai && /usr/local/bin/uv run python -m jbg_ai.indexing sync-pos >> /var/log/jbg-ai/sync-pos.log 2>&1
 ```
 
-Run `--full` once after first deploying, and again whenever `IndexFeed:SalesAsOf` changes.
-An incremental run recomputes nothing: the feed re-emits only pairs whose inventory row
-moved, so a clock changed afterwards leaves every unchanged pair on the old one. The stored
-`computed_as_of` is what makes such a mixture visible instead of silent.
+It was never installed anywhere, and not through forgetfulness: it begins by changing into a
+**host directory**, while this service ships as a container — the demo drains with
+`docker exec -i jbg-demo-ai …`. It described a deployment that does not exist. The cost
+argument does not survive measurement either: an incremental drain fetches nought or one page
+of at most two hundred rows and holds one connection for seconds, once every ten minutes,
+keeping no state between ticks. And the honesty argument is the one the evidence refuted — the
+age was reported faithfully for twenty days and **reached no screen**, across three sessions and
+two distinct failure modes, two of which published measurements taken over a scope that had
+silently degraded. Reporting honestly was necessary and it was not sufficient. The cron is no
+longer hidden either: `GET /health` reports when the drain last ran.
+
+### Concurrency: the advisory lock
+
+Every drain — scheduled, or this command run by hand — takes a **non-blocking** advisory lock
+before writing anything, and one that cannot get it **declines** and writes nothing. Declining
+is not failing: the work is being done by whoever holds the lock.
+
+`ai.sync_checkpoint` holds one row per feed, so two drains writing at once interleave the
+keyset, and an interleaved keyset **does not fail — it skips rows in silence**, which is worse
+than the staleness this exists to fix.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Drained, no failed pages |
+| `1` | At least one page failed, or the feed is not configured |
+| `75` | Another drain holds the lock; nothing was written |
+
+### When you still run it by hand
+
+Run `--full` whenever `IndexFeed:SalesAsOf` changes, and after failed pages — `GET /health`
+reports the count. An incremental run recomputes nothing: the feed re-emits only pairs whose
+inventory row moved, so a clock changed afterwards leaves every unchanged pair on the old one.
+The stored `computed_as_of` is what makes such a mixture visible instead of silent.
 
 
 ## The knowledge corpus and its index (C23)
@@ -342,6 +390,29 @@ The second index. `ai.knowledge_document` and `ai.knowledge_chunk` had existed s
 with their final shape and **nothing had ever written to them**; the content lives in
 [`../data/knowledge/`](../data/knowledge/), versioned in git, and
 [its README](../data/knowledge/README.md) carries the seven authoring rules.
+
+> **Where the corpus is looked for, and why the image carries it (C39a).** The directory is
+> resolved by searching three candidates in order — the checkout, the working directory, and
+> `/app/data/knowledge` — which is the same search `load_prompt_file` performs for the prompts and
+> for the same stated reason: one search, so a container layout cannot diverge from a developer
+> checkout. It used to be **derived** by counting parent directories from the module file, which is
+> correct in a checkout and lands inside the virtual environment once `uv sync --no-editable`
+> installs the package: measured in the deployed container, the corpus was looked for at
+> `/app/.venv/lib/data/knowledge`, a directory nothing writes to.
+>
+> The corpus now also **ships inside the image**, because `data/knowledge/` sits outside this
+> image's build context. It arrives through a named additional context, so **a build that does not
+> supply it fails** instead of producing an image whose `sync-knowledge` has nothing to read:
+>
+> ```bash
+> docker build -f ai-service/Dockerfile --build-context corpus=./data/knowledge … ai-service
+> ```
+>
+> Both consumers pass it: the demo deployment workflow and, for local development,
+> `backend/docker-compose.yml` through `additional_contexts`. With the table empty the
+> piece-anchored argument is withheld for want of material to anchor it to and the piece-anchored
+> question answers `knowledge_not_covered` — which read on screen as a defect of the sale card and
+> are not one.
 
 Three commands need neither a database nor a provider:
 
@@ -428,6 +499,20 @@ uv run evals rescore                                   # phase C: the weight gri
 uv run evals cag [--dry-run]                           # the context-only measurement, dated
 uv run evals provider-latency                          # the provider round trip, cold and warm
 ```
+
+> **Pass `GIT_SHA` when the run happens inside the container, which is the normal case.** Any
+> measurement against the real provider runs in `jpv-pv-jbg-ai`, and there is no `.git` in the
+> image — so `evals/routing.py:git_sha()` falls through to `unknown` and the artefact records a
+> provenance nobody can use. It reads the environment first for exactly this reason:
+>
+> ```bash
+> docker exec -e GIT_SHA="$(git rev-parse --short HEAD)" jpv-pv-jbg-ai \
+>   python -m jbg_ai.evals.free_query_gate --prompt-version assist/v5
+> ```
+>
+> **If the tree is dirty, say so**: `GIT_SHA="$(git rev-parse --short HEAD)+dirty"`. A bare sha on
+> a dirty tree declares a re-run at that commit comparable when it is not — the trap
+> `evals/provenance.py` documents, and the one C40's two placeholder artefacts fell into.
 
 **The calibration runs in two phases, and their order is a constraint rather than a
 preference.** The fusion decides WHICH candidates a query produces; the business signals only
@@ -1106,6 +1191,23 @@ untouched** and keeps serving the deterministic route. A piece the loop pivoted 
 also handed over as a match, and when the cap of eight pieces binds, further matches are dropped
 before the substitutes.
 
+> **C40 moves the deterministic route to `assist/v5`, and that was a prerequisite rather than an
+> improvement.** `v3` ordered the model to write `{{price}}` and `{{stock}}` in **every** task,
+> including the three free-query ones — where there is no anchored piece for `PitchPlaceholderResolver`
+> to resolve them against, so the .NET gateway withdrew the argument and M1 would have shipped with
+> no prose at all. `v5` removes price and availability from the free-query tasks, adds an uncovered
+> task for a knowledge question the corpus cannot answer, and the integrity gate gains the hard
+> cause `placeholder_in_free_query`, so a placeholder there withholds the argument instead of
+> reaching a screen.
+>
+> **The measurement refuted the prediction that justified it, and the change stands anyway.** C30b
+> counted `{{price}}` in 147 of 213 arguments and `{{stock}}` in 188 of 213, and the ticket
+> extrapolated that most of M1's arguments would be withheld. Measured over 90 free-query
+> generations on `v3`: **2 of 90 and 1 of 90** — a factor of thirty. What actually blocked M1 was
+> not the placeholder rate but the gateway guard, which refused it **100 %** of the time. On `v5`
+> the counts are 0 and 0, and 0 again over 71 responses driven end to end through .NET. Both
+> artefacts are in `evals/results/c40-placeholders-*.json`.
+
 **The wall-clock budget bounds the whole request.** The loop runs against 15 s minus the
 argument's reserve (its two calls at their timeout, 8 s by default) and the turn in flight is cut
 when that runs out; the bound is 15 s plus, at most, the tool calls of that turn, which are not
@@ -1195,7 +1297,7 @@ These four tests exist to catch failures that produce **no error at all**: an HN
 - No SQL access to schema `public`, ever
 - No production deploy, SSM or `CREATE EXTENSION` on RDS. C17 delivered the **enriched health** — `GET /health` reports database reachability, indexed document count, whether the embedding provider credential is configured, and a contrast between the configured embedding model and the one recorded on the index rows, all without ever calling the provider — and deployed it to an **isolated demo account**, not to the shop's production account. The return annotation stays an open mapping, so `openapi.json` is unchanged
 - No production tuning: `halfvec`, `hnsw.iterative_scan`, `CREATE INDEX CONCURRENTLY` and the `VACUUM`/`REINDEX` cycle are deliberate omissions at ~1,500 vectors, not oversights
-- No edits to `indexing/embeddings.py`, frozen since C11. The POS feed **is** drained since C22, by `python -m jbg_ai.indexing sync-pos` — a command with a documented cron, not a route and not an in-process scheduler
+- No edits to `indexing/embeddings.py`, frozen since C11. The POS feed **is** drained since C22, by `python -m jbg_ai.indexing sync-pos` — a command, not a route. *(Corrected by C41: it also said «not an in-process scheduler», and since C41 there is one — the command's documented cron was never installable, because it changed into a host directory against a containerised service. There is still no route.)*
 - **The rotation figures describe the world at its horizon, not "today".** The synthetic world of C10 ends on **2026-08-23**, and since C22 the sales windows are counted against a declared reference instant (`IndexFeed:SalesAsOf`) rather than the wall clock. Two consequences worth stating plainly. It is what makes the aggregates **reproducible** — the same configuration and seed give the same figures on different days, which a ranking that reads `now()` never could, dataset horizon or not. And it means `sales_30d` describes the thirty days before that instant: peak summer for a world whose seasonality is extreme, so **23,54 %** of assigned pairs are non-zero rather than the 16,28 % a wall-clock reading gave on 2026-09-05. Neither figure is "the truth about today"; the declared one is the one that can be cited twice and mean the same thing. Removing the setting restores wall-clock behaviour, and with it the drift to zero that made the setting necessary
 
 ## Layout
@@ -1275,6 +1377,9 @@ ai-service/
                     #   stay on disk because figures were measured against them) and router/v1-v3
                     #   (C31 intent classifier; v3 in force)
                     # + agent/v1 (C32b loop) and assist/v4 (C32b agent evidence; v3 untouched)
+                    # + assist/v5 (C40: the free-query tasks stop writing placeholders) and
+                    #   assist/v6 (C42: the AGENT task inherits that rule; v4 and v5 untouched,
+                    #   and only AGENT_PITCH_PROMPT_VERSION moves: PROMPT_VERSION stays on v5)
   evals/            # the yardstick, versioned: golden/ (queries, judgements, frozen query vectors,
                     # criterion.md, pricing.yaml), configs/ (the five baseline configurations —
                     # globbed by load_all(), so nothing else may live there), assist/ (C30b's

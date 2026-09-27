@@ -113,7 +113,7 @@ Los dos árboles se comportan de forma distinta, y ahí está la explicación:
 | `UnitTests/` | 315 | **10** | El QA de C03 (2026-08-09) registró exactamente estos 10, **nombre por nombre** |
 | `IntegrationTests/` | 270 | **~42** | **Nunca se habían medido** |
 
-C03 registró «315 total» — que es **exactamente el recuento del árbol unitario**. Los de integración necesitan Docker y en aquella sesión no llegaron a ejecutarse. Y en CI tampoco: [`test-backend.yml`](../../../.github/workflows/test-backend.yml) corre la solución completa sobre `ubuntu-latest`, que sí tiene Docker, **pero solo se dispara en `push`/`pull_request` a `main` y `develop`**, y todo el Proyecto Final se está construyendo en `ai-eng` y sus ramas de change. Un árbol de 270 tests lleva semanas sin ejecutarse ni en local ni en CI.
+C03 registró «315 total» — que es **exactamente el recuento del árbol unitario**. Los de integración necesitan Docker y en aquella sesión no llegaron a ejecutarse. Y en CI tampoco: [`test-backend.yml`](../../../../.github/workflows/test-backend.yml) corre la solución completa sobre `ubuntu-latest`, que sí tiene Docker, **pero solo se dispara en `push`/`pull_request` a `main` y `develop`**, y todo el Proyecto Final se está construyendo en `ai-eng` y sus ramas de change. Un árbol de 270 tests lleva semanas sin ejecutarse ni en local ni en CI.
 
 Eso no es una suite que se haya podrido: es una suite que nadie estaba mirando.
 
@@ -134,8 +134,8 @@ No son teoría: aparecieron escribiendo los tests nuevos y se corrigieron en ell
 
 ### Dónde queda registrado
 
-- **[CLAUDE.md](../../../CLAUDE.md)** — la regla operativa duradera: un recuento en rojo no es señal de regresión, se compara **por nombres** contra la línea base, y las dos trampas concretas con las que tropezará quien escriba el siguiente test. Sin cifras, que caducan.
-- **[Documentos/testing-backend.md](../../../Documentos/testing-backend.md)**, sección *Estado de la suite: fallos conocidos* — el inventario fechado con causas raíz, la explicación del hueco de CI y el orden de rentabilidad para cerrarlo.
+- **[CLAUDE.md](../../../../CLAUDE.md)** — la regla operativa duradera: un recuento en rojo no es señal de regresión, se compara **por nombres** contra la línea base, y las dos trampas concretas con las que tropezará quien escriba el siguiente test. Sin cifras, que caducan.
+- **[Documentos/testing-backend.md](../../../../Documentos/testing-backend.md)**, sección *Estado de la suite: fallos conocidos* — el inventario fechado con causas raíz, la explicación del hueco de CI y el orden de rentabilidad para cerrarlo.
 - Este QA — lo medido en este change.
 
 **No se ha arreglado ninguno**, y es deliberado: no son de este change y tocarlos habría mezclado dos cosas distintas en un mismo diff. **Merece un change propio**, y el primer punto —extender el disparador de CI a las ramas de trabajo— es el que impide que siga creciendo en silencio.

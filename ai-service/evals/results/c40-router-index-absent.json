@@ -1,0 +1,30 @@
+{
+  "measurement": "c40-router-index-absent-rate",
+  "measured_at": "2026-09-25T07:06:35.885Z",
+  "run_id": "5e1374166136",
+  "git_sha": "d1af1557493291700e6524c102fdffa597f290fb",
+  "prompt_version": "assist/v5",
+  "router_prompt_version": "router/v3",
+  "note": "Read off the `coerced=` field the coercion added to the served router stage line, over the 42 labelled queries driven end to end through .NET at 4 s spacing.",
+  "router_replies_served": 42,
+  "router_degraded": 0,
+  "coerced_router_index_absent": 0,
+  "rate": 0,
+  "predicted_by_exploration": {
+    "source": "H7",
+    "n": 42,
+    "fired": 5,
+    "rate": 0.119
+  },
+  "latency_same_pass": {
+    "p50_ms": 4465,
+    "p95_ms": 8213,
+    "over_budget": 0
+  },
+  "probes_issued_in_this_pass": 0,
+  "probes_note": "Zero, and that is the point: the 42 labelled queries carry no filters, so no probe runs and the probe cannot account for any latency difference against the group 8 pass.",
+  "state_distribution": {
+    "answered": 37,
+    "answered-without-prose": 5
+  }
+}

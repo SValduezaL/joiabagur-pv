@@ -19,7 +19,7 @@ Tres restricciones gobiernan este diseño y ninguna es negociable:
    inyectados por la misma costura de constructor que usa `LiteLlmEnrichClient`.
 
 La exploración refutó **dos garantías** que la ficha del plan daba por buenas, las dos por medición
-estática. Están en [`c30b-exploration-decisions.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md)
+estática. Están en [`c30b-exploration-decisions.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md)
 y son el origen de D1 y D9.
 
 ## Goals / Non-Goals

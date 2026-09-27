@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, ShoppingCart, AlertTriangle, CheckCircle2, Plus } from 'lucide-react';
+import { ArrowLeft, Search, ShoppingCart, AlertTriangle, CheckCircle2, Plus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -490,9 +490,29 @@ export function ManualSalesPage() {
                         </div>
                       )}
                     </div>
-                    <Badge variant={selectedProduct.isActive ? 'primary' : 'secondary'}>
-                      {selectedProduct.isActive ? 'Activo' : 'Inactivo'}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant={selectedProduct.isActive ? 'primary' : 'secondary'}>
+                        {selectedProduct.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                      {/* Entrance to the sale card (C36). This is one of the two entrances that
+                          carry the situation the card exists for — the customer with the piece
+                          in their hand — because this page is reached by scanning and by SKU.
+                          The point of sale of this form travels with it so the card does not
+                          have to ask for one again. */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="sales-new-open-card"
+                        onClick={() =>
+                          navigate(ROUTES.SALES.ASSIST(selectedProduct.id), {
+                            state: { pointOfSaleId: selectedPosId },
+                          })
+                        }
+                      >
+                        <FileText className="mr-1.5 h-3.5 w-3.5" />
+                        Ver ficha de venta
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

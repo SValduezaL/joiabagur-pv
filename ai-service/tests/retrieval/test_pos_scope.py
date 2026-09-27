@@ -107,10 +107,33 @@ def test_a_malformed_pos_id_is_rejected() -> None:
         parse_pos_id("POS-B")
 
 
-@pytest.mark.parametrize("claim", [None, "", "   ", "POS-B", "not-a-uuid", "42"])
-def test_no_claim_shape_short_of_a_uuid_is_accepted(claim: str | None) -> None:
+@pytest.mark.parametrize(
+    "claim",
+    # `*` and `all` are named by the specification, which requires that a wildcard stay
+    # impossible: they are values like any other, they are not UUIDs, and they are refused. The
+    # only shape that widens a search is the claim not being there at all.
+    ["", "   ", "POS-B", "not-a-uuid", "42", "*", "all", "ALL", "%"],
+)
+def test_no_claim_shape_short_of_a_uuid_is_accepted(claim: str) -> None:
+    """Every VALUE that is not a UUID is refused, and an empty string is a value.
+
+    `None` left this list with C40 and moved to the test below. The rule it used to encode —
+    anything short of a UUID is a mis-issued token — still holds for everything that *is* a
+    value; what changed is that the claim can now legitimately not be there at all.
+    """
     with pytest.raises(InvalidPosIdError):
         parse_pos_id(claim)
+
+
+def test_an_omitted_claim_is_the_every_shop_scope_and_not_a_rejection() -> None:
+    """C40: absence is a scope, and it is the only shape of it.
+
+    The reversal is narrow on purpose. `None` means the key was not in the payload — the auth
+    layer already refuses a present-but-empty one — so the only way to reach this branch is a
+    token deliberately issued without a shop. Everything else on the line above still raises,
+    which is what keeps a broken token from being answered with the whole estate.
+    """
+    assert parse_pos_id(None) is None
 
 
 def test_a_malformed_claim_never_produces_an_unscoped_search() -> None:

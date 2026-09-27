@@ -20,7 +20,7 @@ almacenado, la capacidad se entrega **sin una sola llamada al proveedor**.
 
 **La exploración midió seis cosas antes de escribir esto y refutó tres puntos de la ficha del plan.**
 Evidencias en
-[`c26-exploration-measurements.md`](../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md):
+[`c26-exploration-measurements.md`](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c26-exploration-measurements.md):
 
 - **«Misma familia primero» está invertida.** La familia es, por construcción, el conjunto de piezas
   que se diferencian **justo en el atributo que descalifica** —la talla—. Para `SKU13 Anillo erizo de

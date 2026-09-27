@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jbg_ai.api.auth import (
     CATALOG_CLAIMS,
     REQUIRED_CLAIMS,
+    UNSCOPED_CLAIMS,
     InvalidServiceToken,
     ServicePrincipal,
     decode_service_token,
@@ -59,6 +60,26 @@ def get_catalog_principal(
     only hard filter standing between two points of sale.
     """
     return _principal(request, credentials, settings, CATALOG_CLAIMS)
+
+
+def get_unscoped_principal(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    settings: Settings = Depends(get_app_settings),
+) -> ServicePrincipal:
+    """Catalog retrieval and sale assistance: `pos_id` is accepted and no longer demanded.
+
+    **These two routes take it both ways, and that is the whole of C40's third scope.** A
+    token that carries a point of sale is validated and used exactly as before; one that
+    carries none is served, and the absent claim makes the availability prefilter **not
+    apply** rather than match everything. Every other route that works inside one shop keeps
+    `get_service_principal` and still rejects the token, so the omission fails closed
+    everywhere it matters.
+
+    Declared per route, like the catalog dependency and for the same reason: relaxing it here
+    cannot relax it anywhere else.
+    """
+    return _principal(request, credentials, settings, UNSCOPED_CLAIMS)
 
 
 def _principal(

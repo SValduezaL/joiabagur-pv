@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-PRICE_PLACEHOLDER = "{{price}}"
-STOCK_PLACEHOLDER = "{{stock}}"
+from jbg_ai.assist.constants import PRICE_PLACEHOLDER, STOCK_PLACEHOLDER
+
+__all__ = ["PRICE_PLACEHOLDER", "STOCK_PLACEHOLDER", "ScopedResponse", "Usage"]
 
 
 class Usage(BaseModel):

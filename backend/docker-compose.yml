@@ -45,6 +45,17 @@ services:
     build:
       context: ../ai-service
       dockerfile: Dockerfile
+      # C39a. The knowledge corpus lives at `<repo root>/data/knowledge`, outside the
+      # context above, so the Dockerfile reaches it through a NAMED ADDITIONAL CONTEXT.
+      # This line is not optional: with the `COPY --from=corpus` declared in the
+      # Dockerfile, a build without it fails. The context itself stays `../ai-service`
+      # precisely so that this file keeps working — moving it to the repository root was
+      # the first plan and would have broken local development.
+      #
+      # Local development GAINS something here: until now this image carried no corpus
+      # either, so `sync-knowledge` had nothing to index in a local container.
+      additional_contexts:
+        corpus: ../data/knowledge
     container_name: jpv-pv-jbg-ai
     # Secrets for local CLIs live in `.env` (copy `.env.example`). Compose
     # reads that file for ${VAR} interpolation automatically. Do NOT add

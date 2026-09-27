@@ -141,6 +141,32 @@ services:
       # (`stage=router_client ... credential=assist_fallback`); the router runs
       # only for a free query with no product, which the demo never sends.
       JPV_ASSIST_LLM_API_KEY: ${ASSIST_LLM_API_KEY:-}
+      # Source: /jbg-demo/ROUTER_LLM_API_KEY — optional, same pattern, added by C39a.
+      # Until now the router had NO credential of its own here and fell back to the one
+      # above, which is what the C34 deployment logged as
+      # `stage=router_client ... credential=assist_fallback`. That works and it is not what
+      # is declared: the fallback exists as a safety net, not as configuration. The two
+      # stages run DIFFERENT models on purpose — the classifier `gpt-4o`, the argument
+      # `gpt-4o-mini` — because a ~30-output-token classification and a paragraph are not
+      # the same call, and sharing one credential makes their two costs impossible to tell
+      # apart. Absent or empty, the classifier is not constructed, `intent` comes back
+      # `unclassified` and the route serves exactly what it served before C31: the
+      # fail-open, the ablation and the rollback at once.
+      #
+      # The comment above this block used to add that «the router runs only for a free
+      # query with no product, which the demo never sends». That stopped being true with
+      # C40: the free-query panel IS the demo's third mode and the router runs on it.
+      JPV_ROUTER_LLM_API_KEY: ${ROUTER_LLM_API_KEY:-}
+      # Source: /jbg-demo/AGENT_LLM_API_KEY — optional, same pattern, added by C39a.
+      # Absent or empty, the loop is not constructed and POST /v1/assist/agent answers 200
+      # without running it. That is one of the TWO screen states C42 declares as never
+      # observed in production — it was built against scenarios — so the demo with this key
+      # present is also the first place it gets exercised for real.
+      #
+      # Its model is NOT inherited from either of the two above, and it is the cheapest
+      # cost lever the capability has: the loop is the expensive stage, measured at x3,0
+      # against the deterministic pipeline.
+      JPV_AGENT_LLM_API_KEY: ${AGENT_LLM_API_KEY:-}
     # Never `env_file:`. The deploy script exports these into its own process
     # and Compose interpolates them here; writing an environment file next to
     # this one would put every secret on the host's disk (C17 D10).
@@ -196,6 +222,35 @@ services:
       # switch the demo would answer every card with the degraded one read from
       # the catalog — a 200, `aiAvailable: false`, and the AI never called.
       AiSalesAssist__EnabledByDefault: "true"
+      # Class C - versioned literal, and THE THIRD OF THE FAMILY, missing until C40_FIX.
+      #
+      # C40 gave the free-query route a rollout gate of its own, deliberately separate
+      # from the two above because the three features have different cost profiles -
+      # and did not add it here. The property defaults to false with an empty
+      # allowlist, so on this environment `GET /api/ai/search/availability` answered
+      # `assistedAnswerAvailable: false` with `switched_off` for EVERY shop: the whole
+      # generative panel C40 built, switched off, in the environment whose only job is
+      # to show it. Exactly the failure the comment above this block describes.
+      #
+      # It is a prerequisite and not an improvement for C40_FIX: the every-shop scope
+      # is served by the assisted route alone, so with this off an administrator picking
+      # «Todas las tiendas» reaches a scope they cannot search from on the first click.
+      AiFreeQuerySearch__EnabledByDefault: "true"
+      # Class C - versioned literal, and THE FOURTH OF THE FAMILY. Missing until C39a,
+      # which makes this the THIRD TIME the same defect reaches this file: C17 found it
+      # for search, C40_FIX for the free query, and this change for the agent. The shape
+      # is identical every time and that is the point — it is not a slip, it is what an
+      # omitted switch DOES here.
+      #
+      # `AiAgentAssistOptions.EnabledByDefault` is a `bool` with no initialiser and
+      # `EnabledPointOfSaleIds` is an empty list, so an omitted key is not a neutral
+      # default: it is `false` for every point of sale. The agent panel C42 built — the
+      # fourth card of the hub, its conversation thread and the loop trace — would not be
+      # served at all, in the environment whose only job is to show it. And the agent is
+      # the one pillar of the final project that cannot be demonstrated any other way:
+      # there is no screen for it elsewhere, so it would not appear in the public URL nor
+      # in the video.
+      AiAgentAssist__EnabledByDefault: "true"
       # The budget of the generative client. 10 s, because the AI service
       # declares a worst case of 2 x 4 s for the provider calls of one request;
       # start-up refuses anything below 8000.

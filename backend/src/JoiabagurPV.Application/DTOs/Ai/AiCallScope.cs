@@ -10,18 +10,27 @@ namespace JoiabagurPV.Application.DTOs.Ai;
 /// only transports it.
 /// </para>
 /// <para>
-/// There are exactly two construction paths and no third. <see cref="ForPointOfSale"/> requires
+/// There are exactly three construction paths and no fourth. <see cref="ForPointOfSale"/> requires
 /// a concrete point of sale: from C22 onward the <c>pos_id</c> claim becomes the retriever's only
 /// hard filter, so a sentinel value such as "*" or "system" reaching it would be a cross-POS leak
 /// wearing a convenience-parameter costume. <see cref="ForCatalog"/> carries none at all, for the
 /// routes that operate over the whole catalog — enrichment, and later index synchronization — and
-/// therefore belong to no point of sale.
+/// therefore belong to no point of sale. <see cref="ForAllPointsOfSale"/> carries none either, for
+/// a search the operator deliberately spread over every shop.
 /// </para>
 /// <para>
-/// The second path is not a relaxation of the first: it is a different scope, and it is
-/// <em>refused</em> by every point-of-sale operation of the client. Making the leaking state
-/// unconstructible is cheaper than asking people not to write it; refusing the catalog scope
-/// where a point of sale is mandatory is what keeps that guarantee once the state exists.
+/// Neither of the other two is a relaxation of the first: they are different scopes. The catalog
+/// one is <em>refused</em> by every point-of-sale operation of the client; the every-shop one is
+/// refused by all of them except catalog retrieval and sale assistance, which are the two that
+/// can answer without a shop. Making the leaking state unconstructible is cheaper than asking
+/// people not to write it; refusing a scope where a point of sale is mandatory is what keeps that
+/// guarantee once the state exists.
+/// </para>
+/// <para>
+/// <see cref="ForCatalog"/> and <see cref="ForAllPointsOfSale"/> hold the same fields and are
+/// still two kinds, on purpose: collapsing them would make enrichment's scope usable for a
+/// search. <see cref="Kind"/> is the only thing that tells them apart, which is exactly why it
+/// exists.
 /// </para>
 /// <para>
 /// A sealed class rather than a record struct on purpose: every struct has an implicit
@@ -46,7 +55,8 @@ public sealed class AiCallScope
     public string Role { get; }
 
     /// <summary>
-    /// Point of sale the call is scoped to, or null for a catalog-wide scope.
+    /// Point of sale the call is scoped to, or null for a catalog-wide scope and for a search
+    /// spread over every point of sale. <see cref="Kind"/> is what tells those two apart.
     /// </summary>
     /// <remarks>
     /// Nullable rather than a sentinel: a null cannot be mistaken for a point of sale, and it
@@ -90,6 +100,34 @@ public sealed class AiCallScope
         RequireIdentity(userId, role);
 
         return new AiCallScope(userId, role, pointOfSaleId: null, AiCallScopeKind.Catalog);
+    }
+
+    /// <summary>
+    /// Builds a scope for a search that deliberately covers every point of sale.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>The absence of a point of sale, never a wildcard.</strong> That distinction is the
+    /// whole safety of this path: an absent <c>pos_id</c> claim makes the availability prefilter
+    /// <em>not apply</em>, and fails closed on every route that requires the claim. A sentinel
+    /// would instead reach the retriever's only hard filter and match everything, which is the
+    /// cross-point-of-sale leak the other two paths exist to prevent.
+    /// </para>
+    /// <para>
+    /// Like the other two, this authorises nothing. Whoever builds it has already checked that the
+    /// caller may search across every point of sale — which operators and administrators may,
+    /// because the stock breakdown of a product is already readable across every shop by any
+    /// authenticated caller, so a search that spans them discloses nothing new.
+    /// </para>
+    /// </remarks>
+    /// <param name="userId">User the call is made for. Must not be empty.</param>
+    /// <param name="role">Role of that user. Must not be blank.</param>
+    /// <exception cref="ArgumentException">Any argument is empty or blank.</exception>
+    public static AiCallScope ForAllPointsOfSale(Guid userId, string role)
+    {
+        RequireIdentity(userId, role);
+
+        return new AiCallScope(userId, role, pointOfSaleId: null, AiCallScopeKind.AllPointsOfSale);
     }
 
     private static void RequireIdentity(Guid userId, string role)

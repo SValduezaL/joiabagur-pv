@@ -146,3 +146,124 @@ describe('searchOrigin', () => {
     expect(searchOrigin([], true)).toBe('unknown');
   });
 });
+
+/**
+ * C40 · the stock label with and without a shop.
+ *
+ * `hasStock` gained a third value when the panel learnt to search every shop at once, and three
+ * values do not fit two branches: falling through to "Sin existencias" would tell the operator a
+ * piece has run out everywhere, which is a claim nobody made.
+ */
+describe('AssistedSearchResultRow stock label', () => {
+  function renderWithShop(
+    shop: string | null | undefined,
+    overrides: Partial<AssistedSearchResult> = {},
+  ) {
+    render(
+      <AssistedSearchResultRow
+        result={result(overrides)}
+        onSelect={vi.fn()}
+        onOpenCard={vi.fn()}
+        pointOfSaleName={shop}
+      />,
+    );
+    return screen.getByTestId('assisted-search-result');
+  }
+
+  it('should name the shop in the stock label', () => {
+    const row = renderWithShop('MAO-TALLER', { quantityAtPointOfSale: 3, hasStock: true });
+
+    // «3 en tienda» is true of some shop and says which one only if the operator remembers what
+    // they picked. With the panel able to span every shop, naming it is what makes the figure
+    // readable at all.
+    expect(within(row).getByTestId('stock-label')).toHaveTextContent('3 en MAO-TALLER');
+  });
+
+  it('should not show a zero when no shop is selected', () => {
+    const row = renderWithShop(null, { quantityAtPointOfSale: null, hasStock: null });
+
+    expect(within(row).getByTestId('stock-needs-a-shop')).toHaveTextContent(
+      /selecciona una tienda/i,
+    );
+    expect(within(row).queryByText('0')).not.toBeInTheDocument();
+    expect(within(row).queryByText(/sin existencias/i)).not.toBeInTheDocument();
+  });
+
+  it('should still say a piece has run out when the shop is known and carries none', () => {
+    // The third state must not swallow the second: "we carry it, we are out of it" is an answer
+    // that can still save a sale.
+    const row = renderWithShop('MAO-TALLER', { quantityAtPointOfSale: 0, hasStock: false });
+
+    expect(within(row).getByText(/sin existencias/i)).toBeInTheDocument();
+  });
+
+  it('should disable the sale card action when no shop is selected', () => {
+    // The card reports one shop's stock and offers substitutes from its assortment. With no shop
+    // it has nothing to answer, so the action is disabled rather than opened onto a degraded card.
+    const row = renderWithShop(null, { quantityAtPointOfSale: null, hasStock: null });
+
+    expect(within(row).getByTestId('assisted-search-open-card')).toBeDisabled();
+  });
+
+  it('should enable the sale card action when a shop is selected', () => {
+    const row = renderWithShop('MAO-TALLER');
+
+    expect(within(row).getByTestId('assisted-search-open-card')).toBeEnabled();
+  });
+});
+
+/**
+ * C40 · the row states what its family carries.
+ *
+ * The composition is tested in `lib/family-note.test.ts`, where the SKU fallback and the
+ * single-member case belong. What these add is that the row *says* it, and — the part a reader
+ * would not guess from the markup — that it says it **without offering to sell any of them**.
+ */
+describe('AssistedSearchResultRow family note', () => {
+  function renderWithNote(note: string | null) {
+    render(
+      <AssistedSearchResultRow
+        result={result()}
+        onSelect={vi.fn()}
+        onOpenCard={vi.fn()}
+        pointOfSaleName="MAO-TALLER"
+        familyNote={note}
+      />,
+    );
+    return screen.getByTestId('assisted-search-result');
+  }
+
+  it('should state what else the family carries', () => {
+    const row = renderWithNote('Aro Menorca también en: 20 mm, 22 mm');
+
+    expect(within(row).getByTestId('family-note')).toHaveTextContent(
+      'Aro Menorca también en: 20 mm, 22 mm',
+    );
+  });
+
+  it('should name a member by its SKU when the variant label is missing', () => {
+    const row = renderWithNote('Aro Menorca también en: JBG-0009');
+
+    expect(within(row).getByTestId('family-note')).toHaveTextContent('JBG-0009');
+  });
+
+  it('should state nothing for a single-member group', () => {
+    // Not an empty element: a row padded with a blank line reads as a rendering fault, and on a
+    // shop floor a rendering fault reads as a system nobody should trust.
+    const row = renderWithNote(null);
+
+    expect(within(row).queryByTestId('family-note')).not.toBeInTheDocument();
+  });
+
+  it('should not offer a sale action for any member other than the one the row is about', () => {
+    // **The row announces; the sale card unfolds.** An action per sibling would turn a result
+    // list into a variant picker and would let an operator sell a piece they never looked at.
+    const row = renderWithNote('Aro Menorca también en: 20 mm, 22 mm');
+
+    const actions = within(row).getAllByRole('button').map((button) => button.textContent);
+
+    expect(actions).toHaveLength(2);
+    expect(actions.filter((text) => text?.includes('Seleccionar para venta'))).toHaveLength(1);
+    expect(within(row).getByTestId('family-note').querySelectorAll('button')).toHaveLength(0);
+  });
+});

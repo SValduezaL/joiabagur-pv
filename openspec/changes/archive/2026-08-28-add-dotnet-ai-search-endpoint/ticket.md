@@ -1,7 +1,7 @@
 # T-AIENG-015: Assisted search endpoint with authoritative hydration (C15)
 
 > Ticket técnico del change OpenSpec `add-dotnet-ai-search-endpoint`, generado con `/enrich-us`.
-> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-015](../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md), [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C15 y §0 de 2026-08-28), [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.4, §7.6), sesión de exploración 2026-08-28, código real de `backend/src/` y `ai-service/src/`.
+> **Fuentes de verdad:** `openspec/project.md`, [HU-AIENG-015](../../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md), [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C15 y §0 de 2026-08-28), [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.4, §7.6), sesión de exploración 2026-08-28, código real de `backend/src/` y `ai-service/src/`.
 > **Idioma:** título e identificadores técnicos en inglés; cuerpo en español, por coherencia con la HU y con el resto de `Documentos/`.
 
 ---
@@ -284,15 +284,15 @@ Default si el apply descubre un detalle menor no listado: la opción más estrec
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-015](../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md)
+- **HU origen:** [HU-AIENG-015](../../../../Documentos/Historias/AI-Eng/HU-AIENG-015.md)
 - **Change OpenSpec:** `openspec/changes/add-dotnet-ai-search-endpoint/`
-- **Plan y diseño:** [plan de changes](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C15 y §0 de 2026-08-28) · [diseño RAG](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.4, §7.6)
-- **Apuntes del Máster (guía, no dogma):** [S10 · Filtrado contextual y temporal](../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) *(el filtro duro va lo más temprano posible; verifica la cardinalidad de lo que vuelve)* · [S16 · Coste, latencia y A/B testing](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md) *(cachear resultados de búsqueda para consultas repetidas)* · [S16 · Un sistema debe saber decir «No lo sé»](../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
+- **Plan y diseño:** [plan de changes](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md) (ficha C15 y §0 de 2026-08-28) · [diseño RAG](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) (§6.2, §6.4, §7.6)
+- **Apuntes del Máster (guía, no dogma):** [S10 · Filtrado contextual y temporal](../../../../Documentos/Sesiones%20Master%20AIEng/S10_Tecnicas_Recuperacion/Filtrado%20contextual%20y%20temporal.md) *(el filtro duro va lo más temprano posible; verifica la cardinalidad de lo que vuelve)* · [S16 · Coste, latencia y A/B testing](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Coste,%20latencia%20y%20A%20B%20Testing.md) *(cachear resultados de búsqueda para consultas repetidas)* · [S16 · Un sistema debe saber decir «No lo sé»](../../../../Documentos/Sesiones%20Master%20AIEng/S16_Produccion_II/Un%20sistema%20debe%20saber%20decir%20%E2%80%9CNo%20lo%20se%E2%80%9D.md)
 - **Specs vivas:** `ai-gateway-client` · `ai-search-telemetry` *(se modifica)* · `vector-retrieval` · `product-management` · `inventory-management` · `access-control` · `point-of-sale-management`
 - **Precedentes:** C03 (cliente, resiliencia, `AiCallScope`) · C04 (telemetría, `SearchOrigin`, sin ruta de lectura) · C08 (`AiCatalogController`, validación explícita) · C12 (`IndexFeedService`, consultas conjuntas) · C14 (umbral antes del `LIMIT`)
 - **Contrato Python:** `ai-service/openapi.json` — **no se modifica**
-- **Testing:** [testing-backend.md](../../../Documentos/testing-backend.md) — *Estado de la suite: fallos conocidos*
-- **Procedimientos:** [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
+- **Testing:** [testing-backend.md](../../../../Documentos/testing-backend.md) — *Estado de la suite: fallos conocidos*
+- **Procedimientos:** [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md) · [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md)
 
 ---
 

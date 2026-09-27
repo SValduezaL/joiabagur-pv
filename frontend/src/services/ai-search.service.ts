@@ -10,13 +10,21 @@
 
 import apiClient from './api.service';
 import type {
+  AiSearchAvailability,
+  FreeQuerySearchOutcome,
+  FreeQuerySearchRequest,
+  FreeQuerySearchResponse,
+  AiSearchAvailabilityOutcome,
   AssistedSearchOutcome,
   AssistedSearchRequest,
   AssistedSearchResponse,
+  SearchFailureOutcome,
 } from '@/types/ai-search.types';
 import type { ApiError } from '@/types/api.types';
 
 const SEARCH_ENDPOINT = '/ai/search';
+const ASSISTED_ENDPOINT = '/ai/search/assisted';
+const AVAILABILITY_ENDPOINT = '/ai/search/availability';
 const SEARCH_EVENTS_ENDPOINT = '/ai/search-events';
 
 /**
@@ -32,7 +40,7 @@ function toMessages(errors: ApiError['errors'] | string[] | undefined): string[]
   return Object.values(errors).flat();
 }
 
-function toOutcome(error: unknown): AssistedSearchOutcome {
+function toOutcome(error: unknown): SearchFailureOutcome {
   const apiError = error as ApiError;
 
   switch (apiError?.statusCode) {
@@ -77,6 +85,53 @@ export const aiSearchService = {
       return { kind: 'ok', response: response.data };
     } catch (error) {
       return toOutcome(error);
+    }
+  },
+
+  /**
+   * Runs the assisted answer: the other route of the panel's toggle. C40.
+   *
+   * Never throws, and maps `rate-limited` to a member of its own for the same reason the semantic
+   * path does: exceeding the allowance and the AI being unavailable have opposite remedies, and
+   * this route's allowance is three times tighter, so the case is three times more reachable.
+   */
+  searchAssisted: async (
+    request: FreeQuerySearchRequest,
+  ): Promise<FreeQuerySearchOutcome> => {
+    try {
+      const response = await apiClient.post<FreeQuerySearchResponse>(
+        ASSISTED_ENDPOINT,
+        request,
+      );
+      return { kind: 'ok', response: response.data };
+    } catch (error) {
+      return toOutcome(error);
+    }
+  },
+
+  /**
+   * Reads which assisted paths are switched on for a scope: one point of sale, or every one of
+   * them when none is given.
+   *
+   * Never throws, and never reports a failure as an outage: a panel that cannot read the switches
+   * still searches perfectly well, so the badge says it could not tell rather than announcing a
+   * problem the operator can neither verify nor fix.
+   *
+   * Costs no AI call and no quota, which is what makes it safe to ask before every search — and
+   * what makes it safe to ask again whenever the scope changes.
+   *
+   * **The parameter is omitted rather than blanked** when there is no shop. The route refuses a
+   * blank identifier on purpose and reads only a genuine absence as the wider scope, so sending
+   * an empty string here would turn the wider scope into a validation error.
+   */
+  getAvailability: async (pointOfSaleId?: string): Promise<AiSearchAvailabilityOutcome> => {
+    try {
+      const response = await apiClient.get<AiSearchAvailability>(AVAILABILITY_ENDPOINT, {
+        params: pointOfSaleId ? { pointOfSaleId } : undefined,
+      });
+      return { kind: 'ok', availability: response.data };
+    } catch {
+      return { kind: 'unknown' };
     }
   },
 

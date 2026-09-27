@@ -17,12 +17,16 @@ from jbg_ai.assist.constants import (
     FAMILY_ROSTER_CAP,
     INTENT_PRODUCT_PITCH,
     INTENT_UNCLASSIFIED,
+    WARNING_FILTERS_TOO_NARROW,
+    WARNING_KNOWLEDGE_NOT_COVERED,
     WARNING_FAMILY_HAS_VARIANTS,
     WARNING_SIZE_LABEL_MISSING,
 )
+from jbg_ai.assist.modes import AssistMode
 from jbg_ai.assist.errors import UnusableAnchorProductError
 from jbg_ai.assist.knowledge_scope import canonical_material_sheets
 from jbg_ai.assist.orchestrator import assist_sale
+from jbg_ai.assist.prompt import PitchTask, resolve_task, task_message
 from jbg_ai.knowledge.constants import CLAIM_SCOPE_GENERAL
 from jbg_ai.knowledge.offline import InMemoryKnowledgeIndex, LocalEmbeddingClient
 from support.assist_world import (
@@ -36,6 +40,7 @@ from support.assist_world import (
     indexed_row,
     run,
 )
+from support.assist_router import decision, scripted_router
 from support.fake_product_search import FakeProductSearch
 from support.settings import build_settings
 
@@ -721,3 +726,226 @@ def test_an_absent_abstention_parameter_falls_back_to_the_configured_default(
     assert enabled.abstained is True
     assert disabled.abstained is False
     assert disabled.groups
+
+
+# --- C40 · the filters the operator pressed reach retrieval in the free-query mode --------
+
+
+def test_free_query_forwards_filters_to_retrieval(
+    search, knowledge: InMemoryKnowledgeIndex, principal
+) -> None:
+    """The chips an operator pressed must narrow what M1 retrieves.
+
+    Without this the free-query mode knew *less* about what was asked than the plain
+    retrieval route did: the panel collected the filters and the assist request had nowhere
+    to carry them, so they were dropped at the boundary while the controls stayed pressed.
+    """
+    serve(
+        search,
+        knowledge,
+        principal,
+        payload={
+            "query": "anillo de plata",
+            "filters": {"materials": ["plata"], "category": "anillo"},
+        },
+    )
+
+    assert search.search_calls, "the free-query mode retrieves, so the port must be reached"
+    # **The first statement, not the last.** Since C40 a filtered request issues two: the served
+    # one, which carries the filters, and the abstention probe, which deliberately carries none.
+    # Reading the last call here would assert the opposite of what this test is about.
+    served = search.search_calls[0]["filters"]
+    assert list(served.materials) == ["plata"]
+    assert served.category == "anillo"
+
+    probe = search.search_calls[-1]["filters"]
+    assert probe.is_empty, "the probe judges the query, so no filter of the operator's may reach it"
+
+
+def test_a_narrow_filter_is_declared_on_the_generative_route_too(
+    search, knowledge: InMemoryKnowledgeIndex, principal
+) -> None:
+    """The code reaches M1, because the decision belongs to retrieval and M1 retrieves.
+
+    The requirement is that it be available on **every** consuming path that accepts
+    catalog-side filters and not only on the generative one. This is the generative one; the
+    plain retrieval route is covered in `tests/retrieval/test_probe.py`. It is **carried** and
+    not recomputed here, so the two cannot drift into saying different things about one
+    search.
+    """
+    response = serve(
+        search,
+        knowledge,
+        principal,
+        payload={
+            "query": "anillo de plata",
+            "filters": {"materials": ["oro"]},
+        },
+    )
+
+    assert WARNING_FILTERS_TOO_NARROW in response.warnings
+    assert not response.abstained, (
+        "the unfiltered profile is not flat, so the description is not what failed"
+    )
+
+
+def test_a_refused_query_carries_no_narrow_filter_code(
+    search, knowledge: InMemoryKnowledgeIndex, principal
+) -> None:
+    """Nothing was retrieved, so there is no filter that could have been too narrow.
+
+    The router cuts before retrieval. A code about the filters over a query this shop does not
+    serve would send the operator to loosen a filter that never ran.
+    """
+    router, _ = scripted_router(decision(served="out_of_domain", index=None))
+
+    response = serve(
+        search,
+        knowledge,
+        principal,
+        payload={
+            "query": "un reloj sumergible",
+            "filters": {"materials": ["oro"]},
+        },
+        router_client=router,
+    )
+
+    assert WARNING_FILTERS_TOO_NARROW not in response.warnings
+    assert not search.search_calls, "the refusal cuts before retrieval, so no statement runs at all"
+
+
+def test_free_query_without_filters_behaves_as_before(
+    search, knowledge: InMemoryKnowledgeIndex, principal
+) -> None:
+    """Pure addition: a caller that sends no filters gets exactly what it got before."""
+    response = serve(search, knowledge, principal, payload={"query": "anillo de plata"})
+
+    forwarded = search.search_calls[-1]["filters"]
+    assert not forwarded.materials
+    assert forwarded.category is None
+    assert forwarded.family_id is None
+    assert not forwarded.exclude_product_ids
+    assert response.groups
+
+
+def test_anchored_mode_ignores_filters(
+    search, knowledge: InMemoryKnowledgeIndex, principal
+) -> None:
+    """An anchor already says what to retrieve, so a catalog filter can only contradict it.
+
+    Asserted rather than assumed: the field is on the shared request model, so nothing stops
+    a caller sending both. Honouring the filter here could drop the very piece the caller
+    anchored to — answering about a piece by not showing it.
+    """
+    response = serve(
+        search,
+        knowledge,
+        principal,
+        payload={
+            "product_id": str(PIECE),
+            "filters": {"category": "un-tipo-que-no-existe"},
+        },
+    )
+
+    assert len(response.groups) == 1
+    assert {member.product_id for member in response.groups[0].members} == {
+        str(PIECE),
+        str(SIBLING),
+    }
+
+
+# --- C40 · the coverage guardrail reaches the free query ----------------------------------
+
+
+def test_free_query_knowledge_without_corpus_declares_it(
+    search, principal
+) -> None:
+    """A knowledge question the corpus cannot answer must say so, not answer from memory.
+
+    M3 has had this guardrail since C34. M1 did not, so a knowledge question with zero
+    fragments ran the task that says «responde apoyándote en esos fragmentos» **with no
+    fragments** — which is not a neutral omission but an explicit invitation to invent, in the
+    one mode C40 puts in front of an operator.
+    """
+    router, _ = scripted_router(decision(index="knowledge"))
+    empty_corpus = InMemoryKnowledgeIndex(chunks=[])
+
+    response = serve(
+        search,
+        empty_corpus,
+        principal,
+        payload={"query": "¿la plata aguanta el agua del mar?"},
+        router_client=router,
+    )
+
+    assert response.citations == []
+    assert WARNING_KNOWLEDGE_NOT_COVERED in response.warnings
+
+
+def test_free_query_catalog_route_does_not_declare_missing_coverage(
+    search, principal
+) -> None:
+    """On `catalog` an empty citation list is correct, not a gap.
+
+    That route is answered from pieces and its own task section tells the model to return no
+    citations at all, so reporting «la documentación no cubre esta pregunta» would be a warning
+    about a question nobody asked the documentation.
+    """
+    router, _ = scripted_router(decision(index="catalog"))
+    empty_corpus = InMemoryKnowledgeIndex(chunks=[])
+
+    response = serve(
+        search,
+        empty_corpus,
+        principal,
+        payload={"query": "anillo de plata"},
+        router_client=router,
+    )
+
+    assert WARNING_KNOWLEDGE_NOT_COVERED not in response.warnings
+
+
+def test_free_query_uncovered_costs_no_extra_provider_call(
+    search, principal
+) -> None:
+    """The guardrail reads a result already computed: no second search, no provider call."""
+    router, _ = scripted_router(decision(index="knowledge"))
+    empty_corpus = InMemoryKnowledgeIndex(chunks=[])
+    embed = LocalEmbeddingClient()
+
+    serve(
+        search,
+        empty_corpus,
+        principal,
+        payload={"query": "¿la plata aguanta el agua del mar?"},
+        router_client=router,
+        embed=embed,
+    )
+
+    # The embeddings are those the query itself needs and nothing more: deciding "uncovered"
+    # is reading `not citations`, which the search above already produced. A guardrail that
+    # cost a second call would be paid on every knowledge question the corpus cannot answer.
+    assert len(embed.calls) <= 2
+
+
+def test_free_query_without_corpus_uses_the_uncovered_task(
+    search, principal
+) -> None:
+    """`resolve_task` picks the fourth free-query task, and the prompt carries its section."""
+    assert (
+        resolve_task(AssistMode.QUERY_ONLY, route="knowledge", uncovered=True)
+        is PitchTask.FREE_QUERY_UNCOVERED
+    )
+    assert (
+        resolve_task(AssistMode.QUERY_ONLY, route="both", uncovered=True)
+        is PitchTask.FREE_QUERY_UNCOVERED
+    )
+    # And `catalog` is deliberately untouched: an empty corpus there is the normal state.
+    assert (
+        resolve_task(AssistMode.QUERY_ONLY, route="catalog", uncovered=True)
+        is PitchTask.FREE_QUERY_CATALOG
+    )
+
+    task = task_message(PitchTask.FREE_QUERY_UNCOVERED).casefold()
+    assert "no finjas haber contestado" in task
+    assert "no respondas de memoria" in task

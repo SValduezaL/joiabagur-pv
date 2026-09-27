@@ -1,13 +1,13 @@
 # T-AIENG-030b: Sale-assist pitch generation — referential integrity, verifiable support spans and a runtime numeric gate (C30b)
 
 > **Idioma.** Título e identificadores técnicos en inglés, cuerpo en español — la regla que ya
-> siguen [T-AIENG-030a](../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md),
-> [T-AIENG-028](../archive/2026-09-13-add-profile-review-ui-and-metrics/ticket.md) y
-> [T-AIENG-026](../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
+> siguen [T-AIENG-030a](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/ticket.md),
+> [T-AIENG-028](../../archive/2026-09-13-add-profile-review-ui-and-metrics/ticket.md) y
+> [T-AIENG-026](../../archive/2026-09-12-add-substitutes-retrieval/ticket.md).
 
-**HU origen:** [HU-AIENG-030b](../../../Documentos/Historias/AI-Eng/HU-AIENG-030b.md)
+**HU origen:** [HU-AIENG-030b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-030b.md)
 **Change:** `add-assist-pitch-generation` (C30b) · **Épica:** EP15
-**Rama:** `c30b-add-assist-pitch-generation` · **Decisiones:** [c30b-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md)
+**Rama:** `c30b-add-assist-pitch-generation` · **Decisiones:** [c30b-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md)
 
 ---
 
@@ -299,16 +299,16 @@ Cuatro son ajustables durante la implementación y conviene saber contra qué se
 
 ## Enlaces o Referencias
 
-- **HU origen:** [HU-AIENG-030b](../../../Documentos/Historias/AI-Eng/HU-AIENG-030b.md)
-- **Decisiones de exploración:** [c30b-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md) — nueve decisiones (D1–D9) y cuatro mediciones estáticas
-- **Decisiones heredadas:** [c30-exploration-decisions.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md) (D-A … D-K, en particular D-D, D-H, D-I y D-K)
-- **Medición de la mitad estructurada:** [c30a-implementation-measurements.md](../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md)
-- **Change predecesor:** [`archive/2026-09-13-add-assist-structure-and-rule-warnings/`](../archive/2026-09-13-add-assist-structure-and-rule-warnings/)
-- **Diseño:** §7.7 con su bloque revisado del 13 sep, §11.2, §11.3, §11.6, §15 — [proyecto-final-diseno-rag-joiabagur.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
-- **Plan de changes:** ficha de C30b en el §3 y entrada del §0 del 13 sep — [proyecto-final-plan-changes-openspec.md](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- **Capability que se modifica:** [`assist-generation`](../../specs/assist-generation/spec.md)
-- **Capabilities consumidas:** [`knowledge-corpus`](../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../specs/retrieval-abstention/spec.md) · [`ai-service-api-contracts`](../../specs/ai-service-api-contracts/spec.md)
-- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- **HU origen:** [HU-AIENG-030b](../../../../Documentos/Historias/AI-Eng/HU-AIENG-030b.md)
+- **Decisiones de exploración:** [c30b-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30b-exploration-decisions.md) — nueve decisiones (D1–D9) y cuatro mediciones estáticas
+- **Decisiones heredadas:** [c30-exploration-decisions.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30-exploration-decisions.md) (D-A … D-K, en particular D-D, D-H, D-I y D-K)
+- **Medición de la mitad estructurada:** [c30a-implementation-measurements.md](../../../../Documentos/Proyecto%20Final%20AIEng/informes/c30a-implementation-measurements.md)
+- **Change predecesor:** [`archive/2026-09-13-add-assist-structure-and-rule-warnings/`](../../archive/2026-09-13-add-assist-structure-and-rule-warnings/)
+- **Diseño:** §7.7 con su bloque revisado del 13 sep, §11.2, §11.3, §11.6, §15 — [proyecto-final-diseno-rag-joiabagur.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md)
+- **Plan de changes:** ficha de C30b en el §3 y entrada del §0 del 13 sep — [proyecto-final-plan-changes-openspec.md](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- **Capability que se modifica:** [`assist-generation`](../../../specs/assist-generation/spec.md)
+- **Capabilities consumidas:** [`knowledge-corpus`](../../../specs/knowledge-corpus/spec.md) · [`retrieval-abstention`](../../../specs/retrieval-abstention/spec.md) · [`ai-service-api-contracts`](../../../specs/ai-service-api-contracts/spec.md)
+- **Procedimientos:** [Procedimiento-TicketsTrabajo.md](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [Procedimiento-UserStories.md](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
 
 ---
 

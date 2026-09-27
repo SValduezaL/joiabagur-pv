@@ -374,7 +374,7 @@ Una sola versión almacenada, `openai/text-embedding-3-small:1536:source-text/v1
 
 ### 11.2. Comparación de configuraciones
 
-`python -m jbg_ai.retrieval compare`, informe versionado en [`ai-service/evals/results/c21-fusion-configuration-comparison.md`](../../../ai-service/evals/results/c21-fusion-configuration-comparison.md). **24 consultas**: las 12 curadas de C20 más las **12 grabadas** de `public."ProductSearchEvents"`.
+`python -m jbg_ai.retrieval compare`, informe versionado en [`ai-service/evals/results/c21-fusion-configuration-comparison.md`](../../../../ai-service/evals/results/c21-fusion-configuration-comparison.md). **24 consultas**: las 12 curadas de C20 más las **12 grabadas** de `public."ProductSearchEvents"`.
 
 | configuración | aciertos |
 |---|---:|

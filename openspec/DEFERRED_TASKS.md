@@ -384,13 +384,26 @@ does — which is the whole point of D18. No resizing, and the swap file the des
 mitigation is not needed at these numbers. Re-measure if the corpus grows by an order of
 magnitude or if a generative route lands.
 
-> **A generative route landed with C34** (2026-09-21): the demo configuration now passes
-> `JPV_ASSIST_LLM_API_KEY` to `jbg-demo-ai` and switches the sale card on. **The re-measurement is
-> pending** because it needs the parameter created by hand and a deployment (C34 tasks 11.3 and
-> 11.4). What to record here when it is done: `docker stats --no-stream jbg-demo-ai` after a
-> handful of sale assistance requests, against the 512 MiB cap and the 232,5 MiB above; and
-> whether several requests in a row hit the organisation's tokens-per-minute quota before the
-> money does — the constraint C32b measured on the agent route.
+> **Re-measured on 2026-09-22, with the generative route live (C34).** `docker stats --no-stream`
+> before and after the ten sale assistances the rate window allowed — **6 + 4, not ten in a row**:
+>
+> | Container | Idle | After the ten generations | Of its limit |
+> |---|---|---|---|
+> | `jbg-demo-ai` | **269,9 MiB** | **269,9 MiB**, unchanged | **52,7 % of 512 MiB** |
+> | `jbg-demo-api` | 235,2 MiB | 238,6 MiB | — |
+> | `jbg-demo-postgres` | 96,6 MiB | 96,8 MiB | — |
+>
+> Host: 751 MB of 1909 used, 836 available, still **no swap**. The ~37 MiB above the 232,5 MiB of C17
+> are the generative and router clients plus the corpus; **generating moves nothing**, because the
+> model runs at the provider. **`t3.small` and the 512 MiB cap remain right-sized.**
+>
+> **And the tokens-per-minute quota is not the operative constraint here**, contrary to what the C32b
+> entry suggests for the agent route: the ten generations the window allowed all came back `generated`,
+> with no provider degradation. What binds first is the card's own limit — 10 per minute per user,
+> answering 429 from the eleventh request of the window. **They were not ten in a row**: 6 from the
+> piece-by-piece probe plus 4 of a burst of 12, the other 8 refused with 429, and both `docker stats`
+> readings span the two phases. Reaching the quota would take several operators at once, and that
+> remains unmeasured.
 
 ---
 
@@ -612,9 +625,10 @@ one sheet* · `ai-service/tests/knowledge/test_corpus_rules.py:257`
 
 ## C30b — la demo no genera argumentario, y lo que hace falta para que genere
 
-**Estado:** **cerrada en el repositorio por C34** (2026-09-21): los pasos 2, 3 y 4 están hechos, más
-la configuración .NET que el card necesita. **Queda sólo el paso 1 —crear el parámetro— y la
-verificación en el entorno**, que son manuales y del desarrollador (tareas 11.3 y 11.4 de C34).
+**Estado:** **CERRADA el 2026-09-22 por C34.** Los cuatro pasos hechos, el parámetro creado y la demo
+desplegada y verificada: `stage=assist_client … credential=assist` en el log y una asistencia real con
+`pitchStatus: generated` y el precio y el stock resueltos en el texto («disponible por 250,00 € y
+cuenta con 5»). Evidencia en el §13 del [QA de C34](changes/archive/2026-09-22-add-dotnet-assist-and-recommendation-endpoints/qa.md).
 · **Abierto el:** 2026-09-14 · **Zona:** `deploy/demo/`, `compose.demo.yaml`
 **No es un fallo:** es el comportamiento declarado, verificado y con test.
 
@@ -622,7 +636,7 @@ verificación en el entorno**, que son manuales y del desarrollador (tareas 11.3
 >
 > | Paso | Estado |
 > |---|---|
-> | 1 · `/jbg-demo/ASSIST_LLM_API_KEY` como `SecureString` | **pendiente, manual** — el comando está abajo y en `deploy/demo/README.md` §3 |
+> | 1 · `/jbg-demo/ASSIST_LLM_API_KEY` como `SecureString` | **hecho el 2026-09-22**, versión 1, verificado sin descifrarlo |
 > | 2 · `deploy.sh` lee el parámetro **sin `:?`** y con `\|\| true` | **hecho**, y además registra `Generation credential: present/absent` —si está, nunca qué es— |
 > | 3 · `JPV_ASSIST_LLM_MODEL` y `JPV_ASSIST_LLM_API_KEY` en `jbg-demo-ai` | **hecho**. La clave se interpola como `${ASSIST_LLM_API_KEY:-}`, con valor por defecto vacío, para que `docker compose config` resuelva también sin el script de despliegue; vacía equivale a no configurada (`blank_assist_llm_key_is_unset`) |
 > | 4 · El parámetro en la lista de secretos manuales del runbook, marcado como el único opcional | **hecho**, con una §5.6b de comprobación del card |
@@ -728,6 +742,157 @@ C30b declara `terraform/`, `.github/workflows/` y `backend/` fuera de alcance, y
 de la demo es trabajo de despliegue, no de la capa. La mitad de Python está entregada, probada
 con **13 tests** y **no es andamio**: en local se separa hoy poniendo `JPV_ASSIST_LLM_API_KEY`
 en `backend/.env`, que es de donde el barrido de C30b lee sus credenciales.
+
+---
+
+## ~~C34 · el corpus de conocimiento no viaja en la imagen de `jbg-ai`~~ — **CERRADA por C39a (2026-09-27)**
+
+**Estado:** **CERRADA el 2026-09-27 por C39a, y con dos arreglos y no uno**, porque al implementarla
+apareció que el problema tenía una segunda mitad que esta entrada no había visto.
+
+> **1 · El corpus entra en la imagen, por un contexto adicional con nombre.** No por mover el contexto
+> de *build* a la raíz, que era el primer plan y habría **roto el desarrollo local**:
+> `backend/docker-compose.yml` construye el mismo `Dockerfile` con `context: ../ai-service`. Se usa
+> `--build-context corpus=./data/knowledge` con `COPY --from=corpus`, así que el contexto primario no se
+> mueve, `ai-service/.dockerignore` sigue gobernando, y **construir sin el flag falla en voz alta** —
+> `failed to resolve source metadata for docker.io/library/corpus:latest`, código 1—, que es la
+> propiedad que importa: no existe una imagen sin corpus construida en silencio.
+>
+> **2 · Y la mitad que esta entrada no había visto: la ruta que el servicio lee estaba mal calculada.**
+> `CORPUS_DIR` se derivaba con `parents[3].parent`, correcto en un *checkout* y absurdo con el paquete
+> instalado por `uv sync --no-editable`: **medido dentro del contenedor desplegado, el corpus se buscaba
+> en `/app/.venv/lib/data/knowledge`**, dentro del árbol de dependencias. Copiar el corpus sin arreglar
+> eso habría dejado el defecto en pie con una imagen más gorda. Se resuelve ahora por la **misma búsqueda
+> de tres candidatos que `load_prompt_file`**, cuyo *docstring* describe exactamente este problema — y
+> por eso los prompts sí funcionaban y el corpus no.
+>
+> **Evidencia:** en la imagen nueva `CORPUS_DIR` = `/app/data/knowledge`, **no es enlace**, 33 documentos
+> y *sidecar* presente; en la antigua no existe. Imagen **426 MB antes y después**; contexto de 388 kB a
+> 2,78 MB. `tests/knowledge/test_corpus_location.py`, **5 passed**. Suite de `ai-service` completa,
+> **1.664 passed**.
+>
+> **Y por qué esto sobrevivió cinco semanas sin que nada fallara:** los fragmentos indexados viven en
+> `jbg-demo-pgdata` y un redespliegue no toca ese volumen. El entorno servía **161 fragmentos** desde la
+> base mientras su imagen no podía haber producido ni uno. `verify.sh` gana la condición que lo habría
+> dicho.
+
+**Estado original:** identificado el 2026-09-22 al desplegar la demo, **sorteado a mano y no resuelto**.
+**Zona:** `ai-service/Dockerfile` — fuera del alcance de C34, que declara `ai-service/` intocable.
+
+`CORPUS_DIR` es `<raíz del repo>/data/knowledge` (`knowledge/constants.py`), y el `Dockerfile` del
+servicio copia sólo `src`, `migrations` y `prompts`. **Dentro del contenedor el corpus no existe**, así
+que `python -m jbg_ai.indexing sync-knowledge` no tiene qué indexar y `ai.knowledge_chunk` se queda a
+cero. Con la tabla vacía, `POST /v1/assist/sale` **retira el argumentario en M2** —la puerta de C30b no
+tiene material al que anclarse— y responde `knowledge_not_covered` sin citas en M3. Parece un problema
+del card, y no lo es.
+
+**Cómo se sorteó en la demo** (el corpus sí viaja en el paquete de despliegue, bajo `/opt/jbg-demo`):
+
+```sh
+DEST=$(docker exec -i jbg-demo-ai python -c "from jbg_ai.knowledge.constants import CORPUS_DIR; print(CORPUS_DIR)")
+docker exec -u root -i jbg-demo-ai mkdir -p "$(dirname "$DEST")"
+docker cp /opt/jbg-demo/data/knowledge "jbg-demo-ai:$(dirname "$DEST")/"
+docker exec -i jbg-demo-ai python -m jbg_ai.indexing sync-knowledge --full
+```
+
+Tras eso, M2 pasó a `generated` con 2 citas. **Pero se pierde con cada imagen nueva.** El arreglo es una
+línea en el `Dockerfile` —copiar `data/knowledge`— o un montaje en el compose, y lo decide quien pueda
+tocar `ai-service/`. Mientras no se haga, cualquier entorno nuevo nace sin corpus y con M2 retirado.
+
+> **Comprobado y agravado el 2026-09-25, en la tarea 14.2 de C40.** La entrada sigue abierta, y el
+> arreglo **no es una línea**. Dos cosas que conviene dejar escritas porque las dos engañan:
+>
+> **1 · Hay ocho Markdown en la imagen que parecen el corpus y no lo son.** `/app/prompts/knowledge/v1`
+> existe —lo copia `COPY prompts ./prompts`— y contiene `01-materiales-frecuentes.md` y siete más. Son
+> los **encargos de producción del corpus**, no el corpus: éste son **33 documentos** en
+> `data/knowledge/`. Es un falso positivo fácil de dar por bueno, y lo di por bueno en la primera
+> lectura de esta comprobación.
+>
+> **2 · Copiar `data/knowledge` a `/app/data/knowledge` tampoco lo encontraría.** Medido desde dentro
+> del contenedor:
+>
+> ```text
+> CORPUS_DIR = /app/.venv/lib/data/knowledge     existe: False
+> ```
+>
+> `CORPUS_DIR` es `REPO_ROOT / "data" / "knowledge"` y `REPO_ROOT` se calcula subiendo desde el módulo,
+> que en el contenedor vive en `site-packages` — así que resuelve a `/app/.venv/lib`. El arreglo
+> necesita **dos** cosas: copiar o montar el corpus, **y** que la ruta deje de derivarse de la posición
+> del paquete (una variable de entorno, como el resto de la configuración del servicio).
+>
+> **Que esta máquina tenga 32 documentos y 161 fragmentos con vector en la base no lo contradice:** el
+> indexado corrió **desde el host**, donde `data/knowledge` sí existe. Un contenedor recién creado no
+> puede indexar nada.
+
+> **Esta entrada pesa más desde el 2026-09-22, al implementar C36.** Hasta hoy el corpus vacío sólo
+> degradaba respuestas que nadie veía: `/v1/assist/sale` se demostraba con `curl` y con el arnés. C36
+> le pone **pantalla**, y con ella una **caja de pregunta con cinco sugerencias horneadas** que
+> invitan explícitamente a preguntar justo lo que el corpus cubre — mojar la pieza, piel sensible,
+> limpieza en casa, regalo sin saber la talla, playa o piscina.
+>
+> En un entorno sin corpus, **las cinco responden `knowledge_not_covered` sin citas**. La ficha lo
+> dice con palabras del mostrador y no miente, pero el efecto es el peor posible para una
+> demostración: la interfaz enseña cinco preguntas y el sistema contesta a las cinco que la
+> documentación no las cubre. **Hay que sortear esto antes de enseñar la ficha**, con el `docker cp`
+> de arriba; si no, parece un defecto de C36 y no lo es.
+
+---
+
+## ~~C22 · un entorno recién desplegado deja `ai.pos_projection` vacía, y la recuperación responde 503~~ — **CERRADA por C41 (2026-09-26)**
+
+> **Cerrada, y por las dos vías a la vez en lugar de elegir una.** La pregunta abierta al final de
+> esta entrada era si `deploy.sh` debía drenar cuando la tabla está vacía o si bastaba con el paso
+> del runbook más una comprobación en `verify.sh`. C41 hace **las dos**, porque resultaron no ser
+> alternativas sino capas distintas:
+>
+> - **El drenaje deja de depender de que alguien lo recuerde.** `jbg-ai` drena el feed **al arrancar**
+>   —completo cuando no hay checkpoint, que es exactamente este caso— y después cada 600 s. Un
+>   entorno recién desplegado se cura solo antes de que nadie lo mire, sin tocar `deploy.sh`: la
+>   condición «la tabla está vacía» ya la resuelve el propio orquestador, porque
+>   `resolve_start_cursor` devuelve un keyset vacío y `is_full` se calcula de ahí.
+> - **Y `verify.sh` gana su quinto motivo de fallo**, que es la red de seguridad. Era la opción
+>   «más barata» y sigue siéndolo, pero por sí sola sólo *detecta*: falla el despliegue y deja a una
+>   persona ejecutando el `docker exec`. Con el drenaje de arranque, la comprobación pasa a ser lo
+>   que debe ser — una afirmación que se verifica, no un trabajo pendiente.
+>
+> La frase que justificaba la entrada —*«un entorno con índice lleno y proyección vacía pasa hoy la
+> verificación posterior al despliegue»*— deja de ser cierta. Y la tarjeta del administrador reporta
+> ahora cuántos puntos de venta se han quedado sin surtido, que es el dato que faltaba para que este
+> fallo fuera visible sin abrir un log.
+>
+> Change [`add-pos-projection-scheduled-drain`](changes/archive/2026-09-26-add-pos-projection-scheduled-drain/),
+> historia [HU-AIENG-041](../Documentos/Historias/AI-Eng/HU-AIENG-041.md).
+
+**Estado:** identificado el 2026-09-22 al desplegar la demo, resuelto en ese entorno sin arreglo
+sistemático, y **cerrado sistemáticamente el 2026-09-26 por C41**. **Zona:** `deploy/demo/` y el
+runbook. *El texto original se conserva íntegro debajo, porque es el diagnóstico y sigue siendo la
+mejor descripción del fallo.*
+
+`resolve_scope` se niega a abstenerse sobre una proyección vacía y lanza `RetrievalDependencyError`,
+que la ruta traduce a **503**:
+
+```python
+size = await search.count_scope(pos_id)
+if size == 0:
+    raise RetrievalDependencyError(EMPTY_PROJECTION_DETAIL)
+```
+
+La llaman **las dos** rutas de recuperación —`/v1/retrieval/products` y `/v1/retrieval/substitutes`—, y
+`jpv_pos_prefilter_enabled` viene activado por defecto. Un entorno que nunca haya drenado el feed de
+disponibilidad responde 503 a **toda** recuperación, y el consumidor .NET degrada correctamente: la
+búsqueda cae a su vía léxica y los sustitutos a `ai_unavailable`, **los dos con 200**, así que desde
+fuera el entorno parece sano. Así estaba la demo, desplegada en C17, cuando C34 llegó.
+
+Se arregla una vez por entorno, y persiste en la base:
+
+```sh
+docker exec -i jbg-demo-ai python -m jbg_ai.indexing sync-pos --full
+```
+
+**Lo que falta decidir:** si `deploy.sh` debe drenarlo cuando la tabla está vacía, o si basta con el
+paso del runbook —que C34 añade— más una comprobación en `verify.sh`, que hoy mira el índice de
+productos pero no la proyección. Lo segundo es más barato y caza el caso: un entorno con índice lleno y
+proyección vacía **pasa hoy** la verificación posterior al despliegue.
 
 ---
 
@@ -881,9 +1046,55 @@ When implementing deferred tasks:
 
 ## C32b · La política de *timeout* y de circuito de `POST /v1/assist/agent` en la capa .NET
 
-**Estado:** identificada, acotada y **no hecha**. Aplazada **con motivo**: hoy la ruta no tiene
-ningún consumidor. *(Sigue abierta tras C34, que dejó fuera la ruta del agente por decisión cerrada
-—sus marcadores hablan de varias piezas—.)*
+**Estado: CERRADA POR C42 el 2026-09-26 — el *timeout* hecho, el circuito CERRADO POR REFUTACIÓN.**
+La mitad del *timeout* se cumple como pedía; la del circuito **no se ejecuta, porque medir la ruta
+demostró que lo que esta entrada pide no es alcanzable**. El motivo, entero, abajo.
+
+> ### Lo que C42 hace, y lo que refuta *(2026-09-26)*
+>
+> **El *timeout* propio por ruta: hecho.** `AiGatewayOptions.AgentTimeoutMs = 18_000` sobre el cliente
+> con nombre `ai-agent`, con `HttpClient.Timeout` infinito y el presupuesto en el *pipeline*, suelo de
+> **15 s validado al arranque** —el `AGENT_DEADLINE_SECONDS` del servicio— y sin reintento en *timeout*
+> ni en 5xx. Deliberadamente **no ajustado al máximo observado** de 11.917 ms: apretarlo corta una
+> petición que Python **ya pagó entera**.
+>
+> **El circuito que cuenta `stop_reason=fallo_proveedor`: NO SE HACE, y es una refutación y no una
+> omisión.** Esta entrada pedía contarlo; el *pipeline* de la ruta hermana ya declaraba lo contrario
+> —*«a 200 the service degraded internally … is not a failure: Python degraded, and the breaker
+> protects from Python not answering»*—, y los dos documentos se contradecían. La contradicción se
+> resuelve del lado de `ai-assist`, por **tres** razones y no por una:
+>
+> 1. **Lo que un cortafuegos protege es que el servicio no conteste.** Estas respuestas son
+>    contestaciones. Uno que las contara se abriría sobre una ruta que **funciona como está diseñada**,
+>    y la consecuencia sería peor que el problema: negaría el servicio a un mostrador cuyo proveedor
+>    ya volvió.
+> 2. **La aritmética lo hace inalcanzable.** Con ~13.000 tokens por petición contra un techo de 25.000
+>    TPM —la misma cifra que esta entrada ya publicaba como restricción operativa— el sistema admite
+>    **una petición por minuto**. El cortafuegos de este proyecto abre por **proporción de fallos sobre
+>    un mínimo de muestras en una ventana**: con `BreakerSamplingDurationSeconds` en decenas de
+>    segundos y `MinimumThroughput` en unidades, **la ventana expira antes de acumular la primera
+>    muestra**. Un circuito que no puede abrirse no es una protección, es código que nadie ejecuta.
+> 3. **Y hay un obstáculo mecánico encima.** El predicado del cortafuegos recibe un
+>    `Outcome<HttpResponseMessage>` y **no ve el cuerpo**. Leerlo exigiría bufferizar la respuesta,
+>    parsear el JSON dos veces y acoplar el transporte al vocabulario cerrado del contrato. Un circuito
+>    de dominio en el servicio de aplicación sería correcto en capas y choca con el punto 2 igual.
+>
+> **Qué se hace en su lugar, porque la señal no se pierde.** La degradación se instrumenta: un
+> `LogWarning` con plantilla `ai_gateway_agent_degraded` que nombra el motivo de parada, la latencia,
+> las vueltas y las llamadas, emitido para `fallo_proveedor` y para `sin_cliente`. Así su tasa queda
+> observable sin que el circuito actúe sobre ella —que era el único coste real de la decisión—. Y
+> **quien avisa a la pantalla es la sonda**, `GET /api/ai/search/availability`, que gana
+> `agentAvailable` como valor propio: no gasta cupo, no llama al proveedor y se lee antes de entrar.
+>
+> **La tercera viñeta de *Qué hace falta*, la de `partial: true`, también está hecha**: el bloque de
+> respuesta lo dice sin alarma y nombrando el presupuesto agotado, y va el último porque sirve al
+> **2,0 %** de las peticiones del brazo servido.
+>
+> **Y la restricción operativa se hereda tal cual.** Una petición por minuto basta para un mostrador y
+> un evaluador, y **no** para dos mostradores simultáneos. Por eso el agente lleva su propia política
+> de cupo —`AiAgentAssist:RateLimitPermitLimit`, cuatro por minuto— en vez de compartir la de la
+> consulta libre: un puñado de conversaciones agotaría lo que la ruta barata necesita. Dimensionar la
+> cuota sigue siendo parte de poner esto en producción.
 
 > **Lo que C34 cambia en esta entrada** *(2026-09-21)*. La ruta determinista ya no declara 5 s: C34
 > registró el cliente `ai-assist` para `/v1/assist/sale` con **10 s y un suelo de 8 s validado al
@@ -939,6 +1150,70 @@ Dimensionar la cuota es parte de poner esta ruta en producción, no un detalle d
 > menos la reserva del argumentario y la vuelta en curso se corta; el límite es **15 s más, como
 > mucho, las herramientas de esa vuelta**, que no se cancelan a medias. Es el número que un
 > *timeout* .NET debe cubrir, con su margen de red.
+
+---
+
+## C42 · El pivote a sustitutos es inalcanzable cuando el operario nombra la pieza por su NOMBRE
+
+**Estado: medido con proveedor real, acotado y fuera del alcance de C42**, que declara no tocar las
+seis herramientas ni añadir una séptima. Encontrado por la **comprobación manual** de C42 y por nada
+más — las tres suites estaban verdes.
+
+> **El pivote a sustitutos es lo que el panel del agente existe para demostrar**, y está medido **3 de
+> 3** en `sin_existencias` con `gpt-4o`. Esta entrada dice que esa medición se tomó en **una situación
+> que no existe en la pantalla**.
+
+### El experimento que lo establece
+
+Una pieza agotada de verdad —`SKU759`, *Anillo Luna Creciente S*, `qty_bucket = '0'` en
+`ai.pos_projection` para `CIU-CENTRE`, comprobado— preguntada de las dos maneras contra el proveedor
+real por HTTP:
+
+| Cómo la nombra el operario | Herramientas que el bucle eligió | ¿Pivota? |
+|---|---|---|
+| **Por su referencia**, `SKU759` | `consultar_disponibilidad` → **`buscar_sustitutos`** | ✅ **Sí.** 6 grupos, **todos `sustitutos`** |
+| **Por su nombre**, «Anillo Luna Creciente S» | `consultar_disponibilidad`❗`referencia_desconocida` → `buscar_catalogo` → `consultar_disponibilidad` | ❌ **No.** 8 grupos, todos `catalogo` |
+
+### Y el mecanismo, que es estructural y no una torpeza del modelo
+
+**`buscar_catalogo` no devuelve el nombre de la pieza.** Su observación lleva
+`posicion`, `sku`, `materiales`, `variante` y `motivos` (`assist/tools.py`, `buscar_catalogo`). De modo
+que la cadena es:
+
+1. El modelo pasa el **nombre** a `consultar_disponibilidad`, que quiere un SKU → `referencia_desconocida`.
+2. Se recupera con `buscar_catalogo`, que devuelve ocho candidatos **identificados sólo por SKU,
+   material y variante**.
+3. **No tiene con qué saber cuál de los ocho es la pieza que el cliente nombró**, así que consulta la
+   disponibilidad de otra — que sí tiene stock — y, correctamente, no pivota.
+
+**El bucle hace lo correcto en cada paso.** Lo que falta es el puente del nombre al SKU, y las seis
+herramientas no lo tienen: la búsqueda semántica devuelve **vecinos**, no la pieza exacta.
+
+**Por qué el arnés no lo vio**, que es el mismo patrón que esta implementación ya encontró dos veces
+más: `scenario_turns` resuelve el marcador `{pieza}` a un **SKU** y lo escribe en el turno, así que en
+las 204 peticiones de C32b y en las 102 de C42 **el modelo siempre recibió la referencia servida**. Un
+operario teclea un nombre.
+
+### Qué haría falta cuando se haga, y la decisión que arrastra
+
+- **Lo más estrecho: que la observación de `buscar_catalogo` lleve el nombre del producto.** Un campo,
+  en la observación que ve el modelo y no en el payload de generación.
+- **Y el argumento de C30b contra ensanchar el payload no se le aplica tal cual**, que es lo que hace
+  esta opción defendible: aquella regla es sobre **numerales** —*«every field handed over widens the
+  whitelist the numeric gate admits»*— y un nombre no lleva cifras. Pero sigue siendo **una de las seis
+  herramientas congeladas**, así que lo decide quien las posea, no un change de frontal.
+- **Alternativa sin tocar las herramientas:** que la pantalla ofrezca la referencia. El panel del
+  agente ya enseña el SKU en cada fila, así que un operario que ve la pieza en un turno anterior puede
+  nombrarla por referencia en el siguiente. **Es un paliativo y no el arreglo**, porque el caso que
+  falla es justo el primer turno, cuando el cliente nombra algo que el operario aún no tiene en
+  pantalla.
+- **Y lo que NO hay que hacer:** colapsar `referencia_desconocida` con una búsqueda por nombre dentro de
+  `consultar_disponibilidad`. Esa herramienta responde sobre **una** pieza identificada; hacerla adivinar
+  cuál convertiría una respuesta sobre existencias en una búsqueda, que es precisamente la confusión que
+  el vocabulario cerrado de causas existe para evitar.
+
+**Mientras no se haga, el pivote se demuestra nombrando la referencia**, que es realista en un
+mostrador —la pieza lleva su etiqueta delante— y es lo que el *runbook* de la comprobación manual dice.
 
 ---
 
@@ -1003,3 +1278,259 @@ clave de precio.
 etapa, cada una con su modelo y sus tokens. Es **adición pura** sobre un esquema que sólo publica
 esta ruta —`/v1/assist/sale` no se mueve— y no se hace ahora porque, sin consumidor, agrandaría la
 superficie congelada para nadie.
+
+---
+
+## C36 · servir la parte estructural de la ficha sin pagar una generación
+
+**Estado:** identificado el 2026-09-22 al implementar C36, **no hecho y no decidible hoy**.
+**Zona:** `backend/src/JoiabagurPV.Application/` y `API/` — fuera del alcance de C36, cuya zona es
+`frontend/src/`.
+
+**El problema, medido.** Los datos **baratos** de la ficha de venta —el grupo de la familia, los
+cuatro avisos y el estado de existencias— y los **caros** —el argumentario y sus citas— llegan
+**soldados en la misma respuesta**. Los primeros no necesitan ni un token y sólo se obtienen pagando
+una generación completa de **p50 4,42 s / p95 7,13 s** (C34 §4), cuando el reparto real es **4 ms de
+.NET contra 4,4 s de IA**.
+
+**Y no hay camino alternativo desde el frontend.** `GET /api/product-families/{id}` existe y es
+accesible a cualquier autenticado, pero está indexada por **familia**, el objeto de transferencia de
+producto **no lleva `familyId`**, y la ruta no devuelve cantidad por punto de venta. Desde un
+`productId` no se llega: comprobado sobre el árbol en la exploración de C36 (H4).
+
+**Qué haría falta.** Un `generate=false` —o un `?structural=true`— en
+`POST /api/ai/products/{productId}/sales-assist` que devuelva el mismo objeto con `pitchStatus:
+not_generated`, `citations` vacío y el grupo, los avisos y las existencias hidratados igual que ahora.
+Serviría la ficha estructural en **~10 ms**. Es **adición pura**: ningún campo se retira ni cambia de
+tipo, y la ficha ya sabe pintar `not_generated` sin insinuar una caída.
+
+**Por qué no se hizo en C36.** Rompe la zona del change —`backend/` intocable— y reabre un change
+archivado el día anterior.
+
+**Condición de reactivación, y por qué hoy no es observable.** Sería *«que el uso real de la ficha
+muestre aperturas que no leen el argumentario»*. **No se puede comprobar**: la ficha no tiene
+telemetría, que es la entrada siguiente. Mientras no la tenga, esto se decide por argumento o no se
+decide.
+
+---
+
+## C36 · la ficha de venta no deja rastro
+
+**Estado:** identificado el 2026-09-22 al implementar C36, **declarado como limitación**.
+**Zona:** `backend/` (tabla y ruta) y `frontend/src/pages/sales/assist.tsx` (emisión).
+
+A diferencia de la búsqueda asistida, que persiste `ProductSearchEvent` desde C04 y sostiene con él la
+tasa de selección del §11 del diseño, **ninguna de las tres cosas que la ficha decide deja rastro**:
+
+| Acto | ¿Se registra? |
+|---|---|
+| Abrir la ficha de una pieza | **No** |
+| Preguntar algo del cliente | **No** |
+| Elegir una variante de la familia | **No** |
+
+No hay tabla equivalente y C36 no la crea, porque crearla era una migración de EF Core y la zona del
+change es `frontend/src/`. Una consecuencia deliberada y una accidental:
+
+- **Deliberada:** abrir la ficha **desde la fila de resultados no reporta selección** al endpoint de
+  telemetría de búsqueda. Ver una ficha no es elegir la pieza, y contarlo inflaría la tasa de
+  selección que el evento de búsqueda existe para medir. Hay test: `should report no selection when
+  the card is opened from a result row`.
+- **Accidental:** la condición de reactivación de la entrada anterior **no es observable**.
+
+**Qué haría falta cuando se haga.** Una tabla `SalesAssistEvent` con el producto anclado, el punto de
+venta, si hubo pregunta —**nunca su texto**, por la misma razón por la que no viaja en la URL— y el
+miembro elegido si lo hubo; más una ruta de reporte con la forma de la de selección de C04, que se
+llama sin esperarla y cuyo fallo es invisible por diseño. La retención hereda el problema que el §15.11
+del diseño ya declara para `ProductSearchEvent`.
+
+---
+
+
+## Active Change: `add-frontend-free-query-panel` (C40)
+
+### Una búsqueda en «todos los puntos de venta» no queda registrada
+
+**Estado:** implementada la búsqueda, **no** su telemetría.
+
+`ProductSearchEvent.PointOfSaleId` es `Guid` no nulo, `IsRequired()` en su configuración de EF Core
+y forma parte del índice `(PointOfSaleId, CreatedAt)`. Registrar una búsqueda sin tienda exige
+volverlo anulable, y eso es **una migración de EF Core**, que es lo único que el encargo de este
+change excluye explícitamente. La spec, por su parte, prohíbe la salida fácil: *«it MUST record the
+search with no point of sale rather than with a placeholder one»*.
+
+Entre una migración y una mentira, la tercera opción es no registrar y decirlo. Es lo que se ha
+hecho: con `PointOfSaleId` nulo el servicio devuelve `searchEventId = null` —exactamente como ya
+hace cuando la telemetría falla—, no se atribuye ninguna venta a esa búsqueda y nada más cambia.
+
+**Qué se pierde, concretamente.** Una consulta libre de ámbito global no aparece en el embudo, no
+cuenta para la tasa de selección y no se puede comparar con las de ámbito de tienda. Como el panel
+por defecto lleva una tienda seleccionada, el hueco afecta sólo a las búsquedas en que el operario
+quita el ámbito a propósito, cuya frecuencia **no se puede medir precisamente porque no se
+registran**. Eso es circular y hay que decirlo: la primera cifra que dará el arreglo es cuánto se
+estaba perdiendo.
+
+**Qué haría falta cuando se haga.** Volver `PointOfSaleId` anulable en `ProductSearchEvent` y en su
+configuración, la migración correspondiente, y revisar el índice —un `(PointOfSaleId, CreatedAt)`
+con nulos sigue sirviendo a las consultas por tienda, pero las agregaciones que hoy asumen no-nulo
+tendrían que decidir si cuentan o excluyen las globales—. En `ProductSearchEventService` desaparece
+el `?? throw` que hoy trata un ámbito sin tienda como error de programación. Y la retención hereda
+el problema que el §15.11 del diseño ya declara para esta misma tabla.
+
+### El rechazo del ámbito global en inventario no tiene superficie .NET donde afirmarse
+
+**Estado:** la garantía existe, el test que la tarea 12.2 pedía **no puede escribirse donde lo pedía**.
+
+La tarea 12.2 pide `ForAllPointsOfSale_IsRefusedByInventory`, junto a sus hermanos de la ficha y los
+sustitutos. Los dos hermanos existen; éste no, porque **`IAiGatewayClient` no tiene operación de
+inventario**: `/v1/inventory/propose` existe en jbg-ai y nada en .NET la llama. El requisito viene de
+la spec, que enumera «the sale card, substitutes and inventory» pensando en las rutas del servicio y
+no en los métodos del cliente.
+
+No se ha inventado un test que pase por casualidad. Lo que hay en su lugar son dos cosas:
+
+- **La garantía vive del lado de Python.** La ruta conserva la dependencia estricta del punto de
+  venta y rechaza un token sin la reclamación, en `test_pos_scoped_route_still_rejects_it`
+  (`ai-service/tests/api/test_auth.py`). Es la garantía que importa, porque es la que un cliente
+  cualquiera —no sólo el .NET— encuentra al llamar.
+- **Del lado .NET queda un centinela que afirma que la superficie no existe**, en
+  `AiGatewayClientTests.cs:421`, `ForAllPointsOfSale_IsRefusedByInventory_HasNoClientSurface`. El día
+  que este cliente crezca una llamada de inventario, ese test falla y pide su propio rechazo — que es
+  exactamente el momento en que el test de la tarea 12.2 tendrá dónde aterrizar.
+
+**Qué haría falta cuando se haga.** Añadir la operación de inventario a `IAiGatewayClient` con su
+guarda de ámbito —`scope.Kind != AiCallScopeKind.PointOfSale` lanza antes de emitir petición, como
+`SubstitutesAsync`—, sustituir el centinela por el test que la tarea nombra, y comprobar que el
+rechazo ocurre **antes** de la petición y no por la respuesta del servicio.
+
+Anotado aquí porque el informe de implementación lo declara diferido y la verificación encontró que
+faltaba esta mitad: la entrada estaba en el informe y no en este fichero.
+
+---
+
+## Active Change: `c40-fix-all-shops-scope-unreachable` (C40_FIX)
+
+### La ruta rápida no acepta el ámbito global — y arreglarlo exige antes agrupar en la rama léxica
+
+**Son una sola tarea, y ése es el hallazgo.** Separadas parecen dos mejoras independientes; juntas son
+una tarea con un orden obligatorio, porque hacer la primera sin la segunda entrega un **HTTP 500**.
+
+**Qué falta.** `POST /api/ai/search` —la ruta rápida, la que el panel usa **por defecto**— rechaza el
+ámbito «todas las tiendas» con un 400 de validación:
+`AssistedSearchRequestValidator` lleva `RuleFor(x => x.PointOfSaleId).NotEmpty()`, y
+`AssistedSearchRequest.PointOfSaleId` es `Guid` y no `Guid?`. El ámbito sólo lo sirve
+`POST /api/ai/search/assisted`, cuyo request sí es anulable.
+
+**Por qué C40_FIX no lo hizo.** Porque limitó el control al administrador, y con esa audiencia la
+objeción económica a fijar la ruta generativa se cae: no son cien mostradores en ráfagas, son consultas
+ocasionales de administración. Extender la ruta rápida arrastra el DTO, el validador, `AuthoriseAsync`,
+la construcción del ámbito, la hidratación, `RecordAsync` y `AssistedSearchResponse` de
+`AssistedSearchService`, **el servicio más transitado y más probado del árbol**, con toda su cola de
+tests de integración. Se declaró fuera de alcance con su motivo en el `design.md` del change (D2).
+
+**Y la mina que hay que desactivar antes, que es la parte no obvia.** La capa de repositorio ya es
+anulable, pero **no de forma uniforme**:
+
+| Método de `IAssistedSearchRepository` | Acepta `Guid?` | Agrupa por producto con nulo |
+|---|---|---|
+| `HydrateAsync` | sí | **sí**, con un comentario que explica el peligro |
+| `SearchLexicalAsync` | sí | **no** — proyecta `ToRow` desde filas de `Inventory` |
+
+`Carried(null)` suelta el filtro de tienda, así que un producto que tres tiendas llevan vuelve **tres
+veces**, y `AssistedSearchService.BuildResultsAsync` hace `rows.ToDictionary(row => row.ProductId)`
+**incondicionalmente, en las dos ramas**. Resultado: `ArgumentException` → **HTTP 500**.
+
+Hoy la rama nula de `SearchLexicalAsync` es **código muerto**: su único llamante es `DegradedAsync`, que
+siempre pasa una tienda concreta. Se activaría en el instante en que la ruta rápida aceptara la
+ausencia — y **primero en desarrollo local**, donde `AiSearch__EnabledByDefault` no está declarado en
+ningún `appsettings` y por tanto la ruta degradada es la que corre siempre.
+
+### Qué hace falta cuando se haga
+
+1. **Primero la agrupación**: replicar en `SearchLexicalAsync` el `GroupBy(ProductId)` de
+   `HydrateAsync` para la rama nula, con `Quantity = null` — sin sumar y sin elegir la de una tienda al
+   azar, por lo mismo que la hidratación ya razona—, y **un test que le pase `null` y compruebe que un
+   producto de varias tiendas vuelve una sola vez**. Sin ese test la mina vuelve a quedar dormida y sin
+   guarda.
+2. `AssistedSearchRequest.PointOfSaleId` a `Guid?`; el validador retira `.NotEmpty()` y **rechaza
+   `Guid.Empty`** con el mismo criterio y el mismo texto que ya usa el controlador de la consulta libre:
+   ausencia es que la clave no esté, y cualquier otra cosa es un valor que tiene que ser usable.
+3. `AuthoriseAsync` omitida con nulo; `AiCallScope.ForAllPointsOfSale` en vez de `ForPointOfSale`;
+   el predicado del interruptor por el método de extensión que C40_FIX extrajo, que ya resuelve el nulo.
+4. `RecordAsync` omitido sin tienda, como ya hace `FreeQuerySearchService`.
+5. `AssistedSearchResponse.PointOfSaleId` a `Guid?`.
+6. En el frontend, retirar la fijación de ruta de `assisted.tsx` —`effectiveRoute`— y el motivo de
+   ámbito del lado semántico del toggle, más los dos tests que los fijan.
+
+### Lo que esto ensancharía, y hay que decirlo al hacerlo
+
+**El hueco de telemetría.** Hoy una consulta global no se registra, y con el control limitado al
+administrador eso es marginal. Si la ruta rápida acepta el ámbito, las búsquedas globales **semánticas**
+tampoco quedarían registradas, y ésas sí son la ruta por defecto: el agujero pasa de un puñado de
+consultas de administración a algo que puede sesgar la comparación de las dos rutas sobre la telemetría.
+La tarea de arriba —*«Una búsqueda en “todos los puntos de venta” no queda registrada»*— sube de
+prioridad en ese momento, no antes.
+
+Anotado al implementar C40_FIX, cuya exploración encontró las dos mitades: el 400 de la ruta rápida no
+figuraba en ninguna pasada anterior del ticket, y la mina de la rama léxica no figuraba en ninguna
+parte.
+
+---
+
+### La sonda de disponibilidad es más estricta que la ruta que describe — decisión de producto pendiente
+
+**Hallado por la verificación independiente de C40_FIX (2026-09-26), medido por HTTP y fijado en un test.**
+No se arregló aquí a propósito: **qué lado está mal es una decisión de producto**, y cambiar cualquiera de
+los dos altera comportamiento entregado por C40.
+
+**El hecho.** `AssistedSearchService.GetAvailability` responde
+
+```csharp
+AssistedAnswerAvailable = freeQueryOptions.IsEnabledForScope(pos) && assistOptions.IsEnabledForScope(pos);
+```
+
+y `FreeQuerySearchService` —la ruta que esa bandera describe— aplica **sólo el primero**. El segundo,
+`AiSalesAssistOptions`, no se lee en ningún punto del camino de la consulta libre: lo lee
+`SalesAssistService`, que sirve la ficha de venta, otra ruta.
+
+**Medido contra la API en marcha**, con `AiFreeQuerySearch__EnabledByDefault=true` y
+`AiSalesAssist__EnabledByDefault=false`:
+
+| Llamada | Respuesta |
+|---|---|
+| `GET /api/ai/search/availability` (sin tienda) | `assistedAnswerAvailable: false`, `switched_off` |
+| `POST /api/ai/search/assisted` (sin tienda) | `200` · `aiAvailable: true` · `pitchStatus: "generated"` · prosa real |
+
+**Por qué importa, y por qué no es cosmético.** En el panel, con el ámbito «todas las tiendas»
+seleccionado, esa combinación deshabilita **las dos** opciones del selector de vía y escribe *«La búsqueda
+en todas las tiendas usa la respuesta asistida, y está desactivada»* — de un ámbito que el backend sirve
+sin problema. Es el defecto que C40_FIX vino a cerrar —una capacidad que funciona, inalcanzable desde la
+pantalla, con un motivo falso escrito al lado—, alcanzable por una combinación de interruptores en vez de
+por una opción que falta. Y roza el `MUST NOT` vivo de `ai-free-query-search`:
+
+> *«…and MUST NOT reuse the switch of assisted search nor the switch of the sale card, because the three
+> are different features with different cost profiles.»*
+
+La ruta, en rigor, no lo reutiliza; **la pantalla sí**, porque deshabilita la vía sobre esa lectura. El
+efecto neto es que el interruptor de la ficha de venta gobierna si un operario puede usar la consulta
+libre desde el panel, que es exactamente lo que ese requisito prohíbe.
+
+**Las dos salidas, y lo que cuesta cada una.**
+
+1. **Aflojar la sonda** a `freeQuery` a secas. La sonda pasaría a describir exactamente lo que la ruta
+   hace, y el requisito de C40_FIX —*«resolving the absence by the very rule the search route resolves it
+   with»*— se cumpliría de arriba abajo. Coste: si alguien apaga la ficha de venta esperando apagar
+   también la prosa del panel, deja de ocurrir — así que hay que comprobar si esa expectativa existía en
+   C34/C40 antes de tocarlo.
+2. **Hacer que la ruta lo aplique**, leyendo `AiSalesAssistOptions` en `FreeQuerySearchService`. Coherente
+   con el texto del comentario que había en `GetAvailability` —*«whether the AI service will write prose
+   for this shop»*—, pero **contradice el `MUST NOT` citado arriba**, que existe precisamente para que los
+   tres interruptores no se compartan.
+
+La primera parece la correcta por ese `MUST NOT`. No se decide aquí.
+
+**Qué hay puesto mientras tanto:** `AiScopePredicateAgreementTests` construye la sonda y la ruta sobre las
+mismas opciones, **ejecuta la ruta** y compara veredictos;
+`Probe_AlsoReportsTheSaleCardSwitch_WhichTheRouteNeverApplies` fija la respuesta de hoy, de modo que quien
+la cambie tiene que pasar por ahí y leer esta nota.
+
+---

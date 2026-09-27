@@ -15,5 +15,19 @@ public enum AiCallScopeKind
     PointOfSale = 1,
 
     /// <summary>Scoped to the whole catalog: enrichment, index synchronization.</summary>
-    Catalog = 2
+    Catalog = 2,
+
+    /// <summary>
+    /// A search deliberately covering every point of sale: catalog retrieval and sale
+    /// assistance only.
+    /// </summary>
+    /// <remarks>
+    /// <strong>Not a relaxation of <see cref="PointOfSale"/> and not a synonym of
+    /// <see cref="Catalog"/>.</strong> It carries no point of sale, like the catalog scope, but
+    /// it is a different intent and the client treats it differently: the catalog scope is
+    /// refused by every point-of-sale route, while this one is accepted by the two that can
+    /// answer without a shop and refused by the rest. Collapsing the two would make
+    /// enrichment's scope usable for a search, which is the leak the kinds exist to prevent.
+    /// </remarks>
+    AllPointsOfSale = 3
 }

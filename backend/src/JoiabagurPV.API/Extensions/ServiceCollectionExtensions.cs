@@ -29,6 +29,21 @@ public static class RateLimitPolicies
     /// language model; the substitutes route calls none and uses <see cref="AiSearch"/>.
     /// </summary>
     public const string AiSalesAssist = "AiSalesAssistRateLimit";
+
+    /// <summary>
+    /// Free-query search (C40), partitioned by user. Its own policy because its route calls
+    /// the language model and the panel is used in bursts; sharing the card's allowance would
+    /// leave whichever one the operator reached second unable to work, with no way to know why.
+    /// </summary>
+    public const string AiFreeQuerySearch = "AiFreeQuerySearchRateLimit";
+
+    /// <summary>
+    /// The sale agent (C42), partitioned by user. Its own policy, and here the allowance is set by
+    /// the quota rather than by taste: at about 13 000 prompt tokens per request against 25 000
+    /// tokens per minute, the system admits roughly one request per minute. Sharing the free query's
+    /// allowance would let a handful of conversations exhaust what the cheaper route needs.
+    /// </summary>
+    public const string AiAgentAssist = "AiAgentAssistRateLimit";
 }
 
 /// <summary>
@@ -188,6 +203,54 @@ public static class ServiceCollectionExtensions
                     {
                         PermitLimit = salesAssistPermitLimit,
                         Window = TimeSpan.FromSeconds(salesAssistOptions.RateLimitWindowSeconds),
+                        QueueLimit = 0
+                    }));
+
+            // Free-query search (C40). Same shape again, and its own allowance for the reason
+            // its configuration section exists: the card is opened once per piece and the panel
+            // is used in bursts, so a shared quota strangles whichever one is reached second.
+            var freeQueryOptions = configuration
+                .GetSection(AiFreeQuerySearchOptions.SectionName)
+                .Get<AiFreeQuerySearchOptions>() ?? new AiFreeQuerySearchOptions();
+
+            var freeQueryPermitLimit = configuration
+                .GetValue<int?>($"{AiFreeQuerySearchOptions.SectionName}:{nameof(AiFreeQuerySearchOptions.RateLimitPermitLimit)}")
+                ?? (isTestingEnvironment ? 10_000 : freeQueryOptions.RateLimitPermitLimit);
+
+            options.AddPolicy(RateLimitPolicies.AiFreeQuerySearch, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                  ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                                  ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = freeQueryPermitLimit,
+                        Window = TimeSpan.FromSeconds(freeQueryOptions.RateLimitWindowSeconds),
+                        QueueLimit = 0
+                    }));
+
+            // The sale agent (C42). Same shape a fourth time, and its own allowance because the
+            // binding constraint here is not the money but the tokens-per-minute quota: one
+            // conversation turn carries the whole transcript plus up to five turns of tool choosing,
+            // measured at ~13 000 prompt tokens against a ceiling of 25 000 per minute. Sharing the
+            // free query's allowance would let four conversations strangle the cheaper route.
+            var agentOptions = configuration
+                .GetSection(AiAgentAssistOptions.SectionName)
+                .Get<AiAgentAssistOptions>() ?? new AiAgentAssistOptions();
+
+            var agentPermitLimit = configuration
+                .GetValue<int?>($"{AiAgentAssistOptions.SectionName}:{nameof(AiAgentAssistOptions.RateLimitPermitLimit)}")
+                ?? (isTestingEnvironment ? 10_000 : agentOptions.RateLimitPermitLimit);
+
+            options.AddPolicy(RateLimitPolicies.AiAgentAssist, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                  ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                                  ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = agentPermitLimit,
+                        Window = TimeSpan.FromSeconds(agentOptions.RateLimitWindowSeconds),
                         QueueLimit = 0
                     }));
         });

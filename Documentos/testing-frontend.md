@@ -294,6 +294,108 @@ describe('ProductCard', () => {
 
 **482 tests, 118 fallos, en 17 de los 40 ficheros.** Duración: 252 s.
 
+> **Re-medido el 2026-09-22, al implementar C36: la línea base da 597 tests, 114 fallos, en 15 de
+> 48 ficheros, y al cierre **729** tests, 113 fallos, en 14 de 54.** Los **132** tests de más son de
+> C36 y están los 132 en verde. La comparación por nombres salió **subconjunto estricto**: **cero
+> nombres nuevos** y **uno que dejó de fallar**.
+>
+> **Y ese uno obliga a matizar el párrafo siguiente.** Es
+> `pages/admin/__tests__/family-review.test.tsx :: should create a family with its members from the
+> review screen`: falló en la línea base y pasó al cierre **sin que nadie tocara ni ese fichero ni su
+> código de producción**. Explica por qué la línea base daba 114 y 15 ficheros donde el 13 de
+> septiembre daba 113 y 14 — no es rojo acumulado, es que la suite creció seis ficheros y eso desplazó
+> el orden de ejecución.
+>
+> Así que **la afirmación de que aquí el conjunto de fallos es estable entre ejecuciones era demasiado
+> fuerte**: hay al menos un test dependiente del orden en el frontend, igual que en el backend, sólo
+> que uno y no un puñado. **El método no cambia** —comparar por nombres sigue dando una respuesta
+> binaria y útil—, pero conviene esperar que el recuento oscile entre **113 y 114** sin que nadie haya
+> roto nada.
+>
+> **Y la verificación de C36 (2026-09-24) lo volvió a medir sobre el mismo commit de línea base**
+> —regenerado en un worktree sobre `2b49685`— **y dio 113 fallos en 14 ficheros, no 114 en 15**: el
+> test de `family-review` pasó también allí. Mismo commit, mismo código, dos respuestas. Refuerza la
+> conclusión en vez de contradecirla, y es la razón por la que el recuento no sirve ni como línea base.
+> Lo que se mantuvo idéntico en las dos mediciones: **cero nombres nuevos**. Detalle en
+> `Documentos/Proyecto Final AIEng/informes/c36-implementation-measurements.md` §2.1.
+
+> **Actualización del 2026-09-24, sobre `c40-add-frontend-free-query-panel`.** La suite tiene ahora
+> **833 tests** —834 tras los arreglos de su verificación—: C40 añade **104**. La línea base dio
+> **113 fallos de 729 en 14 de 54 ficheros**; al cierre, **113 de 833 en 14 de 57**, con el conjunto
+> de nombres **idéntico** y el diff vacío. Los 104 tests nuevos están los 104 en verde.
+>
+> **Y no es un test dependiente del orden, son al menos tres ficheros.** La entrada anterior cerraba
+> con `family-review.test.tsx` como el único caso conocido. C40 midió dos pasadas del **mismo
+> commit** minutos aparte, a **113 y 114**, y el nombre discrepante fue un tercer fichero:
+> `pages/sales/__tests__/scan.test.tsx :: ScanningPage should show manual SKU input fallback after
+> initialization`, que **no había fallado en ninguna de las siete pasadas anteriores del change** y
+> **pasa cuando el fichero se corre solo**. No toca nada de C40 —cero referencias a `ai-search`,
+> `assisted` o `warnings`—. Su vecino del mismo fichero, `should render loading state initially`, es
+> rojo en la línea base y **sigue rojo**, así que el fichero aporta un fallo fijo y uno oscilante.
+>
+> **El conjunto rotatorio conocido es, por tanto, `family-review.test.tsx`, `assist.test.tsx` y
+> `scan.test.tsx`** — la tabla de inventario de más abajo los lista, pero como fallos sin más; lo que
+> esta entrada añade es que **oscilan**. Y con ello el criterio útil deja de ser el del frontend y pasa
+> a ser el del backend, que es el mismo en los dos árboles: **si el nombre discrepante cae en un
+> fichero que ya estaba rojo y tu propia área está limpia, no es tuyo.** Un nombre nuevo en un fichero
+> que tú tocas es una regresión; uno más en `scan.test.tsx` es martes.
+>
+> **La verificación de C40 lo reprodujo dos veces más** (2026-09-25), antes y después de sus arreglos:
+> **113 de 833** y **113 de 834**, los mismos 14 ficheros las dos veces, y los **nueve** ficheros de
+> test que C40 añade o toca en verde. Detalle en
+> `Documentos/Proyecto Final AIEng/informes/c40-implementation-measurements.md` §10 y §14.3.
+
+> **Actualización del 2026-09-26, sobre `c40-fix-all-shops-scope-unreachable` (C40_FIX).** La suite
+> tiene **848 tests**: C40_FIX añade **14** de página y **1** de servicio, los quince en verde. La
+> línea base del implementador dio **113 fallos de 834 en 14 de 57 ficheros**; su cierre, **114 de 848
+> en 15**.
+>
+> **Y la verificación independiente midió el cierre otra vez, sobre el mismo commit `4b1d056`, y dio
+> 113 en 14 ficheros.** El nombre que sobra en una pasada y falta en la otra es
+> `admin/__tests__/family-review.test.tsx :: family review screen should create a family with its
+> members from the review screen` — **el mismo** que C36 usó para refutar que aquí el conjunto fuera
+> estable, y el mismo al que C40 apuntaba. Es la **tercera** observación independiente de ese nombre
+> rotando, y esta vez en la dirección contraria: rojo para quien implementó, verde para quien
+> verificó, mismo árbol. De paso se confirma el par de `scan.test.tsx` que describe la entrada
+> anterior: `should render loading state initially` sigue rojo y `should show manual SKU input
+> fallback after initialization` sale verde.
+>
+> **La consecuencia operativa, que es la que importa:** en este árbol **113 y 114 son el mismo
+> resultado**, y quien mida uno u otro no está observando su propio cambio. `assisted.test.tsx` —el
+> área del change— no aparece entre los rojos en ninguna de las tres pasadas.
+>
+> Detalle en el `qa.md` del change archivado, §1.1 y §11.9.
+
+> **Actualización del 2026-09-26, sobre `c42-add-frontend-agent-panel` (C42).** La suite tiene ahora
+> **953 tests**: C42 añade **99** —6 ficheros nuevos, los 99 en verde—. La línea base dio **113 fallos
+> de 854 en 14 de 57 ficheros**; al cierre, **113 de 953 en 14**, con el conjunto de nombres
+> **idéntico** y el diff vacío. Cuarta observación consecutiva de que el rojo de este árbol no crece
+> con la suite.
+>
+> **Pero la primera comparación de C42 dio 114, y el nombre que sobraba era una regresión de verdad —
+> la primera de esta serie de entradas.** `pages/sales/__tests__/sales-index.test.tsx :: should show
+> "Buscar con Ayuda" tile linking to the assisted search panel`. La causa no estaba en ningún test
+> nuevo: la tarjeta que C42 añade al hub llevaba la viñeta «Más lento y más caro que **buscar con
+> ayuda**», con lo que el **nombre accesible de su propio enlace** pasaba a encajar también con
+> `/Buscar con Ayuda/i`, y la consulta del test —`getByRole('link', { name: … })`— encontraba dos
+> elementos. Reescrita la viñeta, el recuento vuelve a 113.
+>
+> **Y eso es lo que esta entrada aporta al método**, porque va justo contra la costumbre que las
+> anteriores establecieron: aquí el nombre discrepante **no** era ruido de un fichero ya rojo. Cayó en
+> un fichero que el change **tocaba** —`pages/sales/index.tsx`—, que es exactamente el criterio que las
+> entradas de C40 y C40_FIX dejaron escrito: *un nombre nuevo en un fichero que tú tocas es una
+> regresión; uno más en `scan.test.tsx` es martes*. El criterio funcionó a la primera.
+>
+> **La otra lección es sobre el paralelismo, y vale para las tres suites de este repositorio.** La
+> primera medición de C42 lanzó `dotnet test`, `npm run test` y `uv run pytest` **a la vez**, y el
+> backend dio **490 fallos de 1.347** en vez de 53: `vitest` con 14 *workers* satura la máquina y
+> testcontainers deja de alcanzar el demonio de Docker por su tubería con nombre, así que **todos** los
+> tests de integración fallan al arrancar con un `TimeoutException` de `NamedPipeClientStream`. En la
+> misma pasada, `pytest` dio 2 rojos —sus dos tests de reloj del agente— que solos pasan. **Una pasada
+> de las tres suites es serial**, y cuesta unos 20 minutos.
+>
+> Detalle en `Documentos/Proyecto Final AIEng/informes/c42-implementation-measurements.md` §1.
+
 > **Re-medido el 2026-09-13, al cerrar C28: 595 tests, 113 fallos, en 14 de 48 ficheros.** La suite
 > ha crecido 113 tests en dos semanas y el rojo **no ha crecido con ella**: cae de 118 a 113 y de 17
 > ficheros a 14. La proporción pasa del 24 % al 19 %. El conjunto de nombres fallidos de C28 fue
@@ -391,7 +493,11 @@ Una petición sin manejador **no rompe el test**: imprime un aviso y devuelve na
 
 ### `tsc --noEmit` no es una puerta
 
-Devuelve decenas de errores preexistentes en los ficheros de plantilla de Metronic: `lucide-react` sin exportar `ShieldUser`, `VectorSquare` o `PanelTopBottomDashed`, módulos ausentes (`@/components/image-input`, `embla-carousel-react`), y tipos rotos en `chart.tsx` y `data-grid-table.tsx`. Filtra su salida a tus propios ficheros antes de sacar conclusiones. **La puerta real es `npm run build`**, que sí pasa en verde.
+Devuelve decenas de errores preexistentes en los ficheros de plantilla de Metronic: `lucide-react` sin exportar `ShieldUser`, `VectorSquare` o `PanelTopBottomDashed`, módulos ausentes (`@/components/image-input`, `embla-carousel-react`), y tipos rotos en `chart.tsx` y `data-grid-table.tsx`. Filtra su salida a tus propios ficheros antes de sacar conclusiones.
+
+**Pero no lo sustituyas por `npm run build`, porque `npm run build` no comprueba tipos.** *(Corregido el 2026-09-26, al verificar C40_FIX: este párrafo decía que la puerta real era `npm run build`, y es falso.)* Vite transpila con **esbuild**, que descarta las anotaciones de tipo **sin mirarlas**, así que el build sale verde sobre un error de tipos y `vitest` tampoco lo ve. Medido sobre el mismo árbol: `npm run build` **sale 0** en 27,7 s mientras `tsc --noEmit` **sale 2** con 176 errores. C40 se comió un commit entero por esto —un DTO anulable en .NET y todavía `number` en `ai-search.types.ts`, con tests y build en verde— y **el `tsc --noEmit` filtrado fue lo único que lo encontró**.
+
+La lectura correcta es que **ninguno de los dos es una puerta por sí solo** y miden cosas distintas: `npm run build` dice «compila y empaqueta», `tsc --noEmit` filtrado a tus ficheros dice «los tipos cuadran». Para cualquier cambio que mueva un tipo —un DTO, una firma de servicio, un campo anulable— hay que correr los dos.
 
 ---
 

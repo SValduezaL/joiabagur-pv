@@ -119,7 +119,12 @@ public class SalesAssistService : ISalesAssistService
             ? await DegradedAsync(productId, pointOfSaleId, anchor!, options, cancellationToken)
             : await ServedAsync(ai, productId, pointOfSaleId, question, anchor!, options, cancellationToken);
 
-        LogOutcome(outcome, ai, productId, pointOfSaleId, question, degradedReason, aiMs, ElapsedMs(startedAt));
+        // Assigned before the log line is written, and the log line reads it back from here. The
+        // requirement is that the screen and the log cannot disagree for one trace; keeping a
+        // single value rather than two that travel side by side is what makes that structural.
+        outcome.Response.DegradedReason = degradedReason;
+
+        LogOutcome(outcome, ai, productId, pointOfSaleId, question, aiMs, ElapsedMs(startedAt));
 
         return SalesAssistResult.Ok(outcome.Response);
     }
@@ -166,8 +171,11 @@ public class SalesAssistService : ISalesAssistService
         }
         catch (AiRequestRejectedException exception)
         {
-            // Not an outage: a product created after the last synchronisation. Told apart here,
-            // in the log; the body degrades the same way as an outage (design D11).
+            // Not an outage: a product created after the last synchronisation, a state the next
+            // one fixes by itself. Told apart in the log and, since C40, in the body too: it
+            // travels as DegradedReason so the screen can say "this piece is not ready yet"
+            // instead of "the assistant is down". The pitch still degrades identically — the
+            // distinction is in why, not in what the card can offer.
             _logger.LogWarning(exception,
                 "Sale assistance degraded: reason=product_not_indexed, the AI service cannot process product {ProductId}. TraceId={TraceId}",
                 productId, traceId);
@@ -477,7 +485,13 @@ public class SalesAssistService : ISalesAssistService
         Name = row.Name,
         VariantLabel = variantLabel,
         Price = row.Price,
-        QuantityAtPointOfSale = row.Quantity,
+        // The row always carries a quantity here: the sale card is refused without a
+        // point of sale, so the hydration that produced this row named one. Stated as a throw
+        // rather than as a `?? 0`, because a zero would be a claim about stock and this is a
+        // claim about the code.
+        QuantityAtPointOfSale = row.Quantity
+            ?? throw new InvalidOperationException(
+                "A sale card hydrated without a point of sale. The card is refused without one."),
         HasStock = row.Quantity > 0,
         PrimaryPhotoUrl = row.PrimaryPhotoFileName is null
             ? null
@@ -500,7 +514,6 @@ public class SalesAssistService : ISalesAssistService
         Guid productId,
         Guid pointOfSaleId,
         string? question,
-        string? degradedReason,
         int? aiMs,
         int totalMs)
     {
@@ -513,7 +526,7 @@ public class SalesAssistService : ISalesAssistService
             productId,
             question is null ? "M2" : "M3",
             response.AiAvailable,
-            degradedReason,
+            response.DegradedReason,
             ToWire(response.PitchStatus),
             response.Pitch?.Length ?? 0,
             string.Join(",", response.Citations.Select(citation => citation.CitationId)),

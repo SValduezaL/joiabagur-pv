@@ -30,7 +30,7 @@ no provider call, so it neither worsens nor fixes that budget.
 ## 3. Measured reach, reproduced
 
 `python -m jbg_ai.retrieval measure` against the live index (1.168 active rows), report committed
-at [`ai-service/evals/results/c20-query-expansion-reach.md`](../../../ai-service/evals/results/c20-query-expansion-reach.md):
+at [`ai-service/evals/results/c20-query-expansion-reach.md`](../../../../ai-service/evals/results/c20-query-expansion-reach.md):
 
 | query | without expansion | with expansion |
 |---|---:|---:|

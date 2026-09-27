@@ -1,0 +1,3120 @@
+{
+  "components": {
+    "schemas": {
+      "AgentAssistRequest": {
+        "description": "A conversation to answer, and the caps that bound it. C32b.\n\n**The transcript travels in the request because this service stores nothing between\ncalls** — the property the generation and routing capabilities already hold with tests,\nwhich a session store would collide with head-on. The price is that the client now\ncontrols the factor that dominates the cost of a loop, which is why the three caps are\npart of the contract rather than an implementation detail.",
+        "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssistContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "locale": {
+            "default": "es-ES",
+            "title": "Locale",
+            "type": "string"
+          },
+          "pos_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accepted for client compatibility and ignored; scope comes from the token",
+            "title": "Pos Id"
+          },
+          "top_k": {
+            "default": 5,
+            "description": "Families wanted after hydration",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          },
+          "turns": {
+            "description": "The conversation so far, oldest first. At least one turn must be the operator's: the one being answered is the last of those, because a client that appends its own account of the reply must not move what the request is asking",
+            "items": {
+              "$ref": "#/components/schemas/AgentTurn"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "turns"
+        ],
+        "title": "AgentAssistRequest",
+        "type": "object"
+      },
+      "AgentAssistResponse": {
+        "description": "What `POST /v1/assist/agent` returns: the deterministic shape **plus** five fields.\n\n**A subclass and not an independent model, and that is the whole value of the cut.** The\ncomparison this capability exists to enable runs both routes over the same set, so it has\nto be a difference of fields rather than a translation between two shapes: every field of\nthe deterministic response is present here with the same meaning, and what the agent adds\nare additions.",
+        "properties": {
+          "abstained": {
+            "description": "The retrieval's abstention rule decided the catalogue cannot answer this query, so no group is returned. Emitted in every mode — constantly false for a piece with no question, where there is no retrieval to abstain from — and deliberately **not** `low_confidence`, whose measured meaning is cross-branch consensus and fires on answerable queries far more often than on out-of-domain ones",
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "agent_prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Version of the **loop's** prompt, reported apart from `prompt_version`, which keeps the meaning it already has: the version the argument was written with. Two calls with different outputs and potentially different models, so a single field would make either figure unreadable the first time one of the two moved. Null when no loop ran",
+            "title": "Agent Prompt Version"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "clarification_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A question back to the operator when the classifier found the query carries too little to search with, naming the axis it left out. Null in every other case, including a refusal. Selected in code from a closed catalogue of es-ES templates and never written by the model: the field is typed as prose rather than as a code, so the presentation layer cannot resolve it, and two requests carrying the same query produce exactly the same text",
+            "title": "Clarification Question"
+          },
+          "effective_pos_id": {
+            "description": "Scope applied by the handler; always the token claim, never the body value",
+            "title": "Effective Pos Id",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AssistGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "intent": {
+            "description": "Closed vocabulary of the assistance capability: product_pitch, in_domain, out_of_domain, not_in_catalogue, unclassified. `product_pitch` for a piece with no question, derived from the request shape and unchanged since C30a. For a free query it is the verdict C31's classifier reached before retrieving anything: `in_domain` admitted, `out_of_domain` not this business, `not_in_catalogue` jewellery this catalogue does not stock. `unclassified` means no classification was made — no classifier ran, or one ran and could not be used — and the request was served exactly as it was before this capability routed anything",
+            "title": "Intent",
+            "type": "string"
+          },
+          "iterations": {
+            "description": "Turns of the loop that ran; zero when it never started",
+            "minimum": 0.0,
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "partial": {
+            "description": "The answer is not the one an unhurried request would have produced: a declared budget cut the loop short, or no agent credential is configured and nothing was gathered. **False for a refusal**, which is a complete answer to a request this shop will not serve, and false when the model simply stopped asking for tools",
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "pitch": {
+            "description": "Generated prose with unresolved {{price}} / {{stock}} placeholders",
+            "title": "Pitch",
+            "type": "string"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Version of the prompt the generation layer ran with; null when it did not run",
+            "title": "Prompt Version"
+          },
+          "stop_reason": {
+            "description": "Why the loop stopped, from a closed vocabulary: sin_mas_herramientas, presupuesto_iteraciones, presupuesto_tools, presupuesto_tokens, presupuesto_contexto, presupuesto_reloj, aclaracion, rechazado, sin_cliente, fallo_proveedor. **Always present and never to be inferred from the counters**: five iterations does not say whether the fifth was the last one needed or the one that ran out, and those are opposite statements about the answer being read",
+            "title": "Stop Reason",
+            "type": "string"
+          },
+          "tool_calls_used": {
+            "description": "Tool executions this request paid for, accumulated across turns. Calls refused for want of budget are counted in neither this figure nor the tool budget: no port was touched for them",
+            "minimum": 0.0,
+            "title": "Tool Calls Used",
+            "type": "integer"
+          },
+          "trace": {
+            "description": "Per iteration: the tools invoked, whether each succeeded and with what cause if not, plus what the iteration cost and how long it took. **Always present and bounded** rather than requested by a parameter, which would create two response shapes to test. It carries no tool argument and no observation content; a richer trace is available in process to a caller that embeds this layer directly",
+            "items": {
+              "$ref": "#/components/schemas/AgentTraceIteration"
+            },
+            "title": "Trace",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AgentUsage"
+          },
+          "warnings": {
+            "description": "Rule-derived codes, from the closed vocabulary of the assistance capability: family_has_variants, size_label_missing, query_out_of_domain, query_not_in_catalogue, knowledge_not_covered, filters_too_narrow. Never a sentence: the Spanish a human reads belongs to the frontend. The two refusal codes are distinct on purpose — a trade this shop does not practise and a piece it does not carry are two different things to say to a customer — and `knowledge_not_covered` states that an anchored question produced no citation after the corpus distance threshold, so the argument describes the piece without claiming to have answered",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "trace_id",
+          "effective_pos_id",
+          "intent",
+          "groups",
+          "pitch",
+          "usage",
+          "abstained",
+          "partial",
+          "stop_reason",
+          "iterations",
+          "tool_calls_used"
+        ],
+        "title": "AgentAssistResponse",
+        "type": "object"
+      },
+      "AgentTraceIteration": {
+        "description": "One turn of the loop: which tools it ran, what it cost and how long it took.",
+        "properties": {
+          "completion_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Completion Tokens",
+            "type": "integer"
+          },
+          "elapsed_ms": {
+            "default": 0.0,
+            "minimum": 0.0,
+            "title": "Elapsed Ms",
+            "type": "number"
+          },
+          "iteration": {
+            "minimum": 1.0,
+            "title": "Iteration",
+            "type": "integer"
+          },
+          "prompt_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Prompt Tokens",
+            "type": "integer"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/AgentTraceTool"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "total_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "iteration"
+        ],
+        "title": "AgentTraceIteration",
+        "type": "object"
+      },
+      "AgentTraceTool": {
+        "description": "One tool call of one iteration, as the wire reports it: **what, and how it went.**\n\nThe arguments are absent by rule and not by omission. A consumer logs the responses it\nreceives, and the arguments a tool was called with are the operator's question as the\nmodel reformulated it — which the rule this service already holds keeps out of durable\nstorage. Tool names are what the evaluation compares: tools invoked against tools expected.",
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Closed-vocabulary failure cause when the observation failed, null otherwise. `presupuesto_agotado` means the consumer refused the call because the request's tool budget was spent, and that **no port was touched** for it",
+            "title": "Cause"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "tool": {
+            "description": "Name of the tool invoked, from the frozen set of six",
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "ok"
+        ],
+        "title": "AgentTraceTool",
+        "type": "object"
+      },
+      "AgentTurn": {
+        "description": "One turn of the conversation the agent route answers. C32b.\n\n**A turn attributed to the assistant is client-supplied data.** The client composes the\nwhole request and can write what it likes in `role`, so trusting that label would hand an\nattacker a channel the operator's own field does not offer. Both roles travel under the\nsame length cap and both are enclosed in the same data delimiters inside the user message.",
+        "properties": {
+          "role": {
+            "description": "Who the turn is attributed to. `asistente` is **attributed and never trusted**: this service stores no conversation, so every turn arrives from the client",
+            "enum": [
+              "operario",
+              "asistente"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "description": "What was said. The cap is the one a single query of the deterministic route already declares, so one turn of a conversation cannot be longer than one query",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text"
+        ],
+        "title": "AgentTurn",
+        "type": "object"
+      },
+      "AgentUsage": {
+        "description": "The agent's usage object: everything the shared one carries, plus the call count. C32b.\n\n**Added here and deliberately not to `Usage`.** The shared model is what\n`POST /v1/assist/sale` publishes, and widening it would move that route's schema — which\nthis change promises not to do. Without the count, though, «the ceiling is observable from\nthe same object a consumer reads» would not be true of this route, and the ceiling is one\nof the four things the project evaluates about an agent.\n\nThe figure counts **chat calls of one request**: the classification, the loop's turns and\nthe argument with its repair. The embedding lookups the tools make are counted by the\nregistry's own counter and are not folded in here, because `usage.calls` already means\nexactly this on the other route and a number that means two things in two places is a\nnumber nobody can compare.\n\n**`model` is redeclared here, and only here, because on this route it cannot be read as the\nshared object's field is read.** The token counts add up to three stages that may run three\ndifferent models — the classifier, the loop and the argument — and `model` names only the\nlast one that reported, so tokens priced at that model's rate misstate the cost. The first\ncost figure of C32b made exactly that mistake. The shared `Usage` keeps its description:\n`POST /v1/assist/sale` must not move.",
+        "properties": {
+          "calls": {
+            "default": 0,
+            "description": "Chat-provider calls this request made: one classification, at most one per loop turn, and the argument with its single repair. Bounded by a ceiling **derived from the constants of those three stages** rather than written as a literal. Embedding lookups are counted apart and are not included",
+            "minimum": 0.0,
+            "title": "Calls",
+            "type": "integer"
+          },
+          "completion_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Completion Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model of the LAST stage that reported one — the argument's when it ran, otherwise the loop's or the classifier's. **Not a price key for the token counts beside it**: on this route those counts add up to as many as three stages that may run different models, so tokens multiplied by this model's price misstate the cost. Null while stubbed",
+            "title": "Model"
+          },
+          "prompt_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Prompt Tokens",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "title": "AgentUsage",
+        "type": "object"
+      },
+      "AssistContext": {
+        "description": "Optional hints the operator can pass along with the query.",
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "occasion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occasion"
+          },
+          "preferred_materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Materials",
+            "type": "array"
+          },
+          "recipient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient"
+          }
+        },
+        "title": "AssistContext",
+        "type": "object"
+      },
+      "AssistGroup": {
+        "description": "One product family; members are the variants the operator can disambiguate.\n\n`family_id` is **nullable**, and the invariant that comes with it is *null implies exactly\none member*. A synthetic identifier would have been a lie on the wire: .NET and the\nfrontend would have to recognise a prefix no schema declares, and nothing in the type\nwould stop the variants warning from firing on a group of one.",
+        "properties": {
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the product belongs to no family; such a group holds one member",
+            "title": "Family Id"
+          },
+          "family_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Label"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AssistGroupMember"
+            },
+            "title": "Members",
+            "type": "array"
+          }
+        },
+        "required": [
+          "members"
+        ],
+        "title": "AssistGroup",
+        "type": "object"
+      },
+      "AssistGroupMember": {
+        "properties": {
+          "match_reasons": {
+            "description": "Why the retrieval produced this candidate, in its own vocabulary. Reused rather than restated: these codes carry real provenance since C21 and the panel already maps them to badges",
+            "items": {
+              "type": "string"
+            },
+            "title": "Match Reasons",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the variant is unknown",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "score"
+        ],
+        "title": "AssistGroupMember",
+        "type": "object"
+      },
+      "AssistRequest": {
+        "description": "One of the two anchors is required, and **at least** one rather than exactly one.\n\n\"Exactly one\" would exclude the mode that carries the most value for the least cost —\na piece on the screen plus the question the customer just asked — which is the mode\nthat finally gives the ten counter-conversation documents of the corpus a route to an\noperator's screen. `IndexSyncRequest` with `full` against `since` is the same shape.",
+        "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssistContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "$ref": "#/components/schemas/RetrievalFilters",
+            "description": "Catalog filters for the free-query mode. Ignored when a piece is anchored: the anchor already determines what is retrieved"
+          },
+          "locale": {
+            "default": "es-ES",
+            "title": "Locale",
+            "type": "string"
+          },
+          "pos_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accepted for client compatibility and ignored; scope comes from the token",
+            "title": "Pos Id"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Anchor the assistance to one indexed piece. Null means a free query",
+            "title": "Product Id"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the operator asked. Null means the piece itself is the request",
+            "title": "Query"
+          },
+          "top_k": {
+            "default": 5,
+            "description": "Families wanted after hydration",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "title": "AssistRequest",
+        "type": "object"
+      },
+      "AssistResponse": {
+        "properties": {
+          "abstained": {
+            "description": "The retrieval's abstention rule decided the catalogue cannot answer this query, so no group is returned. Emitted in every mode — constantly false for a piece with no question, where there is no retrieval to abstain from — and deliberately **not** `low_confidence`, whose measured meaning is cross-branch consensus and fires on answerable queries far more often than on out-of-domain ones",
+            "title": "Abstained",
+            "type": "boolean"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "clarification_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A question back to the operator when the classifier found the query carries too little to search with, naming the axis it left out. Null in every other case, including a refusal. Selected in code from a closed catalogue of es-ES templates and never written by the model: the field is typed as prose rather than as a code, so the presentation layer cannot resolve it, and two requests carrying the same query produce exactly the same text",
+            "title": "Clarification Question"
+          },
+          "effective_pos_id": {
+            "description": "Scope applied by the handler; always the token claim, never the body value",
+            "title": "Effective Pos Id",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AssistGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "intent": {
+            "description": "Closed vocabulary of the assistance capability: product_pitch, in_domain, out_of_domain, not_in_catalogue, unclassified. `product_pitch` for a piece with no question, derived from the request shape and unchanged since C30a. For a free query it is the verdict C31's classifier reached before retrieving anything: `in_domain` admitted, `out_of_domain` not this business, `not_in_catalogue` jewellery this catalogue does not stock. `unclassified` means no classification was made — no classifier ran, or one ran and could not be used — and the request was served exactly as it was before this capability routed anything",
+            "title": "Intent",
+            "type": "string"
+          },
+          "pitch": {
+            "description": "Generated prose with unresolved {{price}} / {{stock}} placeholders",
+            "title": "Pitch",
+            "type": "string"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Version of the prompt the generation layer ran with; null when it did not run",
+            "title": "Prompt Version"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "warnings": {
+            "description": "Rule-derived codes, from the closed vocabulary of the assistance capability: family_has_variants, size_label_missing, query_out_of_domain, query_not_in_catalogue, knowledge_not_covered, filters_too_narrow. Never a sentence: the Spanish a human reads belongs to the frontend. The two refusal codes are distinct on purpose — a trade this shop does not practise and a piece it does not carry are two different things to say to a customer — and `knowledge_not_covered` states that an anchored question produced no citation after the corpus distance threshold, so the argument describes the piece without claiming to have answered",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "trace_id",
+          "effective_pos_id",
+          "intent",
+          "groups",
+          "pitch",
+          "usage",
+          "abstained"
+        ],
+        "title": "AssistResponse",
+        "type": "object"
+      },
+      "Citation": {
+        "description": "A fragment of the knowledge corpus, carrying everything needed to present it honestly.\n\n**Citations are corpus fragments and nothing else.** Citing the catalogue would verify\nnothing — the product's metadata already travels in the response — so the anchoring of a\ncandidate in the catalogue is expressed with `match_reasons` instead.\n\n`citation_id` is `<documento>#<sección>`: with the corpus in git it *resolves, locates and\nopens* a file and a heading. `claim_scope` is not decoration either — it separates a fact\nof the world from a commitment of the establishment, which is the failure the whole\nmarking mechanism of C23 exists to prevent, and 25 of the corpus's 161 fragments carry it.",
+        "properties": {
+          "citation_id": {
+            "description": "`<document>#<section>`; resolves to a file and a heading in git",
+            "title": "Citation Id",
+            "type": "string"
+          },
+          "claim_scope": {
+            "description": "`general` for a fact of the world, `establecimiento` for a commitment of the house, which is never read to a customer without confirming it in store",
+            "title": "Claim Scope",
+            "type": "string"
+          },
+          "doc_type": {
+            "description": "Corpus document type: material, faq, politica, talla",
+            "title": "Doc Type",
+            "type": "string"
+          },
+          "document_title": {
+            "title": "Document Title",
+            "type": "string"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The piece this claim supports, when the request anchored one",
+            "title": "Product Id"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "section_title": {
+            "title": "Section Title",
+            "type": "string"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          }
+        },
+        "required": [
+          "citation_id",
+          "document_title",
+          "section_title",
+          "doc_type",
+          "claim_scope",
+          "score",
+          "snippet"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "DebugInfo": {
+        "description": "Optional retrieval diagnostics; minimally filled by the stubs.",
+        "properties": {
+          "lexical_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexical Score"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "rerank_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerank Score"
+          },
+          "vector_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vector Score"
+          }
+        },
+        "title": "DebugInfo",
+        "type": "object"
+      },
+      "EnrichProductInput": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "product_id": {
+            "minLength": 1,
+            "title": "Product Id",
+            "type": "string"
+          },
+          "raw_attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Raw Attributes",
+            "type": "object"
+          },
+          "sku": {
+            "minLength": 1,
+            "title": "Sku",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku"
+        ],
+        "title": "EnrichProductInput",
+        "type": "object"
+      },
+      "EnrichRequest": {
+        "properties": {
+          "locale": {
+            "default": "es-ES",
+            "title": "Locale",
+            "type": "string"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/EnrichProductInput"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "products"
+        ],
+        "title": "EnrichRequest",
+        "type": "object"
+      },
+      "EnrichResponse": {
+        "properties": {
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedProfile"
+            },
+            "title": "Profiles",
+            "type": "array"
+          },
+          "prompt_version": {
+            "description": "Version of the extraction prompt behind this batch. Cheap to emit and impossible to reconstruct afterwards, which is why it is here rather than deferred",
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        },
+        "required": [
+          "trace_id",
+          "profiles",
+          "usage",
+          "prompt_version"
+        ],
+        "title": "EnrichResponse",
+        "type": "object"
+      },
+      "EvalMetric": {
+        "properties": {
+          "name": {
+            "description": "Metric key, e.g. recall_at_10",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "EvalMetric",
+        "type": "object"
+      },
+      "EvalRun": {
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/EvalMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "description": "Run outcome, e.g. passed or failed",
+            "title": "Status",
+            "type": "string"
+          },
+          "suite": {
+            "title": "Suite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "suite",
+          "status",
+          "started_at"
+        ],
+        "title": "EvalRun",
+        "type": "object"
+      },
+      "EvalRunsResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/EvalRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "runs"
+        ],
+        "title": "EvalRunsResponse",
+        "type": "object"
+      },
+      "ExcludedProductModel": {
+        "description": "A product the piece-type gate removed before grouping.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "reason": {
+            "description": "no_piece_type",
+            "title": "Reason",
+            "type": "string"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "name",
+          "reason"
+        ],
+        "title": "ExcludedProductModel",
+        "type": "object"
+      },
+      "FamilyAuditRequest": {
+        "description": "Optional narrowing and thresholds. An empty body audits the whole active index.",
+        "properties": {
+          "judged_pairs": {
+            "description": "Pairs already ruled on, omitted from both lists of this response",
+            "items": {
+              "$ref": "#/components/schemas/JudgedPair"
+            },
+            "title": "Judged Pairs",
+            "type": "array"
+          },
+          "max_orphans": {
+            "default": 500,
+            "description": "Upper bound on returned candidates; refusals are never truncated",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Max Orphans",
+            "type": "integer"
+          },
+          "orphan_margin": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Overrides JPV_FAMILY_ORPHAN_MARGIN for this run; null uses configuration",
+            "title": "Orphan Margin"
+          },
+          "piece_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Restrict to one closed-vocabulary piece type; null means all",
+            "title": "Piece Type"
+          },
+          "veto_margin": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Overrides JPV_FAMILY_VETO_MARGIN for this run; null uses configuration",
+            "title": "Veto Margin"
+          }
+        },
+        "title": "FamilyAuditRequest",
+        "type": "object"
+      },
+      "FamilyAuditResponse": {
+        "description": "Both sides of the membership line, plus what the run still refuses to propose.",
+        "properties": {
+          "excluded_products": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedProductModel"
+            },
+            "title": "Excluded Products",
+            "type": "array"
+          },
+          "families_reviewed_count": {
+            "default": 0,
+            "description": "Families the audit examined, so an empty flag list is readable",
+            "minimum": 0.0,
+            "title": "Families Reviewed Count",
+            "type": "integer"
+          },
+          "flagged_members": {
+            "items": {
+              "$ref": "#/components/schemas/FlaggedMemberModel"
+            },
+            "title": "Flagged Members",
+            "type": "array"
+          },
+          "members_examined_count": {
+            "default": 0,
+            "description": "Memberships the audit examined, for the same reason",
+            "minimum": 0.0,
+            "title": "Members Examined Count",
+            "type": "integer"
+          },
+          "orphan_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/OrphanCandidateModel"
+            },
+            "title": "Orphan Candidates",
+            "type": "array"
+          },
+          "rejected_groups": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedGroupModel"
+            },
+            "title": "Rejected Groups",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id"
+        ],
+        "title": "FamilyAuditResponse",
+        "type": "object"
+      },
+      "FamilyProposalModel": {
+        "description": "A candidate family: one piece type, one root, two or more members.",
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedFamilyMember"
+            },
+            "minItems": 2,
+            "title": "Members",
+            "type": "array"
+          },
+          "piece_type": {
+            "title": "Piece Type",
+            "type": "string"
+          },
+          "root": {
+            "title": "Root",
+            "type": "string"
+          },
+          "suggested_name": {
+            "title": "Suggested Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "suggested_name",
+          "piece_type",
+          "members"
+        ],
+        "title": "FamilyProposalModel",
+        "type": "object"
+      },
+      "FamilySuggestRequest": {
+        "description": "Optional narrowing. An empty body proposes over the whole active index.",
+        "properties": {
+          "max_proposals": {
+            "default": 500,
+            "description": "Upper bound on returned proposals; refusals are never truncated",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Max Proposals",
+            "type": "integer"
+          },
+          "piece_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Restrict to one closed-vocabulary piece type; null means all",
+            "title": "Piece Type"
+          }
+        },
+        "title": "FamilySuggestRequest",
+        "type": "object"
+      },
+      "FamilySuggestResponse": {
+        "properties": {
+          "already_in_family_count": {
+            "default": 0,
+            "description": "Products skipped for already belonging to a family. Counted rather than listed: after the first approved batch they are hundreds, and their exclusion is the convergence rule working, not a finding",
+            "minimum": 0.0,
+            "title": "Already In Family Count",
+            "type": "integer"
+          },
+          "excluded_products": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedProductModel"
+            },
+            "title": "Excluded Products",
+            "type": "array"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/FamilyProposalModel"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "rejected_groups": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedGroupModel"
+            },
+            "title": "Rejected Groups",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id"
+        ],
+        "title": "FamilySuggestResponse",
+        "type": "object"
+      },
+      "FlaggedMemberModel": {
+        "description": "A member of an existing family that the vectors do not support.",
+        "properties": {
+          "family_id": {
+            "title": "Family Id",
+            "type": "string"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "margin": {
+            "description": "How far the nearest stranger beat this member's own worst sibling",
+            "title": "Margin",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "reason": {
+            "default": "closer_to_another_family",
+            "title": "Reason",
+            "type": "string"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "stranger_family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Family of the product that beat the worst sibling",
+            "title": "Stranger Family Id"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null is the base piece, a legitimate variant value and not a gap",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "name",
+          "family_id",
+          "margin"
+        ],
+        "title": "FlaggedMemberModel",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IndexStatusResponse": {
+        "properties": {
+          "drift_count": {
+            "description": "Documents known to be stale",
+            "minimum": 0.0,
+            "title": "Drift Count",
+            "type": "integer"
+          },
+          "indexed_documents": {
+            "minimum": 0.0,
+            "title": "Indexed Documents",
+            "type": "integer"
+          },
+          "last_full_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Full Sync At"
+          },
+          "last_incremental_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Incremental Sync At"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "indexed_documents",
+          "drift_count"
+        ],
+        "title": "IndexStatusResponse",
+        "type": "object"
+      },
+      "IndexSyncRequest": {
+        "properties": {
+          "batch_size": {
+            "default": 100,
+            "description": "Ignored; catalog feed page size is the server-fixed 50",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "full": {
+            "default": false,
+            "description": "Force a full re-index; ignores body and checkpoint",
+            "title": "Full",
+            "type": "boolean"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Watermark of the catalog feed keyset; null with since_id null",
+            "title": "Since"
+          },
+          "since_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Second component of the catalog feed keyset; not required when since is null",
+            "title": "Since Id"
+          }
+        },
+        "title": "IndexSyncRequest",
+        "type": "object"
+      },
+      "IndexSyncResponse": {
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Watermark to send on the next sync",
+            "title": "Cursor"
+          },
+          "cursor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keyset id to send on the next sync",
+            "title": "Cursor Id"
+          },
+          "deleted": {
+            "minimum": 0.0,
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "failed": {
+            "minimum": 0.0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Watermark the run started from",
+            "title": "Since"
+          },
+          "since_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keyset id the run started from",
+            "title": "Since Id"
+          },
+          "skipped": {
+            "description": "Items whose embedding was omitted",
+            "minimum": 0.0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "upserted": {
+            "minimum": 0.0,
+            "title": "Upserted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "trace_id",
+          "upserted",
+          "skipped",
+          "deleted",
+          "failed"
+        ],
+        "title": "IndexSyncResponse",
+        "type": "object"
+      },
+      "InventoryFilters": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          }
+        },
+        "title": "InventoryFilters",
+        "type": "object"
+      },
+      "InventoryProposal": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the family is unknown",
+            "title": "Family Id"
+          },
+          "priority": {
+            "description": "1 is the most urgent proposal",
+            "minimum": 1.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "rationale": {
+            "description": "Prose rationale; stock figures stay as {{stock}} placeholders",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "signal": {
+            "description": "What triggered the proposal, e.g. coverage_gap",
+            "title": "Signal",
+            "type": "string"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the variant is unknown",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "priority",
+          "signal",
+          "rationale",
+          "confidence"
+        ],
+        "title": "InventoryProposal",
+        "type": "object"
+      },
+      "InventoryProposeRequest": {
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/InventoryFilters"
+          },
+          "horizon_days": {
+            "default": 30,
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "pos_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accepted for client compatibility and ignored; scope comes from the token",
+            "title": "Pos Id"
+          }
+        },
+        "title": "InventoryProposeRequest",
+        "type": "object"
+      },
+      "InventoryProposeResponse": {
+        "properties": {
+          "effective_pos_id": {
+            "description": "Scope applied by the handler; always the token claim, never the body value",
+            "title": "Effective Pos Id",
+            "type": "string"
+          },
+          "horizon_days": {
+            "minimum": 1.0,
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryProposal"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "effective_pos_id",
+          "proposals",
+          "horizon_days"
+        ],
+        "title": "InventoryProposeResponse",
+        "type": "object"
+      },
+      "JudgedPair": {
+        "description": "A `(product, family)` pair a person has already ruled on.\n\nTravels **in the request**. The service holds no verdict of its own and must not:\nthe catalogue's truth is .NET's, and a store of judgements beside the index would\nbe state nothing invalidates. The caller brings what it knows, exactly as `apply`\nbrings back the proposals it accepted.",
+        "properties": {
+          "family_id": {
+            "title": "Family Id",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "family_id"
+        ],
+        "title": "JudgedPair",
+        "type": "object"
+      },
+      "OrphanCandidateModel": {
+        "description": "A product belonging to no family that looks like it belongs to one.",
+        "properties": {
+          "data_origin": {
+            "description": "`real` or `synthetic`. Reported because the two populations behave very differently here and every metric must be able to separate them",
+            "title": "Data Origin",
+            "type": "string"
+          },
+          "family_id": {
+            "title": "Family Id",
+            "type": "string"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "margin": {
+            "description": "similarity - worst_sibling. This is the nomination criterion",
+            "title": "Margin",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "piece_type": {
+            "title": "Piece Type",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "purity": {
+            "description": "Of the five nearest neighbours of the same piece type, how many belong to this family. A **ranking signal only**: purity nominates 55 synthetic against 19 real over this corpus, because the deliberate vN families it cannot separate from a missing member are synthetic by construction",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Purity",
+            "type": "integer"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "number"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "worst_sibling": {
+            "description": "Lowest similarity observed inside the target family",
+            "title": "Worst Sibling",
+            "type": "number"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "name",
+          "piece_type",
+          "data_origin",
+          "family_id",
+          "similarity",
+          "worst_sibling",
+          "margin",
+          "purity"
+        ],
+        "title": "OrphanCandidateModel",
+        "type": "object"
+      },
+      "ProposedFamilyMember": {
+        "description": "One product inside a proposal, with what tells it from its siblings.",
+        "properties": {
+          "flagged_for_review": {
+            "default": false,
+            "description": "A product of another proposed family sits closer than this member's worst sibling",
+            "title": "Flagged For Review",
+            "type": "boolean"
+          },
+          "margin": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How far the nearest stranger beat the worst sibling; null when not flagged",
+            "title": "Margin"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "description": "Order by canonical size rank, gap-free",
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for the base piece, which is a variant value and not a gap",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "name",
+          "position"
+        ],
+        "title": "ProposedFamilyMember",
+        "type": "object"
+      },
+      "ProposedList": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "source": {
+            "description": "`rule` for a deterministic normalization, `inferred` for a model",
+            "enum": [
+              "rule",
+              "inferred"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "confidence",
+          "source"
+        ],
+        "title": "ProposedList",
+        "type": "object"
+      },
+      "ProposedProfile": {
+        "description": "One product's proposed attributes.\n\nThe sensitive fields — `piece_type`, `materials`, `stone_type`, `size_label` —\nare the ones whose error reaches a customer, and each is proposed\nindividually so its provenance can be judged individually.\n\nCommercial tags are split into three lists rather than one flat `tags`,\nmatching the columns the vector index already declares: collapsing them here\nwould force the split to be reinvented downstream, by whoever needed it first.",
+        "properties": {
+          "color_tags": {
+            "$ref": "#/components/schemas/ProposedList"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "materials": {
+            "$ref": "#/components/schemas/ProposedList"
+          },
+          "occasion_tags": {
+            "$ref": "#/components/schemas/ProposedList"
+          },
+          "piece_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "size_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "stone_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "style_tags": {
+            "$ref": "#/components/schemas/ProposedList"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "materials",
+          "color_tags",
+          "style_tags",
+          "occasion_tags"
+        ],
+        "title": "ProposedProfile",
+        "type": "object"
+      },
+      "ProposedText": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "source": {
+            "description": "`rule` for a deterministic normalization, `inferred` for a model",
+            "enum": [
+              "rule",
+              "inferred"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confidence",
+          "source",
+          "value"
+        ],
+        "title": "ProposedText",
+        "type": "object"
+      },
+      "RejectedGroupModel": {
+        "description": "A group a guard refused, reported so a person can look at it.",
+        "properties": {
+          "piece_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Piece Type"
+          },
+          "product_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Product Names",
+            "type": "array"
+          },
+          "reason": {
+            "description": "root_too_short | root_is_bare_piece_type | empty_root | duplicate_variant_labels",
+            "title": "Reason",
+            "type": "string"
+          },
+          "root": {
+            "title": "Root",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "reason"
+        ],
+        "title": "RejectedGroupModel",
+        "type": "object"
+      },
+      "RetrievalFilters": {
+        "description": "Catalog-side filters only. Price and stock filtering stays on the .NET side.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "exclude_product_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exclude Product Ids",
+            "type": "array"
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          }
+        },
+        "title": "RetrievalFilters",
+        "type": "object"
+      },
+      "RetrievalMode": {
+        "enum": [
+          "hybrid",
+          "vector",
+          "lexical"
+        ],
+        "title": "RetrievalMode",
+        "type": "string"
+      },
+      "RetrievalRequest": {
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/RetrievalFilters"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RetrievalMode",
+            "default": "hybrid"
+          },
+          "pos_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accepted for client compatibility and ignored; scope comes from the token",
+            "title": "Pos Id"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 10,
+            "description": "Page size wanted after hydration",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "RetrievalRequest",
+        "type": "object"
+      },
+      "RetrievalResponse": {
+        "properties": {
+          "candidates_returned": {
+            "description": "Candidates the retriever produced",
+            "minimum": 0.0,
+            "title": "Candidates Returned",
+            "type": "integer"
+          },
+          "effective_pos_id": {
+            "description": "Scope applied by the handler; always the token claim, never the body value",
+            "title": "Effective Pos Id",
+            "type": "string"
+          },
+          "low_confidence": {
+            "default": false,
+            "title": "Low Confidence",
+            "type": "boolean"
+          },
+          "projection_age_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seconds since the point-of-sale availability projection was last synchronised. Null when the prefilter did not run. Taken from the drain checkpoint and never from the projection rows: the feed is incremental, so a row's timestamp records when that assignment last changed rather than when the projection was last read, and would report months on a projection synchronised seconds ago. Above the configured ceiling the point-of-sale scope is not applied for that request and this field is how the caller can tell.",
+            "title": "Projection Age Seconds"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievalResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "warnings": {
+            "description": "Codes of the closed warning vocabulary that describe the QUERY rather than a piece. Today only `filters_too_narrow`: the query is answerable and the caller's own catalog-side filters are what left almost nothing. It is emitted here and not only on the generative route because the decision belongs to retrieval, and every path that accepts filters can hit it. An abstention is a different statement and never carries it: that one says the description found nothing.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "trace_id",
+          "effective_pos_id",
+          "results",
+          "candidates_returned"
+        ],
+        "title": "RetrievalResponse",
+        "type": "object"
+      },
+      "RetrievalResult": {
+        "properties": {
+          "debug": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DebugInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the family is unknown",
+            "title": "Family Id"
+          },
+          "match_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Match Reasons",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the variant is unknown",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "score"
+        ],
+        "title": "RetrievalResult",
+        "type": "object"
+      },
+      "SimilaritySignals": {
+        "description": "Why two products are considered interchangeable. No price signal by design.",
+        "properties": {
+          "family_match": {
+            "default": false,
+            "title": "Family Match",
+            "type": "boolean"
+          },
+          "material_overlap": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Material Overlap",
+            "type": "number"
+          },
+          "style_similarity": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Style Similarity",
+            "type": "number"
+          },
+          "visual_similarity": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visual Similarity"
+          }
+        },
+        "required": [
+          "material_overlap",
+          "style_similarity"
+        ],
+        "title": "SimilaritySignals",
+        "type": "object"
+      },
+      "SubstituteResult": {
+        "properties": {
+          "debug": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DebugInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the family is unknown",
+            "title": "Family Id"
+          },
+          "match_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Match Reasons",
+            "type": "array"
+          },
+          "materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Materials",
+            "type": "array"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "similarity_signals": {
+            "$ref": "#/components/schemas/SimilaritySignals"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "variant_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the variant is unknown",
+            "title": "Variant Label"
+          }
+        },
+        "required": [
+          "product_id",
+          "sku",
+          "score",
+          "similarity_signals"
+        ],
+        "title": "SubstituteResult",
+        "type": "object"
+      },
+      "SubstitutesRequest": {
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/RetrievalFilters"
+          },
+          "pos_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accepted for client compatibility and ignored; scope comes from the token",
+            "title": "Pos Id"
+          },
+          "product_id": {
+            "minLength": 1,
+            "title": "Product Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a substitute is needed, e.g. out of stock",
+            "title": "Reason"
+          },
+          "top_k": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "SubstitutesRequest",
+        "type": "object"
+      },
+      "SubstitutesResponse": {
+        "properties": {
+          "candidates_returned": {
+            "minimum": 0.0,
+            "title": "Candidates Returned",
+            "type": "integer"
+          },
+          "effective_pos_id": {
+            "description": "Scope applied by the handler; always the token claim, never the body value",
+            "title": "Effective Pos Id",
+            "type": "string"
+          },
+          "low_confidence": {
+            "default": false,
+            "title": "Low Confidence",
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SubstituteResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "trace_id": {
+            "description": "Correlation id, from the token claim when present",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "effective_pos_id",
+          "results",
+          "candidates_returned"
+        ],
+        "title": "SubstitutesResponse",
+        "type": "object"
+      },
+      "Usage": {
+        "description": "Model usage reported by generative routes; zeroed while stubs are served.",
+        "properties": {
+          "completion_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Completion Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider model identifier, null while stubbed",
+            "title": "Model"
+          },
+          "prompt_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Prompt Tokens",
+            "type": "integer"
+          },
+          "total_tokens": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "title": "Usage",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "description": "Internal HS256 service token",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "jbg-ai",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Health Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Public liveness probe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/v1/assist/agent": {
+      "post": {
+        "description": "Run the loop over the transcript; the pitch keeps price and stock as placeholders.\n\n**A route of its own, and the separation is the decision this change turns on.** Its worst\ncase is several times the latency the deterministic route declares, so a flag on that route\nwould put a long path in the one a counter calls synchronously — and the comparison this\ncapability exists to enable needs both to stay runnable over the same set.\n\nThe error mapping is the deterministic route's, extended by one: a transcript over its\ndeclared caps is a 422, the status this service already uses for a body naming something\nit cannot process. It is unreachable through HTTP — the request model refuses it first —\nand it is here because the layer is also a callable.",
+        "operationId": "assist_agent_v1_assist_agent_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentAssistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAssistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assist a sale with an agent loop over a multi-turn transcript",
+        "tags": [
+          "assist"
+        ]
+      }
+    },
+    "/v1/assist/sale": {
+      "post": {
+        "description": "Group candidates by family; the pitch keeps price and stock as placeholders.",
+        "operationId": "assist_sale_v1_assist_sale_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assist a sale with family-grouped candidates and a pitch",
+        "tags": [
+          "assist"
+        ]
+      }
+    },
+    "/v1/enrich/products": {
+      "post": {
+        "description": "Every proposed field carries its own confidence and provenance; nothing is written.\n\nCatalog-scoped: enriching the catalog belongs to no point of sale, so this\nroute accepts a token without `pos_id`. Retrieval, assistance and inventory\nkeep requiring one.",
+        "operationId": "enrich_products_v1_enrich_products_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrichRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrichResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Propose enriched profiles for a batch of products",
+        "tags": [
+          "enrich"
+        ]
+      }
+    },
+    "/v1/evals/runs": {
+      "get": {
+        "operationId": "list_eval_runs_v1_evals_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List evaluation runs (development profile only)",
+        "tags": [
+          "evals"
+        ]
+      }
+    },
+    "/v1/families/audit": {
+      "post": {
+        "description": "Report unsupported memberships and orphan candidates, writing nothing.\n\nThe tenth `/v1` path, and a separate route rather than an extension of `/suggest`\non purpose: the two read disjoint populations — suggestion reads products that\nbelong to no family, this reads the families that exist — and they converge\ndifferently, since suggestion empties itself as batches are approved while the\naudit is a standing signal. Folding one into the other would move the committed\nsnapshot just the same, so nothing would be saved by it.\n\nAnswers 503 rather than a degraded result when the index is unreachable, for the\nsame reason `/suggest` does — and here the stakes are higher. This route feeds a\ncatalogue-quality screen, where an empty answer reads as \"the catalogue is clean\".\nReturning one because the index did not respond would assert by accident exactly\nthe conclusion the review exists to establish with evidence.",
+        "operationId": "audit_v1_families_audit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilyAuditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyAuditResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Audit existing families, and nominate the products that look like members",
+        "tags": [
+          "families"
+        ]
+      }
+    },
+    "/v1/families/suggest": {
+      "post": {
+        "description": "Group the active index into candidate families without writing anything.\n\nAnswers 503 rather than a degraded result when the index is unreachable. Unlike\nsearch, which drops to the lexical branch, there is no honest partial answer\nhere: proposing groupings without the index would mean inventing catalogue\nstructure.",
+        "operationId": "suggest_v1_families_suggest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilySuggestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilySuggestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Propose product families, and report what was refused",
+        "tags": [
+          "families"
+        ]
+      }
+    },
+    "/v1/index/status": {
+      "get": {
+        "operationId": "index_status_v1_index_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          },
+          "503": {
+            "description": "Catalog sync cannot run: missing JPV_INDEX_FEED_BASE_URL, JPV_INDEX_FEED_API_KEY, JPV_EMBEDDING_API_KEY, sku_provenance.json, or the catalog feed did not respond"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report index size and drift",
+        "tags": [
+          "index"
+        ]
+      }
+    },
+    "/v1/index/sync": {
+      "post": {
+        "operationId": "sync_index_v1_index_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          },
+          "503": {
+            "description": "Catalog sync cannot run: missing JPV_INDEX_FEED_BASE_URL, JPV_INDEX_FEED_API_KEY, JPV_EMBEDDING_API_KEY, sku_provenance.json, or the catalog feed did not respond"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Synchronise the vector index from a cursor",
+        "tags": [
+          "index"
+        ]
+      }
+    },
+    "/v1/inventory/propose": {
+      "post": {
+        "description": "Proposals carry priority and rationale; .NET decides quantities.",
+        "operationId": "propose_inventory_v1_inventory_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryProposeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryProposeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Propose what deserves inventory attention, in priority order",
+        "tags": [
+          "inventory"
+        ]
+      }
+    },
+    "/v1/retrieval/products": {
+      "post": {
+        "description": "Over-fetch candidates so .NET can filter and still fill a page of `top_k`.\n\n`payload.pos_id` is ignored on purpose: the scope comes from the token.",
+        "operationId": "retrieve_products_v1_retrieval_products_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrievalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retrieve catalog candidates for a query",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    },
+    "/v1/retrieval/substitutes": {
+      "post": {
+        "operationId": "retrieve_substitutes_v1_retrieval_substitutes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubstitutesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubstitutesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid or missing internal service token"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "501": {
+            "description": "Not implemented yet; delivered in a later change"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retrieve interchangeable products for a reference product",
+        "tags": [
+          "retrieval"
+        ]
+      }
+    }
+  }
+}
