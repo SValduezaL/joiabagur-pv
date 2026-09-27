@@ -3,7 +3,7 @@
 > **Idioma:** título e identificadores en inglés, cuerpo en español — la regla vigente del Proyecto
 > Final, igual que `T-AIENG-042`.
 >
-> **Historia de origen:** [HU-AIENG-043](../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md)
+> **Historia de origen:** [HU-AIENG-043](../../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md)
 > **Change:** `openspec/changes/redeploy-and-audit-demo-environment/` (schema `spec-driven`)
 > **Rama:** `c39a-redeploy-and-audit-demo-environment`, derivada de `ai-eng`
 > **Ficha del plan:** §3 · **C39a**, y §0 · *«C39 se parte en C39a y C39b»* (2026-09-27)
@@ -347,7 +347,7 @@ Delta sobre **`demo-deployment`** (13 requisitos), tocando al menos cuatro:
 
 ## 8 · Criterios de Aceptación
 
-Los catorce escenarios de [HU-AIENG-043](../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md), y en
+Los catorce escenarios de [HU-AIENG-043](../../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md), y en
 particular estos cuatro, que son los que pueden pasar en falso:
 
 1. **El panel del agente aparece** en el *hub* sobre el entorno desplegado, no en local.
@@ -431,13 +431,13 @@ particular estos cuatro, que son los que pueden pasar en falso:
 
 ## 13 · Enlaces o Referencias
 
-- Historia: [HU-AIENG-043](../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md)
-- Spec viva: [`openspec/specs/demo-deployment/spec.md`](../../specs/demo-deployment/spec.md)
-- *Runbook*: [`deploy/demo/README.md`](../../../deploy/demo/README.md)
-- Tareas diferidas: [`openspec/DEFERRED_TASKS.md`](../../DEFERRED_TASKS.md) — *«Este repositorio no tiene CI»*, *«C34 · el corpus de conocimiento no viaja en la imagen de `jbg-ai`»*
-- Plan: [§0 y ficha de C39a](../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
-- Precedente de formato: [`T-AIENG-042`](../archive/2026-09-27-add-frontend-agent-panel/ticket.md)
-- Procedimientos: [`Procedimiento-TicketsTrabajo.md`](../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [`Procedimiento-UserStories.md`](../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
+- Historia: [HU-AIENG-043](../../../../Documentos/Historias/AI-Eng/HU-AIENG-043.md)
+- Spec viva: [`openspec/specs/demo-deployment/spec.md`](../../../specs/demo-deployment/spec.md)
+- *Runbook*: [`deploy/demo/README.md`](../../../../deploy/demo/README.md)
+- Tareas diferidas: [`openspec/DEFERRED_TASKS.md`](../../../DEFERRED_TASKS.md) — *«Este repositorio no tiene CI»*, *«C34 · el corpus de conocimiento no viaja en la imagen de `jbg-ai`»*
+- Plan: [§0 y ficha de C39a](../../../../Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md)
+- Precedente de formato: [`T-AIENG-042`](../../archive/2026-09-27-add-frontend-agent-panel/ticket.md)
+- Procedimientos: [`Procedimiento-TicketsTrabajo.md`](../../../../Documentos/Procedimientos/Procedimiento-TicketsTrabajo.md) · [`Procedimiento-UserStories.md`](../../../../Documentos/Procedimientos/Procedimiento-UserStories.md)
 
 ---
 
