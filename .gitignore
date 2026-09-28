@@ -294,3 +294,6 @@ data/world/backups/*
 
 # Test run artifacts (dotnet test --logger trx)
 TestResults/
+
+# Claude Code: permisos locales de cada máquina
+.claude/settings.local.json
