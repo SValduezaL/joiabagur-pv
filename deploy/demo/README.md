@@ -211,6 +211,22 @@ terraform output          # role ARN, instance id, elastic IP, demo URL
 > source first, or the apply fails with `EntityAlreadyExists`. The comment in
 > [`iam.tf`](../../terraform/demo/iam.tf) spells out the change.
 
+> **Changing `github_repo` on a running environment — read before applying.** The repository
+> moved to `SValduezaL/joiabagur-pv` on 2026-09-29, and the running demo still deploys from
+> `skydr4g0n-it/joiabagur-pv`. `github_repo` feeds two things: the OIDC trust of the deploy role,
+> and the derived bundle URL — which is also rendered into the instance's `user_data`. A plain
+> `terraform apply` with a new `github_repo` therefore **replaces the instance**, and with it the
+> database volume and any backup kept under `/root`. To move the deployment, apply only what the
+> repository name should change:
+>
+> ```bash
+> terraform apply -target=aws_iam_role.deploy -target=aws_ssm_parameter.deployment_bundle_url
+> ```
+>
+> Then create the `demo` environment and its `DEMO_DEPLOY_ROLE_ARN` secret in the new repository
+> and enable `deploy-demo.yml` there. The state keeps a pending `user_data` change afterwards; take a
+> dump of the database (5.9) before any later full apply.
+
 Then confirm the host has registered with Systems Manager — until it does, every
 deployment times out on a command nobody can collect:
 
