@@ -1761,8 +1761,8 @@ foto no es un modelo caducado: es un modelo que no aplica, y el informe no disti
 > por la que `CRITICAL` está mal elegido. Se documenta además **cómo se presenta realmente**, que no es
 > sólo la tarjeta: `ModelHealthAlert` está montado a nivel de `App` y lanza un **aviso con icono rojo
 > durante diez segundos, una sola vez por sesión y sólo para administradores**, así que salta justo al
-> iniciar sesión con `demo.admin` y entra en cámara si nadie lo ha anticipado. Guion en
-> [`c39b-video-script.md`](../Documentos/Proyecto%20Final%20AIEng/informes/c39b-video-script.md), §0.1.
+> iniciar sesión con `demo.admin` y entra en cámara si nadie lo ha anticipado. Explicado en la
+> [guía del revisor](../Documentos/Proyecto%20Final%20AIEng/guia-del-revisor.md), apartado 2.
 >
 > **Las vías 2 y 3 siguen abiertas**, y la 2 sigue siendo el arreglo correcto. C39b **no toca código**.
 

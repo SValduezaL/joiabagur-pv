@@ -827,7 +827,7 @@ gobiernan— y luego alinear los tres sitios: `### 0.1`, `### 0.5` y el nombre d
 **Qué dice hoy.** *«Se añadirá un videotutorial en esta sección.»*
 
 **Estado.** El **guion** está escrito y entregado en
-[`c39b-video-script.md`](c39b-video-script.md); la **grabación** no es parte de este change. La frase
+[`guia-del-revisor.md`](../guia-del-revisor.md) (sustituyó al guion del vídeo el 2026-09-28); la **grabación** no es parte de este change. La frase
 sigue siendo verdad y por eso **no se propone cambiarla todavía**: lo que se propone es sustituirla por el
 enlace **el día que el vídeo exista**, y no antes.
 

@@ -643,7 +643,7 @@ Capa de generación y agéntica. Convierte un conjunto de candidatos en una resp
 > (`finalize-pf-readme-and-evidence`) es el último change, y **no toca una línea de código de producto**:
 > entrega el README del máster en sus secciones editables, el **informe de cierre**
 > ([c39b-implementation-measurements.md](Proyecto%20Final%20AIEng/informes/c39b-implementation-measurements.md))
-> y el **guion del vídeo** ([c39b-video-script.md](Proyecto%20Final%20AIEng/informes/c39b-video-script.md)).
+> y la **guía del revisor** ([guia-del-revisor.md](Proyecto%20Final%20AIEng/guia-del-revisor.md)), que sustituye al guion del vídeo.
 > Entra en **EP17**, que con él pasa a **completa**.
 >
 > **Lo primero que arregla es una cifra que nadie podía comprobar**, y es la razón por la que la nota de

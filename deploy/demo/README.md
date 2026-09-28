@@ -419,6 +419,14 @@ DELETE FROM "Users";
 --   username op-aeroport     e-mail op-aeroport@joiabagur.example      role Operator -> MAO-AIR
 ```
 
+> **What was actually done is not the `DELETE` above, and the difference matters later (5.9).** Sales,
+> families, reviews and profiles reference `Users` with `ON DELETE RESTRICT`, so the rows were
+> **renamed in place, keeping their `Id`**. Measured on 2026-09-28: the local `admin`
+> (`3e03450b-…`) *is* `demo.admin` here, and the local operators survive as `demo.operador` and
+> `retirado-<id-prefix>`. The `admin` row that exists now is a different one, recreated by the seeder
+> (`77cef302-…`) and deactivated. Anything authored locally by `admin` therefore lands in the demo
+> authored by `demo.admin`, with no remapping.
+
 > **It used to say «exactly two accounts», and two turned out not to be enough.** C39a-bis found
 > the demo holding only `demo.admin` and `demo.operador`, the latter bound to `MAO-AIR` — and with a
 > single shop reachable, **abstention, substitutes and the agent's pivot cannot be demonstrated at
@@ -680,13 +688,15 @@ shop.** Everything else in the table below is a deactivated row kept for referen
 each says why. Four is the number on purpose — one credential per thing there is to see, and no
 second credential pointing at a counter another one already covers.
 
-Every password below is already a public constant of the synthetic world
-(`ai-service/src/jbg_ai/data/README.md`); none of them is held in the parameter store, and none is a
-real employee's.
+Every password below is a public constant of the demonstration: the operators' come from the
+synthetic world (`ai-service/src/jbg_ai/data/README.md`), and the administrator's has been published
+in the project README since 2026-09-28 so an evaluator can sign in. None of them is held in the
+parameter store, and none is a real employee's. **Rotate `demo.admin` once the evaluation is over**
+(hash generated off the host, as the note in 5.3 describes).
 
 | Username | Password | Role | Point of sale | What it is the account able to reach |
 |---|---|---|---|---|
-| `demo.admin` | *not in this repository* | Administrator | — | **The AI health card**, which is `[Authorize(Roles = "Administrator")]` and therefore reachable from no operator account. Its password was generated off the host and only the hash was sent, so it is deliberately absent here; reset it as the note in 5.3 describes. **This is the only administrator that can sign in** |
+| `demo.admin` | `DemoAdmin123!` | Administrator | — | **The AI health card**, which is `[Authorize(Roles = "Administrator")]` and therefore reachable from no operator account, plus the family and profile review screens. Its hash was generated off the host; the plaintext is published for the evaluation and must be rotated afterwards. **This is the only administrator that can sign in** |
 | `demo.operador` | **unusable by design** | Operator | `MAO-AIR` | **Deactivated on 2026-09-27**, and the row is kept rather than deleted because **3.380 sales reference it**. It duplicated `op-aeroport` — same shop, same reachable behaviour — and a second credential for the same counter only makes an evaluator wonder which one to use |
 | `op-ciutadella` | `Operator123!` | Operator | `CIU-CENTRE` | **The happy path.** The largest assortment — 871 assigned rows — so assisted search returns stock everywhere and the sale card's argument is *generated* rather than withheld. Start here |
 | `op-fornells` | `Operator123!` | Operator | `FORNELLS` | **Abstention, substitutes and the out-of-stock notice.** The smallest assortment — 241 assigned rows, of which **29 sit in the `0` bucket** — which is what makes a withheld argument and a substitute list reachable at all |
@@ -734,6 +744,55 @@ So the reading changed, and so did what a non-zero value means:
 drains to report before judging — the health report is cached for 10 s and the boot drain can
 need a second attempt, which on 2026-09-27 made the deployment log record a staleness the drain
 had already cured six seconds earlier.
+
+## 5.9 Bringing post-deployment local work into the demo
+
+The demo database was restored from a dump taken on **2026-08-30**. Family suggestion and review,
+the vocabulary re-enrichment and the human profile review all happened afterwards, **in the local
+database only**, so until 2026-09-28 the demo showed 0 families, 0 human reviews and 1.200 indexed
+documents. This is how that work was brought across, and how to do it again.
+
+**A targeted copy, not a full restore.** A full restore would erase the four demonstration accounts
+(the `demo.admin` hash exists only here), force 5.3 again and drag local checkpoints along. Only the
+tables the local work changed are copied; `Users`, `UserPointOfSales`, sales, inventory, search
+events, migration history, `ai.pos_projection`, `ai.pos_shop`, `ai.sync_*` and `ai.knowledge_*` are
+left alone.
+
+| Copied (local → demo) | Rows on 2026-09-28 |
+|---|---|
+| `public."ProductFamilies"` / `"ProductFamilyMembers"` / `"FamilyReviewVerdicts"` | 156 / 492 / 64 |
+| `public."ProductAiProfiles"` | 1.200 — 204 reviewed by a person, all timed |
+| `ai.product_document` | 1.168 on arrival, 1.167 after the reconciliation sync |
+| `ai.eval_run` / `ai.eval_case` / `ai.eval_result` | 4 / 192 / 6.970 |
+| `public."Products"."UpdatedAt"` | 16 rows, the products whose family changed |
+
+**Preconditions, all read-only, both sides — stop if any differs:** the same `ai.alembic_version`
+and last `__EFMigrationsHistory` entry; the same
+`md5(string_agg("Id"::text||"SKU", ',' ORDER BY "Id"))` over `"Products"`; the local reviewer's
+`Id` present in the demo (see the note in 5.3); and no demo row of those tables touched by hand
+(`"UpdatedAt" > '2026-08-30 12:30'` returns 0).
+
+**Steps as run on 2026-09-28:**
+
+1. Back up the demo on the host before writing anything:
+   `docker exec jbg-demo-postgres pg_dump -U postgres -d joiabagur_pv -Fc -f /tmp/pre-sync-demo.dump`,
+   then `docker cp` it to `/root/`, plus a data-only dump of `Users` and `UserPointOfSales`.
+2. Locally, `pg_dump --data-only --no-owner --no-acl -t …` of the tables above, wrapped in one
+   script: `\set ON_ERROR_STOP on`, `BEGIN`, `DELETE` in foreign-key order (verdicts → members →
+   families, profiles, `product_document`, `eval_result` → `eval_case` → `eval_run`), the dump, the
+   `UPDATE`s of `"Products"."UpdatedAt"`, counts, `COMMIT`. **Dry-run it locally with `ROLLBACK`
+   first.**
+3. Move it through S3 with a presigned URL — the host role has no S3 permission and does not need
+   one: `aws s3 cp` to `s3://jbg-demo-terraform-state/transfer/`, `aws s3 presign --expires-in 900`,
+   `curl` + `sha256sum -c` on the host, `docker cp` into the container, `psql -f`. Delete the object
+   afterwards.
+4. Reconcile: `docker exec jbg-demo-ai python -m jbg_ai.indexing sync --full`. On 2026-09-28 it
+   reported `upserted=173 skipped=994 deleted=1`: the upserts are products whose profile was corrected
+   after the last *local* indexing, and the delete is the one profile rejected by hand.
+5. `verify.sh`, which passed: 1.167 documents, projection fresh, 161 knowledge fragments, agent route
+   answering.
+
+**Rollback:** `pg_restore --clean -d joiabagur_pv` from `/root/pre-sync-demo.dump`, then `sync --full`.
 
 ## 6. Moving to a purchased domain
 
