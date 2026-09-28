@@ -32,7 +32,9 @@ Capa de IA generativa construida sobre un sistema de gestión de puntos de venta
 
 ### 0.5. URL o archivo comprimido del repositorio
 
-https://github.com/skydr4g0n-it/joiabagur-pv — rama de desarrollo `ai-eng`, rama desplegada `demo`, rama de entrega `finalproject-SVL`.
+https://github.com/SValduezaL/joiabagur-pv — rama de entrega `finalproject-SVL` (por defecto), rama de desarrollo `ai-eng` y rama desplegada `demo`.
+
+El desarrollo, con sus pull requests, se hizo en [`skydr4g0n-it/joiabagur-pv`](https://github.com/skydr4g0n-it/joiabagur-pv). Este repositorio conserva todo el historial de commits, y el contenido de las 54 PR está en el [historial de pull requests](Documentos/historial-pull-requests.md).
 
 ---
 
@@ -153,6 +155,8 @@ La interfaz está pensada para usarse en el móvil en el punto de venta y es *re
 
 #### 1.4.1. Entorno de demostración en AWS (Terraform)
 
+> **La demo publicada se despliega todavía desde [`skydr4g0n-it/joiabagur-pv`](https://github.com/skydr4g0n-it/joiabagur-pv)**: su rol OIDC y la URL de su paquete de despliegue apuntan a ese repositorio, y en este el flujo `deploy-demo.yml` está desactivado. Para trasladarla, aplica Terraform **solo** sobre el rol de despliegue y el parámetro `DEPLOYMENT_BUNDLE_URL` (`-target`). Un `apply` completo cambiaría el `user_data` y **reemplazaría la EC2**, borrando la base de la demo. Ver el [runbook](deploy/demo/README.md), §2.
+
 La demo vive en una **cuenta AWS dedicada** (`eu-west-1`), con su propio estado de Terraform en [terraform/demo/](terraform/demo/). El procedimiento completo está en el [runbook](deploy/demo/README.md).
 
 **Qué crea `terraform apply`:**
@@ -258,7 +262,6 @@ Estas limitaciones **vienen del MVP y no las ha introducido el Proyecto Final**:
 
 - **Los workflows de tests no se habían ejecutado nunca.** `test-backend.yml` y `test-frontend.yml` se crearon en enero de 2026 escuchando las ramas `main` y `develop`, que no existen en el repositorio. Durante el PFM se corrigieron los disparadores (PR a `ai-eng` y `master`) y se ejecutaron por primera vez.
 - **Las dos suites de aplicación arrastran fallos preexistentes**: unos 50 en el backend y 113 en el frontend, parte de ellos inestables entre ejecuciones. Por eso la CI es informativa y no hace de puerta, y no hay protección de ramas. El inventario de causas está en [testing-backend.md](Documentos/testing-backend.md) y [testing-frontend.md](Documentos/testing-frontend.md).
-- **El workflow de producción** (`deploy-aws-ec2.yml`) despliega con cualquier push a `master`, sin filtro de rutas.
 
 Una limitación que sí es del PFM:
 
@@ -373,7 +376,7 @@ Documentos/               arquitectura, modelo de datos, guías y memoria del Pr
 
 ### 2.4. Infraestructura y despliegue
 
-- **Producción (MVP):** EC2 con nginx (TLS) y un contenedor con la API .NET y la SPA; RDS PostgreSQL, S3, ECR y SSM; despliegue con GitHub Actions y OIDC. Guía en [deploy-aws-production.md](Documentos/Guias/deploy-aws-production.md).
+- **Producción (MVP):** EC2 con nginx (TLS) y un contenedor con la API .NET y la SPA; RDS PostgreSQL, S3, ECR y SSM. Su despliegue **no forma parte de este repositorio**: sus flujos de GitHub Actions eran del MVP y se han retirado. La guía se conserva como referencia histórica en [deploy-aws-production.md](Documentos/Guias/deploy-aws-production.md).
 - **Demostración (PFM):** una cuenta AWS distinta, con su estado de Terraform y su workflow (`deploy-demo.yml`, con push a `demo`). Tiene cuatro contenedores y solo el proxy expone puertos. Los secretos se leen de SSM al entorno del proceso y **nunca se escriben en disco**. La verificación se ejecuta **dentro del anfitrión** y puede tumbar el despliegue. Detalle en [1.4.1](#141-entorno-de-demostración-en-aws-terraform).
 
 ### 2.5. Seguridad
@@ -994,6 +997,7 @@ La zona se asignó midiendo las líneas de código y tests que cambió cada merg
 - [Plan de changes del Proyecto Final](Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), [diseño RAG](Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) y especificaciones funcionales ([v1](Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v1.md), [v2](Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md)).
 - [Runbook del entorno de demostración](deploy/demo/README.md): despliegue, secretos y cuentas.
 - [Tareas diferidas](openspec/DEFERRED_TASKS.md): lo que queda declarado y sin arreglar, con su vía de cierre.
+- [Historial de pull requests](Documentos/historial-pull-requests.md): las 54 PR del desarrollo, con su descripción y sus comentarios.
 - [Arquitectura del sistema](Documentos/arquitectura.md), [modelo de datos](Documentos/modelo-de-datos.md), [modelo C4](Documentos/modelo-c4.md) y [épicas](Documentos/epicas.md).
 - [Testing del backend](Documentos/testing-backend.md) y [del frontend](Documentos/testing-frontend.md).
 - [Guía de despliegue en AWS (producción)](Documentos/Guias/deploy-aws-production.md).
