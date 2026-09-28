@@ -34,7 +34,7 @@ Capa de IA generativa construida sobre un sistema de gestión de puntos de venta
 
 https://github.com/SValduezaL/joiabagur-pv — rama de entrega `finalproject-SVL` (por defecto), rama de desarrollo `ai-eng` y rama desplegada `demo`.
 
-El desarrollo, con sus pull requests, se hizo en [`skydr4g0n-it/joiabagur-pv`](https://github.com/skydr4g0n-it/joiabagur-pv). Este repositorio conserva todo el historial de commits, y el contenido de las 54 PR está en el [historial de pull requests](Documentos/historial-pull-requests.md).
+El desarrollo, con sus pull requests, se hizo en [`skydr4g0n-it/joiabagur-pv`](https://github.com/skydr4g0n-it/joiabagur-pv). Este repositorio conserva todo el historial de commits, y el contenido de las 54 PR está en el [historial de pull requests](Documentos/historial-pull-requests/README.md).
 
 ---
 
@@ -997,7 +997,7 @@ La zona se asignó midiendo las líneas de código y tests que cambió cada merg
 - [Plan de changes del Proyecto Final](Documentos/Proyecto%20Final%20AIEng/proyecto-final-plan-changes-openspec.md), [diseño RAG](Documentos/Proyecto%20Final%20AIEng/proyecto-final-diseno-rag-joiabagur.md) y especificaciones funcionales ([v1](Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v1.md), [v2](Documentos/Proyecto%20Final%20AIEng/joiabagur-ia-especificaciones-funcionales-v2.md)).
 - [Runbook del entorno de demostración](deploy/demo/README.md): despliegue, secretos y cuentas.
 - [Tareas diferidas](openspec/DEFERRED_TASKS.md): lo que queda declarado y sin arreglar, con su vía de cierre.
-- [Historial de pull requests](Documentos/historial-pull-requests.md): las 54 PR del desarrollo, con su descripción y sus comentarios.
+- [Historial de pull requests](Documentos/historial-pull-requests/README.md): las 54 PR del desarrollo, con su descripción y sus comentarios.
 - [Arquitectura del sistema](Documentos/arquitectura.md), [modelo de datos](Documentos/modelo-de-datos.md), [modelo C4](Documentos/modelo-c4.md) y [épicas](Documentos/epicas.md).
 - [Testing del backend](Documentos/testing-backend.md) y [del frontend](Documentos/testing-frontend.md).
 - [Guía de despliegue en AWS (producción)](Documentos/Guias/deploy-aws-production.md).
